@@ -19,6 +19,7 @@ import java.util.List;
  * <p>
  * 访问地址:
  * <ul>
+ *   <li>Knife4j 增强 UI: <a href="http://localhost:8080/doc.html">/doc.html</a> (支持离线导出)</li>
  *   <li>Swagger UI: <a href="http://localhost:8080/swagger-ui.html">/swagger-ui.html</a></li>
  *   <li>OpenAPI JSON: <a href="http://localhost:8080/v3/api-docs">/v3/api-docs</a></li>
  * </ul>
