@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.PromptTemplateMapper">
+
+    <resultMap id="PromptTemplatePOMap" type="com.example.agent.infrastructure.persistence.po.PromptTemplatePO">
+        <id     column="id"              property="id"/>
+        <result column="tenant_id"       property="tenantId"/>
+        <result column="prompt_id"       property="promptId"/>
+        <result column="name"            property="name"/>
+        <result column="description"     property="description"/>
+        <result column="template_text"   property="templateText"/>
+        <result column="variables"       property="variablesJson"/>
+        <result column="version"         property="version"/>
+        <result column="status"          property="status"/>
+        <result column="ab_test_config"  property="abTestConfig"/>
+        <result column="created_at"      property="createdAt"/>
+        <result column="updated_at"      property="updatedAt"/>
+        <result column="deleted"         property="deleted"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_prompt_template (
+            tenant_id, prompt_id, name, description,
+            template_text, variables, version, status, ab_test_config,
+            created_at, updated_at
+        ) VALUES (
+            #{tenantId}, #{promptId}, #{name}, #{description},
+            #{templateText}, #{variablesJson}, #{version}, #{status}, #{abTestConfig},
+            #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectByPromptId" resultMap="PromptTemplatePOMap">
+        SELECT id, tenant_id, prompt_id, name, description,
+               template_text, variables, version, status, ab_test_config,
+               created_at, updated_at
+        FROM t_prompt_template
+        WHERE prompt_id = #{promptId}
+          AND deleted = 0
+    </select>
+
+    <select id="selectByTenantId" resultMap="PromptTemplatePOMap">
+        SELECT id, tenant_id, prompt_id, name, description,
+               template_text, variables, version, status, ab_test_config,
+               created_at, updated_at
+        FROM t_prompt_template
+        WHERE tenant_id = #{tenantId}
+          AND deleted = 0
+        ORDER BY updated_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByTenantId" resultType="long">
+        SELECT COUNT(1)
+        FROM t_prompt_template
+        WHERE tenant_id = #{tenantId}
+          AND deleted = 0
+    </select>
+
+    <select id="selectByTenantIdAndStatus" resultMap="PromptTemplatePOMap">
+        SELECT id, tenant_id, prompt_id, name, description,
+               template_text, variables, version, status, ab_test_config,
+               created_at, updated_at
+        FROM t_prompt_template
+        WHERE tenant_id = #{tenantId}
+          AND status = #{status}
+          AND deleted = 0
+        ORDER BY updated_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="selectByTenantIdAndName" resultMap="PromptTemplatePOMap">
+        SELECT id, tenant_id, prompt_id, name, description,
+               template_text, variables, version, status, ab_test_config,
+               created_at, updated_at
+        FROM t_prompt_template
+        WHERE tenant_id = #{tenantId}
+          AND name = #{name}
+          AND deleted = 0
+    </select>
+
+    <update id="updateContent">
+        UPDATE t_prompt_template
+        SET name = #{name},
+            description = #{description},
+            template_text = #{templateText},
+            variables = #{variablesJson},
+            updated_at = NOW()
+        WHERE prompt_id = #{promptId}
+          AND deleted = 0
+    </update>
+
+    <update id="publish">
+        UPDATE t_prompt_template
+        SET version = #{version},
+            template_text = #{templateText},
+            variables = #{variablesJson},
+            status = 'PUBLISHED',
+            updated_at = NOW()
+        WHERE prompt_id = #{promptId}
+          AND deleted = 0
+    </update>
+
+    <update id="updateStatus">
+        UPDATE t_prompt_template
+        SET status = #{status}, updated_at = NOW()
+        WHERE prompt_id = #{promptId}
+          AND deleted = 0
+    </update>
+
+    <update id="softDelete">
+        UPDATE t_prompt_template
+        SET deleted = 1, updated_at = NOW()
+        WHERE prompt_id = #{promptId}
+          AND deleted = 0
+    </update>
+
+</mapper>

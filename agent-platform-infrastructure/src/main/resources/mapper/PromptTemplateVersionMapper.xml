@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.PromptTemplateVersionMapper">
+
+    <resultMap id="PromptTemplateVersionPOMap" type="com.example.agent.infrastructure.persistence.po.PromptTemplateVersionPO">
+        <id     column="id"            property="id"/>
+        <result column="prompt_id"     property="promptId"/>
+        <result column="version"       property="version"/>
+        <result column="template_text" property="templateText"/>
+        <result column="variables"     property="variablesJson"/>
+        <result column="change_log"    property="changeLog"/>
+        <result column="publisher"     property="publisher"/>
+        <result column="published_at"  property="publishedAt"/>
+        <result column="created_at"    property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_prompt_template_version (
+            prompt_id, version, template_text, variables,
+            change_log, publisher, published_at, created_at
+        ) VALUES (
+            #{promptId}, #{version}, #{templateText}, #{variablesJson},
+            #{changeLog}, #{publisher}, #{publishedAt}, #{createdAt}
+        )
+    </insert>
+
+    <select id="selectByPromptIdAndVersion" resultMap="PromptTemplateVersionPOMap">
+        SELECT id, prompt_id, version, template_text, variables,
+               change_log, publisher, published_at, created_at
+        FROM t_prompt_template_version
+        WHERE prompt_id = #{promptId}
+          AND version = #{version}
+    </select>
+
+    <select id="selectByPromptId" resultMap="PromptTemplateVersionPOMap">
+        SELECT id, prompt_id, version, template_text, variables,
+               change_log, publisher, published_at, created_at
+        FROM t_prompt_template_version
+        WHERE prompt_id = #{promptId}
+        ORDER BY version DESC
+    </select>
+
+    <select id="countByPromptId" resultType="int">
+        SELECT COUNT(1)
+        FROM t_prompt_template_version
+        WHERE prompt_id = #{promptId}
+    </select>
+
+    <select id="selectMaxVersionByPromptId" resultType="int">
+        SELECT MAX(version)
+        FROM t_prompt_template_version
+        WHERE prompt_id = #{promptId}
+    </select>
+
+</mapper>
