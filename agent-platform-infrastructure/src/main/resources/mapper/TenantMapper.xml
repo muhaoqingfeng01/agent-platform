@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.TenantMapper">
+
+    <resultMap id="TenantPOMap" type="com.example.agent.infrastructure.persistence.po.TenantPO">
+        <id     column="id"         property="id"/>
+        <result column="tenant_id"  property="tenantId"/>
+        <result column="name"       property="name"/>
+        <result column="status"     property="status"/>
+        <result column="tier"       property="tier"/>
+        <result column="config_json" property="configJson"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted"    property="deleted"/>
+    </resultMap>
+
+    <select id="findById" resultMap="TenantPOMap">
+        SELECT * FROM t_tenant WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <select id="findByTenantId" resultMap="TenantPOMap">
+        SELECT * FROM t_tenant WHERE tenant_id = #{tenantId} AND deleted = 0
+    </select>
+
+    <select id="findAll" resultMap="TenantPOMap">
+        SELECT * FROM t_tenant
+        WHERE deleted = 0
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM t_tenant WHERE deleted = 0
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_tenant (tenant_id, name, status, tier, config_json, created_at, updated_at, deleted)
+        VALUES (#{tenantId}, #{name}, #{status}, #{tier}, #{configJson}, #{createdAt}, #{updatedAt}, #{deleted})
+    </insert>
+
+    <update id="update">
+        UPDATE t_tenant
+        SET name       = #{name},
+            status     = #{status},
+            tier       = #{tier},
+            config_json = #{configJson},
+            updated_at = #{updatedAt}
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <update id="deleteById">
+        UPDATE t_tenant SET deleted = 1, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+</mapper>

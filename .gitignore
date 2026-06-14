@@ -1,0 +1,57 @@
+# ==================== Java ====================
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*
+
+# ==================== Maven ====================
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.idea/
+
+# ==================== IDE ====================
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+bin/
+out/
+
+# ==================== OS ====================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ==================== Config ====================
+*.env
+*.env.local
+*.env.prod
+application-local.yml
+application-*.yml.bak
+
+# ==================== Logs ====================
+logs/
+*.log
+*.log.*
+
+# ==================== Data ====================
+data/
+milvus-data/
+mysql-data/
+
+# ==================== Temp ====================
+tmp/
+temp/
+*.tmp
+
+# ==================== Claude Code ====================
+docs/project-memory/.session-log.jsonl
+docs/project-memory/session-*.json
+.claude/settings.local.json

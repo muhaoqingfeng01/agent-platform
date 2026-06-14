@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.PermissionMapper">
+
+    <resultMap id="PermissionPOMap" type="com.example.agent.infrastructure.persistence.po.PermissionPO">
+        <id     column="id"              property="id"/>
+        <result column="permission_code" property="permissionCode"/>
+        <result column="resource"        property="resource"/>
+        <result column="action"          property="action"/>
+        <result column="description"     property="description"/>
+        <result column="created_at"      property="createdAt"/>
+        <result column="deleted"         property="deleted"/>
+    </resultMap>
+
+    <select id="findById" resultMap="PermissionPOMap">
+        SELECT * FROM t_permission WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <select id="findAll" resultMap="PermissionPOMap">
+        SELECT * FROM t_permission WHERE deleted = 0 ORDER BY created_at DESC
+    </select>
+
+    <select id="findByRoleId" resultMap="PermissionPOMap">
+        SELECT p.* FROM t_permission p
+        INNER JOIN t_role_permission rp ON p.id = rp.permission_id
+        WHERE rp.role_id = #{roleId} AND p.deleted = 0
+    </select>
+
+    <!-- 通过用户ID查询权限（三表 JOIN: user_role → role_permission → permission） -->
+    <select id="findByUserId" resultMap="PermissionPOMap">
+        SELECT DISTINCT p.* FROM t_permission p
+        INNER JOIN t_role_permission rp ON p.id = rp.permission_id
+        INNER JOIN t_user_role ur ON rp.role_id = ur.role_id
+        WHERE ur.user_id = #{userId} AND p.deleted = 0
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_permission (permission_code, resource, action, description, created_at, deleted)
+        VALUES (#{permissionCode}, #{resource}, #{action}, #{description}, #{createdAt}, #{deleted})
+    </insert>
+
+    <update id="deleteById">
+        UPDATE t_permission SET deleted = 1 WHERE id = #{id}
+    </update>
+
+</mapper>

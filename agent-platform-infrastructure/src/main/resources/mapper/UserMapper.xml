@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.UserMapper">
+
+    <resultMap id="UserPOMap" type="com.example.agent.infrastructure.persistence.po.UserPO">
+        <id     column="id"            property="id"/>
+        <result column="tenant_id"     property="tenantId"/>
+        <result column="user_id"       property="userId"/>
+        <result column="username"      property="username"/>
+        <result column="password_hash" property="passwordHash"/>
+        <result column="email"         property="email"/>
+        <result column="phone"         property="phone"/>
+        <result column="status"        property="status"/>
+        <result column="created_at"    property="createdAt"/>
+        <result column="updated_at"    property="updatedAt"/>
+        <result column="deleted"       property="deleted"/>
+    </resultMap>
+
+    <select id="findById" resultMap="UserPOMap">
+        SELECT * FROM t_user WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <select id="findByUserId" resultMap="UserPOMap">
+        SELECT * FROM t_user WHERE user_id = #{userId} AND deleted = 0
+    </select>
+
+    <select id="findByTenantAndUsername" resultMap="UserPOMap">
+        SELECT * FROM t_user
+        WHERE tenant_id = #{tenantId} AND username = #{username} AND deleted = 0
+    </select>
+
+    <select id="findByTenant" resultMap="UserPOMap">
+        SELECT * FROM t_user
+        WHERE tenant_id = #{tenantId} AND deleted = 0
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByTenant" resultType="long">
+        SELECT COUNT(*) FROM t_user WHERE tenant_id = #{tenantId} AND deleted = 0
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_user (tenant_id, user_id, username, password_hash, email, phone,
+                            status, created_at, updated_at, deleted)
+        VALUES (#{tenantId}, #{userId}, #{username}, #{passwordHash}, #{email}, #{phone},
+                #{status}, #{createdAt}, #{updatedAt}, #{deleted})
+    </insert>
+
+    <update id="update">
+        UPDATE t_user
+        SET username      = #{username},
+            password_hash = #{passwordHash},
+            email         = #{email},
+            phone         = #{phone},
+            status        = #{status},
+            updated_at    = #{updatedAt}
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <update id="deleteById">
+        UPDATE t_user SET deleted = 1, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+</mapper>

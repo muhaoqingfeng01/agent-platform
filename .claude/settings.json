@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/session-snapshot.py",
+            "timeout": 15000
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,198 @@
+# ============================================================
+# Agent Platform — Main Configuration
+# ============================================================
+spring:
+  application:
+    name: agent-platform
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # --- Datasource (MySQL) ---
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/agent_platform_dev?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:Mhqf@123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 30000
+
+  # --- Redis ---
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:null}
+      database: ${REDIS_DATABASE:0}
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 4
+          max-wait: 3000ms
+
+  # --- File Upload ---
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+
+  # --- Spring AI Alibaba ---
+  ai:
+    alibaba:
+      # DashScope API (default LLM)
+      dashscope:
+        api-key: ${DASHSCOPE_API_KEY:}
+        chat:
+          options:
+            model: ${AI_MODEL:qwen-max}
+            temperature: 0.7
+            max-tokens: 4096
+
+# ============================================================
+# Sa-Token (Authentication & Authorization)
+# ============================================================
+sa-token:
+  token-name: Authorization
+  token-prefix: Bearer
+  timeout: 3600              # Access Token 有效期（秒），默认1小时
+  active-timeout: 1800       # 临时有效期（秒），持续活跃则自动续期
+  is-concurrent: true        # 是否允许同一账号并发登录
+  is-share: true             # 共用一个Token（多端共享）
+  token-style: random-64     # Token 风格：random-64（64位随机字符串）
+  is-log: true               # 是否输出操作日志
+  # ⚠️ alone-redis 仅在 prod 启用，dev 使用内存存储
+
+# ============================================================
+# MyBatis
+# ============================================================
+mybatis:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.example.agent.infrastructure.persistence.po
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+    cache-enabled: true
+
+mybatis-plus:
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# ============================================================
+# Milvus (Vector Database)
+# ============================================================
+milvus:
+  host: ${MILVUS_HOST:localhost}
+  port: ${MILVUS_PORT:19530}
+  username: ${MILVUS_USER:root}
+  password: ${MILVUS_PASSWORD:}
+  database: ${MILVUS_DATABASE:agent_platform}
+  connect-timeout-ms: 10000
+  keep-alive-time-ms: 60000
+  client-key-path: ""
+  client-cert-path: ""
+  server-cert-path: ""
+
+# ============================================================
+# Redisson (Distributed Lock & Cache)
+# ============================================================
+redisson:
+  config: |
+    {
+      "singleServerConfig": {
+        "address": "redis://${REDIS_HOST:localhost}:${REDIS_PORT:6379}",
+        "password": "${REDIS_PASSWORD:}",
+        "database": ${REDIS_DATABASE:0},
+        "connectionPoolSize": 16,
+        "connectionMinimumIdleSize": 4,
+        "timeout": 3000,
+        "retryAttempts": 3,
+        "retryInterval": 1500
+      },
+      "threads": 4,
+      "nettyThreads": 8
+    }
+
+# ============================================================
+# Server
+# ============================================================
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  tomcat:
+    max-connections: 1000
+    threads:
+      max: 200
+      min-spare: 10
+    connection-timeout: 30000
+
+# ============================================================
+# Actuator & Observability
+# ============================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics,env
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+
+# ============================================================
+# SpringDoc OpenAPI (Swagger)
+# ============================================================
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+    display-request-duration: true
+    try-it-out-enabled: true
+    filter: true
+  show-actuator: true
+  default-produces-media-type: application/json
+
+# ============================================================
+# Langfuse (LLM Observability)
+# ============================================================
+langfuse:
+  host: ${LANGFUSE_HOST:http://localhost:3000}
+  public-key: ${LANGFUSE_PUBLIC_KEY:}
+  secret-key: ${LANGFUSE_SECRET_KEY:}
+  enabled: ${LANGFUSE_ENABLED:false}
+
+# ============================================================
+# Logging
+# ============================================================
+logging:
+  level:
+    root: INFO
+    com.example.agent: ${LOG_LEVEL:DEBUG}
+    org.springframework.ai: DEBUG
+    org.mybatis: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{spanId}] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{spanId}] %logger{36} - %msg%n"
+  file:
+    name: logs/agent-platform.log
+    max-size: 100MB
+    max-history: 30

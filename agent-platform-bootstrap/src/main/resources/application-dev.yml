@@ -1,0 +1,55 @@
+# ============================================================
+# Development Profile Configuration
+# ============================================================
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  # Dev datasource (local)
+  datasource:
+    url: jdbc:mysql://localhost:3306/agent_platform_dev?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: mhqf
+    password: Mhqf@123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 2
+      maximum-pool-size: 10
+
+  # Dev Redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  # Disable Redisson auto-config (requires Redis to be running)
+  autoconfigure:
+    exclude:
+      - org.redisson.spring.starter.RedissonAutoConfigurationV2
+      - org.springframework.boot.actuate.autoconfigure.data.redis.RedisReactiveHealthContributorAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.data.redis.RedisHealthContributorAutoConfiguration
+
+  # Flyway
+  flyway:
+    baseline-on-migrate: true
+    validate-on-migrate: false
+    enabled: true
+
+  # DevTools
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+
+milvus:
+  host: localhost
+  port: 19530
+  database: agent_platform_dev
+
+logging:
+  level:
+    com.example.agent: DEBUG
+    org.springframework.ai: DEBUG
+    org.springframework.security: DEBUG
+    org.mybatis: DEBUG

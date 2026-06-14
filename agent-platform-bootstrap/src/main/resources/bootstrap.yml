@@ -1,0 +1,48 @@
+# ============================================================
+# Nacos Bootstrap Configuration (optional)
+# Enabled when spring.cloud.nacos.config.enabled=true
+# ============================================================
+spring:
+  application:
+    name: agent-platform
+
+  cloud:
+    nacos:
+      # --- Service Discovery ---
+      discovery:
+        enabled: ${NACOS_ENABLED:false}
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: DEFAULT_GROUP
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+        register-enabled: true
+        ephemeral: true
+
+      # --- Config Center ---
+      config:
+        enabled: ${NACOS_ENABLED:false}
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: DEFAULT_GROUP
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+        file-extension: yml
+        refresh-enabled: true
+        shared-configs:
+          - data-id: agent-platform-common.yml
+            group: DEFAULT_GROUP
+            refresh: true
+
+# --- Sentinel ---
+  sentinel:
+    enabled: ${SENTINEL_ENABLED:false}
+    transport:
+      dashboard: ${SENTINEL_DASHBOARD:localhost:8080}
+      port: ${SENTINEL_PORT:8719}
+    datasource:
+      nacos:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group-id: DEFAULT_GROUP
+        data-type: json

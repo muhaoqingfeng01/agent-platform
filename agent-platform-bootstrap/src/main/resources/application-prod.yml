@@ -1,0 +1,45 @@
+# ============================================================
+# Production Profile Configuration
+# ============================================================
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    hikari:
+      minimum-idle: 20
+      maximum-pool-size: 100
+
+server:
+  port: ${SERVER_PORT:8080}
+  tomcat:
+    max-connections: 5000
+    threads:
+      max: 500
+      min-spare: 50
+
+# Sa-Token Redis 集成（生产环境必须启用）
+sa-token:
+  alone-redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: ${REDIS_DATABASE:1}
+
+milvus:
+  connect-timeout-ms: 30000
+  keep-alive-time-ms: 300000
+
+langfuse:
+  enabled: true
+
+logging:
+  level:
+    root: WARN
+    com.example.agent: INFO
+    org.springframework.ai: INFO
+  file:
+    name: /var/log/agent-platform/agent-platform.log
+    max-size: 500MB
+    max-history: 90
