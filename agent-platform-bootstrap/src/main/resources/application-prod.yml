@@ -34,12 +34,13 @@ milvus:
 langfuse:
   enabled: true
 
-logging:
-  level:
-    root: WARN
-    com.example.agent: INFO
-    org.springframework.ai: INFO
-  file:
-    name: /var/log/agent-platform/agent-platform.log
-    max-size: 500MB
-    max-history: 90
+# ============================================================
+# Logging Override（prod 环境）
+# ============================================================
+# 日志级别在 logback-spring.xml 的 <springProfile name="prod"> 中管理
+app:
+  logging:
+    base-path: /var/log
+    max-file-size: 300MB
+    max-history-days: 90
+    total-size-cap: 50GB

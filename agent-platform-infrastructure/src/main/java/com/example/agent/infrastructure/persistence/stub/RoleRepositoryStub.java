@@ -88,6 +88,15 @@ public class RoleRepositoryStub implements RoleRepository {
     }
 
     @Override
+    public List<String> findUserIdsByRoleId(Long roleId) {
+        // 单表查询模拟：遍历 user_role 关联关系
+        return userRoleStore.entrySet().stream()
+                .filter(e -> e.getValue().contains(roleId))
+                .map(Map.Entry::getKey)
+                .toList();
+    }
+
+    @Override
     public void assignPermissionToRole(Long roleId, Long permissionId) {
         rolePermStore.computeIfAbsent(roleId, k -> new CopyOnWriteArrayList<>()).add(permissionId);
     }

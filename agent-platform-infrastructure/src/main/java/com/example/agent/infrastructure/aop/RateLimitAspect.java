@@ -5,6 +5,7 @@ import com.alibaba.csp.sentinel.SphU;
 import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.example.agent.common.result.Result;
 import com.example.agent.infrastructure.annotation.RateLimit;
+import com.example.agent.infrastructure.context.TenantContext;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -90,22 +91,13 @@ public class RateLimitAspect {
      * 拼接租户维度
      * <p>
      * 格式：{resource}:tenant:{tenantId}
-     * 无法获取租户 ID 时使用 "unknown" 兜底。
+     * 从 {@link TenantContext} 获取当前租户 ID（由 TenantInterceptor 在请求进入时设置），
+     * 无法获取时使用 "unknown" 兜底。
      */
     private String appendTenantDimension(String resource) {
-        String tenantId = "unknown";
-        try {
-            // 尝试从 Sa-Token Session 获取租户 ID
-            cn.dev33.satoken.session.SaSession session =
-                    cn.dev33.satoken.stp.StpUtil.getSession(false);
-            if (session != null) {
-                String tid = session.getString("tenantId");
-                if (tid != null && !tid.isEmpty()) {
-                    tenantId = tid;
-                }
-            }
-        } catch (Exception e) {
-            log.trace("[Sentinel] 无法获取租户 ID，使用默认维度: {}", e.getMessage());
+        String tenantId = TenantContext.getCurrentTenantId();
+        if (tenantId == null || tenantId.isEmpty()) {
+            tenantId = "unknown";
         }
         return resource + ":tenant:" + tenantId;
     }

@@ -4,6 +4,7 @@ import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.exception.NotPermissionException;
 import cn.dev33.satoken.exception.NotRoleException;
 import cn.dev33.satoken.stp.StpUtil;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.common.exception.DuplicateResourceException;
 import com.example.agent.common.exception.ResourceNotFoundException;
@@ -102,6 +103,21 @@ public class GlobalExceptionHandler {
     public Result<Void> handleConstraintViolation(ConstraintViolationException e) {
         log.warn("[Exception] 参数约束失败: {}", e.getMessage());
         return Result.fail(400, "参数错误: " + e.getMessage());
+    }
+
+    // ==================== 限流熔断异常 ====================
+
+    /**
+     * Sentinel 限流/熔断异常
+     * <p>
+     * 触发场景：被 Sentinel 流控规则或熔断规则拦截时。
+     */
+    @ExceptionHandler(BlockException.class)
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    public Result<Void> handleBlock(BlockException e) {
+        log.warn("[Exception] Sentinel 限流/熔断: rule={}, resource={}",
+                e.getRule().getClass().getSimpleName(), e.getRule().getResource());
+        return Result.tooManyRequests("请求过于频繁，请稍后再试");
     }
 
     // ==================== 业务异常 ====================

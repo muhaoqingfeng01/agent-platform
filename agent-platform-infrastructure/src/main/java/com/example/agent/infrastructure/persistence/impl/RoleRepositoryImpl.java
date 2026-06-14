@@ -71,6 +71,11 @@ public class RoleRepositoryImpl implements RoleRepository {
     }
 
     @Override
+    public List<String> findUserIdsByRoleId(Long roleId) {
+        return roleMapper.findUserIdsByRoleId(roleId);
+    }
+
+    @Override
     public void assignPermissionToRole(Long roleId, Long permissionId) {
         roleMapper.insertRolePermission(roleId, permissionId);
     }

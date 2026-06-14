@@ -171,11 +171,13 @@ public class RoleController {
 
     @GetMapping("/{id}/users")
     @SaCheckPermission("user:read")
-    @Operation(summary = "查看角色下的用户", description = "获取拥有该角色的用户 ID 列表")
+    @Operation(summary = "查看角色下的用户", description = "获取拥有该角色的用户 ID 列表（单表查询 t_user_role）")
     public Result<List<String>> getUsersByRole(
             @Parameter(description = "角色主键 ID") @PathVariable Long id) {
-        // Stub: return empty list
-        return Result.ok(List.of());
+        log.debug("[Role] 查询角色下的用户: roleId={}", id);
+        if (roleRepository.findById(id).isEmpty()) return Result.notFound("角色不存在: " + id);
+        List<String> userIds = roleRepository.findUserIdsByRoleId(id);
+        return Result.ok(userIds);
     }
 
     @PostMapping("/{id}/permissions")

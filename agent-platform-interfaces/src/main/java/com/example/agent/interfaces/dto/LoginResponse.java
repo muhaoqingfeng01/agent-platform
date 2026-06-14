@@ -19,6 +19,9 @@ public class LoginResponse implements Serializable {
     /** Sa-Token 令牌 */
     private String token;
 
+    /** 刷新令牌（用于获取新的 Access Token） */
+    private String refreshToken;
+
     /** Token 类型（固定值 "Bearer"） */
     private String tokenType;
 
@@ -29,5 +32,12 @@ public class LoginResponse implements Serializable {
         this.token = token;
         this.tokenType = "Bearer";
         this.expiresIn = 3600; // 默认 1 小时
+    }
+
+    public LoginResponse(String token, String refreshToken) {
+        this.token = token;
+        this.refreshToken = refreshToken;
+        this.tokenType = "Bearer";
+        this.expiresIn = 3600;
     }
 }

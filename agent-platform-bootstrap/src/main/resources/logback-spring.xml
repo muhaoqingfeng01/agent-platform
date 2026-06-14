@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="60 seconds">
+
+    <!-- ============================================================ -->
+    <!-- Spring 属性注入（支持 profile-aware 覆盖） -->
+    <!-- ============================================================ -->
+    <springProperty scope="context" name="APP_NAME"        source="spring.application.name"       defaultValue="agent-platform"/>
+    <springProperty scope="context" name="LOG_BASE"        source="app.logging.base-path"         defaultValue="D:/log"/>
+    <springProperty scope="context" name="MAX_FILE_SIZE"   source="app.logging.max-file-size"     defaultValue="300MB"/>
+    <springProperty scope="context" name="MAX_HISTORY"     source="app.logging.max-history-days"  defaultValue="30"/>
+    <springProperty scope="context" name="TOTAL_SIZE_CAP"  source="app.logging.total-size-cap"    defaultValue="10GB"/>
+
+    <!-- ============================================================ -->
+    <!-- 全局属性 -->
+    <!-- ============================================================ -->
+    <!-- 日志根目录：D:/log/agent-platform/ -->
+    <property name="LOG_HOME" value="${LOG_BASE}/${APP_NAME}"/>
+
+    <!-- 日志格式：时间 [线程] 级别 [traceId,spanId] Logger - 消息 -->
+    <property name="LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{spanId}] %logger{36} - %msg%n"/>
+
+    <!-- ============================================================ -->
+    <!-- Appender: 控制台（所有环境通用） -->
+    <!-- ============================================================ -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ============================================================ -->
+    <!-- Appender: 文件日志（按天分子目录 + 按大小滚动归档） -->
+    <!-- ============================================================ -->
+    <!--
+        核心机制：
+        - 不指定 <file>，让 Logback 从 fileNamePattern 推导活跃日志路径
+        - 活跃日志自动写入当天日期目录下：D:/log/agent-platform/2026-06-14/agent-platform.0.log
+        - 每天 00:00 自动切换到新日期目录，旧目录的日志文件归档为 .gz
+        - 当天内单文件超过 300MB 自动拆分（%i 递增，压缩归档）
+        - 超过 maxHistory 天的目录自动删除
+        - 超过 totalSizeCap 自动删除最旧的归档
+
+        目录结构示例：
+        D:/log/agent-platform/
+        ├── 2026-06-14/
+        │   ├── agent-platform.0.log        ← 当天活跃日志（无压缩）
+        │   ├── agent-platform.0.log.gz     ← 第1次超300MB拆分
+        │   └── agent-platform.1.log.gz     ← 第2次超300MB拆分
+        ├── 2026-06-15/
+        │   ├── agent-platform.0.log        ← 新一天活跃日志
+        │   └── ...
+    -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!--
+                %d{yyyy-MM-dd} — 按天分目录，同时作为时间滚动边界
+                %i            — 同一天内超过 maxFileSize 时的拆分子序号（从 0 开始）
+            -->
+            <fileNamePattern>${LOG_HOME}/%d{yyyy-MM-dd}/agent-platform.%i.log.gz</fileNamePattern>
+
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+
+            <!-- 应用启动时不清理旧归档（false = 仅按时间/大小滚动时清理） -->
+            <cleanHistoryOnStart>false</cleanHistoryOnStart>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ============================================================ -->
+    <!-- Profile: dev（开发环境） -->
+    <!-- ============================================================ -->
+    <springProfile name="dev">
+        <!-- 根级别 -->
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+
+        <!-- 项目包：DEBUG（含 DDD 各层） -->
+        <logger name="com.example.agent" level="DEBUG"/>
+
+        <!-- Spring AI Alibaba：DEBUG（查看 LLM 调用详情） -->
+        <logger name="org.springframework.ai" level="DEBUG"/>
+        <logger name="com.alibaba.cloud.ai" level="DEBUG"/>
+
+        <!-- Spring Security：DEBUG（查看认证/鉴权流程） -->
+        <logger name="org.springframework.security" level="DEBUG"/>
+
+        <!-- MyBatis：DEBUG（SQL 语句 + 参数 + 结果集） -->
+        <logger name="org.mybatis" level="DEBUG"/>
+        <logger name="org.apache.ibatis" level="DEBUG"/>
+        <logger name="com.example.agent.infrastructure.persistence" level="DEBUG"/>
+
+        <!-- 框架 & 连接池：INFO -->
+        <logger name="org.springframework" level="INFO"/>
+        <logger name="org.springframework.boot" level="INFO"/>
+        <logger name="com.zaxxer.hikari" level="INFO"/>
+        <logger name="org.flywaydb" level="INFO"/>
+
+        <!-- 噪声较大的第三方：WARN -->
+        <logger name="org.hibernate" level="WARN"/>
+        <logger name="io.netty" level="WARN"/>
+        <logger name="org.apache.http" level="WARN"/>
+    </springProfile>
+
+    <!-- ============================================================ -->
+    <!-- Profile: prod（生产环境） -->
+    <!-- ============================================================ -->
+    <springProfile name="prod">
+        <!-- 根级别：WARN（仅警告/错误才记录） -->
+        <root level="WARN">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+
+        <!-- 项目包：INFO（核心业务日志） -->
+        <logger name="com.example.agent" level="INFO"/>
+
+        <!-- Spring AI：INFO -->
+        <logger name="org.springframework.ai" level="INFO"/>
+
+        <!-- 框架：WARN（减少噪音） -->
+        <logger name="org.springframework" level="WARN"/>
+        <logger name="org.springframework.security" level="WARN"/>
+        <logger name="org.mybatis" level="WARN"/>
+        <logger name="com.zaxxer.hikari" level="WARN"/>
+        <logger name="org.flywaydb" level="WARN"/>
+
+        <!-- 第三方库：ERROR（仅记录异常） -->
+        <logger name="org.hibernate" level="ERROR"/>
+        <logger name="io.netty" level="ERROR"/>
+        <logger name="org.apache.http" level="ERROR"/>
+    </springProfile>
+
+    <!-- ============================================================ -->
+    <!-- Profile: default（无 profile 或未知 profile 时的兜底） -->
+    <!-- ============================================================ -->
+    <springProfile name="!dev &amp; !prod">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+
+        <logger name="com.example.agent" level="DEBUG"/>
+        <logger name="org.springframework" level="INFO"/>
+        <logger name="org.springframework.ai" level="INFO"/>
+        <logger name="org.mybatis" level="INFO"/>
+    </springProfile>
+
+</configuration>

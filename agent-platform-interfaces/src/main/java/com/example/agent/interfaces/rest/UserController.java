@@ -3,6 +3,10 @@ package com.example.agent.interfaces.rest;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.stp.StpUtil;
 import com.example.agent.common.result.Result;
+import com.example.agent.domain.tenant.Role;
+import com.example.agent.domain.tenant.RoleRepository;
+import com.example.agent.domain.tenant.Tenant;
+import com.example.agent.domain.tenant.TenantRepository;
 import com.example.agent.domain.tenant.User;
 import com.example.agent.domain.tenant.UserRepository;
 import com.example.agent.infrastructure.config.security.PasswordService;
@@ -44,6 +48,8 @@ import java.util.UUID;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final TenantRepository tenantRepository;
+    private final RoleRepository roleRepository;
     private final PasswordService passwordService;
 
     // ==================== DTOs ====================
@@ -117,9 +123,25 @@ public class UserController {
     @ApiResponses(@ApiResponse(responseCode = "200", description = "注册成功"))
     public Result<UserResponse> register(@Valid @RequestBody CreateUserRequest request) {
         log.info("[User] 注册: tenantId={}, username={}", request.getTenantId(), request.getUsername());
+
+        // 1. 校验租户存在且状态为 ACTIVE
+        Tenant tenant = tenantRepository.findByTenantId(request.getTenantId()).orElse(null);
+        if (tenant == null) {
+            return Result.notFound("租户不存在: " + request.getTenantId());
+        }
+        if (!tenant.isActive()) {
+            return Result.forbidden("该租户已停用，无法注册新用户");
+        }
+
+        // 2. 密码复杂度校验
+        passwordService.validateComplexity(request.getPassword());
+
+        // 3. 用户名唯一性校验
         if (userRepository.findByTenantAndUsername(request.getTenantId(), request.getUsername()).isPresent()) {
             return Result.conflict("用户名已存在");
         }
+
+        // 4. 创建用户
         User user = User.builder()
                 .tenantId(request.getTenantId())
                 .userId("user_" + UUID.randomUUID().toString().substring(0, 8))
@@ -129,6 +151,18 @@ public class UserController {
                 .status("ACTIVE").createdAt(LocalDateTime.now()).updatedAt(LocalDateTime.now()).deleted(false)
                 .build();
         userRepository.save(user);
+
+        // 5. 分配默认 VIEWER 角色（单表查询：查角色表找 VIEWER，查用户角色关联表分配）
+        List<Role> tenantRoles = roleRepository.findByTenant(request.getTenantId());
+        tenantRoles.stream()
+                .filter(r -> "VIEWER".equals(r.getRoleCode()))
+                .findFirst()
+                .ifPresent(viewerRole -> {
+                    roleRepository.assignRoleToUser(user.getUserId(), viewerRole.getId());
+                    log.info("[User] 已分配默认 VIEWER 角色: userId={}, roleId={}", user.getUserId(), viewerRole.getId());
+                });
+
+        log.info("[User] 注册成功: userId={}, tenantId={}", user.getUserId(), user.getTenantId());
         return Result.ok(UserResponse.from(user));
     }
 
@@ -205,6 +239,8 @@ public class UserController {
         if (!passwordService.matches(request.getOldPassword(), user.getPasswordHash())) {
             return Result.fail(400, "旧密码错误");
         }
+        // 新密码复杂度校验
+        passwordService.validateComplexity(request.getNewPassword());
         user = User.builder()
                 .id(user.getId()).tenantId(user.getTenantId()).userId(user.getUserId())
                 .username(user.getUsername()).passwordHash(passwordService.encode(request.getNewPassword()))

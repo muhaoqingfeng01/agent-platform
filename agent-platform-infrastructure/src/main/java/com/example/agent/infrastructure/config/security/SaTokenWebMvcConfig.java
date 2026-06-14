@@ -42,6 +42,7 @@ public class SaTokenWebMvcConfig implements WebMvcConfigurer {
                     // ==================== 白名单（无需登录） ====================
                     SaRouter
                             .match("/api/v1/auth/login",
+                                   "/api/v1/auth/refresh",
                                    "/api/v1/auth/register",
                                    "/swagger-ui/**",
                                    "/v3/api-docs/**",

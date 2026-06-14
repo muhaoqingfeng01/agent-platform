@@ -47,9 +47,12 @@ milvus:
   port: 19530
   database: agent_platform_dev
 
-logging:
-  level:
-    com.example.agent: DEBUG
-    org.springframework.ai: DEBUG
-    org.springframework.security: DEBUG
-    org.mybatis: DEBUG
+# ============================================================
+# Logging Override（dev 环境）
+# ============================================================
+# 日志级别在 logback-spring.xml 的 <springProfile name="dev"> 中管理
+app:
+  logging:
+    base-path: D:/log
+    max-history-days: 7
+    total-size-cap: 5GB

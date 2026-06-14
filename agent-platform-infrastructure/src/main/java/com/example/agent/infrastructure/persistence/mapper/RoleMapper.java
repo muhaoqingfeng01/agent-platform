@@ -31,6 +31,11 @@ public interface RoleMapper {
 
     List<Long> findRoleIdsByUserId(@Param("userId") String userId);
 
+    /**
+     * 单表查询 t_user_role：根据角色 ID 查询拥有该角色的所有用户 ID
+     */
+    List<String> findUserIdsByRoleId(@Param("roleId") Long roleId);
+
     int insertRolePermission(@Param("roleId") Long roleId, @Param("permissionId") Long permissionId);
 
     int deleteRolePermission(@Param("roleId") Long roleId, @Param("permissionId") Long permissionId);

@@ -3,7 +3,7 @@
 > 此文件由 Claude Code 在每次会话启动时自动加载。
 > 详细记忆文件: `docs/project-memory/`
 > 快照脚本: `.claude/hooks/session-snapshot.py`
-> Session Log: `docs/project-memory/.session-log.jsonl`
+> Session Log: `docs/project-memory/sessions/.session-log.jsonl`
 
 ---
 
@@ -137,6 +137,7 @@ P0(5天) → P1(8天) → P2(6天) → P3(3天) → P4(4天) → P5(前端独立
 | 项目现状摘要 | `docs/project-memory/00-项目现状摘要.md` |
 | 会话索引 | `docs/project-memory/README.md` |
 | 开发进度 | `docs/开发进度.md` |
+| 开发规范 | `docs/开发规范.md` |
 | 后端开发计划 | `docs/后端开发计划.md` |
 | 数据库设计 | `docs/数据库设计文档.md` |
 | 技术方案汇总 | `docs/企业级Agent平台技术方案.md` |

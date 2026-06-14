@@ -181,18 +181,13 @@ langfuse:
   enabled: ${LANGFUSE_ENABLED:false}
 
 # ============================================================
-# Logging
+# Logging（由 logback-spring.xml 统一管理）
 # ============================================================
-logging:
-  level:
-    root: INFO
-    com.example.agent: ${LOG_LEVEL:DEBUG}
-    org.springframework.ai: DEBUG
-    org.mybatis: INFO
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{spanId}] %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{spanId}] %logger{36} - %msg%n"
-  file:
-    name: logs/agent-platform.log
-    max-size: 100MB
-    max-history: 30
+# 以下属性仅供 logback-spring.xml 通过 <springProperty> 读取，
+# 各环境可通过 application-{profile}.yml 覆盖
+app:
+  logging:
+    base-path: ${LOG_BASE_PATH:D:/log}       # 日志根目录
+    max-file-size: 300MB                      # 单个日志文件最大大小
+    max-history-days: 30                      # 日志归档保留天数
+    total-size-cap: 10GB                      # 日志归档总大小上限

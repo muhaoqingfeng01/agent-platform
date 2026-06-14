@@ -2,6 +2,15 @@
 """
 项目会话快照脚本 — 仅在有实际文件变更时才记录
 由 Stop Hook 触发，无变更则静默退出
+
+目录结构：
+    docs/project-memory/sessions/               ← 会话记录根目录
+    ├── .session-log.jsonl                      ← 所有会话的追加日志
+    ├── 2026-06-14/                             ← 按日期分子目录
+    │   ├── session-2026-06-14T11-29-11+08-00.json
+    │   └── ...
+    └── 2026-06-15/
+        └── ...
 """
 import subprocess
 import json
@@ -15,6 +24,7 @@ if sys.platform == "win32":
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MEMORY_DIR = os.path.join(PROJECT_ROOT, "docs", "project-memory")
+SESSION_DIR = os.path.join(MEMORY_DIR, "sessions")   # 会话记录独立目录
 
 
 def run(cmd):
@@ -42,10 +52,11 @@ def main():
     tz_asia = timezone(timedelta(hours=8))
     now = datetime.now(tz_asia)
     ts = now.strftime("%Y-%m-%dT%H:%M:%S+08:00")
+    date_str = now.strftime("%Y-%m-%d")
 
     snapshot = {
         "timestamp": ts,
-        "date": now.strftime("%Y-%m-%d"),
+        "date": date_str,
         "time": now.strftime("%H:%M"),
         "branch": run("git branch --show-current"),
         "last_commit": run("git log -1 --format='%h %s (%an, %ar)'"),
@@ -54,16 +65,18 @@ def main():
         "untracked_files": untracked.split("\n") if untracked else [],
     }
 
-    os.makedirs(MEMORY_DIR, exist_ok=True)
+    # 按日期分子目录
+    date_dir = os.path.join(SESSION_DIR, date_str)
+    os.makedirs(date_dir, exist_ok=True)
 
-    # 追加到 session log (JSONL)
-    log_path = os.path.join(MEMORY_DIR, ".session-log.jsonl")
+    # 追加到 session log（JSONL，放在 sessions 根目录）
+    log_path = os.path.join(SESSION_DIR, ".session-log.jsonl")
     with open(log_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(snapshot, ensure_ascii=False) + "\n")
 
-    # 生成详细快照
+    # 生成详细快照（按日期目录存放）
     safe_ts = ts.replace(":", "-")
-    snap_path = os.path.join(MEMORY_DIR, f"session-{safe_ts}.json")
+    snap_path = os.path.join(date_dir, f"session-{safe_ts}.json")
     with open(snap_path, "w", encoding="utf-8") as f:
         json.dump(snapshot, f, ensure_ascii=False, indent=2)
 

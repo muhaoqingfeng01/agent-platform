@@ -65,4 +65,33 @@ public class PasswordService {
         }
         return matched;
     }
+
+    /**
+     * 校验密码复杂度
+     * <p>
+     * 规则：
+     * <ul>
+     *   <li>最少 8 个字符</li>
+     *   <li>至少包含大写字母、小写字母、数字、特殊字符中的 3 种</li>
+     * </ul>
+     *
+     * @param password 待校验的明文密码
+     * @throws IllegalArgumentException 密码不满足复杂度要求
+     */
+    public void validateComplexity(String password) {
+        if (password == null || password.length() < 8) {
+            throw new IllegalArgumentException("密码长度不能少于 8 位");
+        }
+
+        int types = 0;
+        if (password.matches(".*[A-Z].*")) types++;    // 大写字母
+        if (password.matches(".*[a-z].*")) types++;    // 小写字母
+        if (password.matches(".*[0-9].*")) types++;    // 数字
+        if (password.matches(".*[^a-zA-Z0-9].*")) types++; // 特殊字符
+
+        if (types < 3) {
+            throw new IllegalArgumentException(
+                    "密码必须包含大写字母、小写字母、数字、特殊字符中的至少 3 种");
+        }
+    }
 }

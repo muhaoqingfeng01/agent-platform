@@ -24,10 +24,15 @@
         ORDER BY created_at DESC
     </select>
 
+    <!--
+        单表查询：先查 t_user_role 获取 role_id 列表，再查 t_role。
+        不使用 JOIN，遵循项目单表查询规范。
+    -->
     <select id="findByUserId" resultMap="RolePOMap">
-        SELECT r.* FROM t_role r
-        INNER JOIN t_user_role ur ON r.id = ur.role_id
-        WHERE ur.user_id = #{userId} AND r.deleted = 0
+        SELECT * FROM t_role
+        WHERE id IN (
+            SELECT role_id FROM t_user_role WHERE user_id = #{userId}
+        ) AND deleted = 0
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -59,6 +64,11 @@
 
     <select id="findRoleIdsByUserId" resultType="long">
         SELECT role_id FROM t_user_role WHERE user_id = #{userId}
+    </select>
+
+    <!-- 单表查询 t_user_role：根据角色 ID 查用户 ID -->
+    <select id="findUserIdsByRoleId" resultType="string">
+        SELECT user_id FROM t_user_role WHERE role_id = #{roleId}
     </select>
 
     <!-- ========== Role-Permission 关联 ========== -->
