@@ -4,21 +4,18 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.conversation.ConversationApplicationService;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.result.Result;
-import com.example.agent.domain.conversation.valueobject.ConversationStatus;
+import com.example.agent.interfaces.dto.request.conversation.CreateConversationRequest;
+import com.example.agent.interfaces.dto.request.conversation.TransitionConversationStatusRequest;
+import com.example.agent.interfaces.dto.request.conversation.UpdateConversationTitleRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
 /**
- * 会话管理 Controller.
+ * 会话管理 Controller — 纯粹 HTTP 适配层.
  *
  * @author Agent Platform Team
  * @since 1.0.0
@@ -37,7 +34,6 @@ public class ConversationController {
     @Operation(summary = "创建新会话")
     public Result<ConversationApplicationService.ConversationResponse> create(
             @Valid @RequestBody CreateConversationRequest request) {
-        log.info("[Conversation] 创建: agentId={}", request.getAgentId());
         return Result.ok(applicationService.createConversation(toAppRequest(request)));
     }
 
@@ -62,7 +58,7 @@ public class ConversationController {
     @SaCheckPermission("conversation:update")
     @Operation(summary = "更新标题")
     public Result<Void> updateTitle(@PathVariable String id,
-                                     @Valid @RequestBody UpdateTitleRequest request) {
+                                     @Valid @RequestBody UpdateConversationTitleRequest request) {
         applicationService.updateTitle(id, request.getTitle());
         return Result.ok();
     }
@@ -71,7 +67,7 @@ public class ConversationController {
     @SaCheckPermission("conversation:update")
     @Operation(summary = "状态流转")
     public Result<Void> transitionStatus(@PathVariable String id,
-                                          @Valid @RequestBody TransitionStatusRequest request) {
+                                          @Valid @RequestBody TransitionConversationStatusRequest request) {
         applicationService.transitionStatus(id, request.getTargetStatus());
         return Result.ok();
     }
@@ -92,27 +88,5 @@ public class ConversationController {
         appReq.setTitle(request.getTitle());
         appReq.setMetadata(request.getMetadata());
         return appReq;
-    }
-
-    // ==================== DTOs ====================
-
-    @Data
-    public static class CreateConversationRequest {
-        @NotBlank
-        private String agentId;
-        private String title;
-        private Map<String, Object> metadata;
-    }
-
-    @Data
-    public static class UpdateTitleRequest {
-        @NotBlank
-        private String title;
-    }
-
-    @Data
-    public static class TransitionStatusRequest {
-        @NotNull
-        private ConversationStatus targetStatus;
     }
 }

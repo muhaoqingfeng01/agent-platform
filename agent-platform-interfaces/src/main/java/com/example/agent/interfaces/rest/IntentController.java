@@ -4,12 +4,10 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.intent.IntentApplicationService;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.result.Result;
-import com.example.agent.domain.conversation.valueobject.IntentStatus;
+import com.example.agent.interfaces.dto.request.intent.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 意图管理 Controller.
+ * 意图管理 Controller — 纯粹 HTTP 适配层.
  *
  * @author Agent Platform Team
  * @since 1.0.0
@@ -36,16 +34,7 @@ public class IntentController {
     @Operation(summary = "创建意图")
     public Result<IntentApplicationService.IntentResponse> create(
             @Valid @RequestBody CreateIntentRequest request) {
-        log.info("[Intent] 创建: code={}", request.getIntentCode());
-        IntentApplicationService.CreateIntentRequest appReq = new IntentApplicationService.CreateIntentRequest();
-        appReq.setIntentCode(request.getIntentCode());
-        appReq.setIntentName(request.getIntentName());
-        appReq.setCategory(request.getCategory());
-        appReq.setPatterns(request.getPatterns());
-        appReq.setExamples(request.getExamples());
-        appReq.setLlmPrompt(request.getLlmPrompt());
-        appReq.setRequiredParams(request.getRequiredParams());
-        appReq.setRiskLevel(request.getRiskLevel());
+        IntentApplicationService.CreateIntentRequest appReq = toAppRequest(request);
         return Result.ok(intentService.createIntent(appReq));
     }
 
@@ -70,13 +59,7 @@ public class IntentController {
     @Operation(summary = "编辑意图")
     public Result<IntentApplicationService.IntentResponse> update(
             @PathVariable String id, @Valid @RequestBody UpdateIntentRequest request) {
-        IntentApplicationService.UpdateIntentRequest appReq = new IntentApplicationService.UpdateIntentRequest();
-        appReq.setIntentName(request.getIntentName());
-        appReq.setPatterns(request.getPatterns());
-        appReq.setExamples(request.getExamples());
-        appReq.setLlmPrompt(request.getLlmPrompt());
-        appReq.setRequiredParams(request.getRequiredParams());
-        appReq.setRiskLevel(request.getRiskLevel());
+        IntentApplicationService.UpdateIntentRequest appReq = toAppRequest(request);
         return Result.ok(intentService.updateIntent(id, appReq));
     }
 
@@ -84,7 +67,7 @@ public class IntentController {
     @SaCheckPermission("intent:update")
     @Operation(summary = "启停意图")
     public Result<Void> toggleStatus(@PathVariable String id,
-                                      @Valid @RequestBody ToggleStatusRequest request) {
+                                      @Valid @RequestBody ToggleIntentStatusRequest request) {
         intentService.toggleStatus(id, request.getStatus());
         return Result.ok();
     }
@@ -93,7 +76,7 @@ public class IntentController {
     @SaCheckPermission("intent:read")
     @Operation(summary = "测试意图识别")
     public Result<IntentApplicationService.IntentTestResponse> test(
-            @PathVariable String id, @Valid @RequestBody TestRequest request) {
+            @PathVariable String id, @Valid @RequestBody IntentTestRequest request) {
         return Result.ok(intentService.testRecognition(id, request.getInput()));
     }
 
@@ -119,48 +102,29 @@ public class IntentController {
         return Result.ok();
     }
 
-    // ==================== DTOs ====================
+    // ==================== Mappers ====================
 
-    @Data
-    public static class CreateIntentRequest {
-        @NotBlank private String intentCode;
-        @NotBlank private String intentName;
-        private String category;
-        private List<String> patterns;
-        private List<String> examples;
-        private String llmPrompt;
-        private List<java.util.Map<String, Object>> requiredParams;
-        private String riskLevel;
+    private IntentApplicationService.CreateIntentRequest toAppRequest(CreateIntentRequest request) {
+        IntentApplicationService.CreateIntentRequest appReq = new IntentApplicationService.CreateIntentRequest();
+        appReq.setIntentCode(request.getIntentCode());
+        appReq.setIntentName(request.getIntentName());
+        appReq.setCategory(request.getCategory());
+        appReq.setPatterns(request.getPatterns());
+        appReq.setExamples(request.getExamples());
+        appReq.setLlmPrompt(request.getLlmPrompt());
+        appReq.setRequiredParams(request.getRequiredParams());
+        appReq.setRiskLevel(request.getRiskLevel());
+        return appReq;
     }
 
-    @Data
-    public static class UpdateIntentRequest {
-        private String intentName;
-        private List<String> patterns;
-        private List<String> examples;
-        private String llmPrompt;
-        private List<java.util.Map<String, Object>> requiredParams;
-        private String riskLevel;
-    }
-
-    @Data
-    public static class ToggleStatusRequest {
-        @NotBlank private IntentStatus status;
-    }
-
-    @Data
-    public static class TestRequest {
-        @NotBlank private String input;
-    }
-
-    @Data
-    public static class BatchTestRequest {
-        private List<TestItem> items;
-    }
-
-    @Data
-    public static class TestItem {
-        private String input;
-        private String expectedIntentCode;
+    private IntentApplicationService.UpdateIntentRequest toAppRequest(UpdateIntentRequest request) {
+        IntentApplicationService.UpdateIntentRequest appReq = new IntentApplicationService.UpdateIntentRequest();
+        appReq.setIntentName(request.getIntentName());
+        appReq.setPatterns(request.getPatterns());
+        appReq.setExamples(request.getExamples());
+        appReq.setLlmPrompt(request.getLlmPrompt());
+        appReq.setRequiredParams(request.getRequiredParams());
+        appReq.setRiskLevel(request.getRiskLevel());
+        return appReq;
     }
 }

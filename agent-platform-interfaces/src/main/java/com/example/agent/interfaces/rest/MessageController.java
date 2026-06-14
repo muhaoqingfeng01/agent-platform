@@ -6,14 +6,12 @@ import com.example.agent.application.conversation.MessageApplicationService.Mess
 import com.example.agent.application.conversation.StreamOrchestrationService;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.result.Result;
-import com.example.agent.domain.conversation.valueobject.FeedbackType;
 import com.example.agent.infrastructure.config.sse.SseEmitterFactory;
+import com.example.agent.interfaces.dto.request.message.MessageFeedbackRequest;
+import com.example.agent.interfaces.dto.request.message.SendMessageRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -24,7 +22,7 @@ import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
- * 消息收发 Controller — SSE 流式 + 非流式.
+ * 消息收发 Controller — SSE 流式 + 非流式，纯粹 HTTP 适配层.
  *
  * @author Agent Platform Team
  * @since 1.0.0
@@ -44,7 +42,6 @@ public class MessageController {
     @Operation(summary = "发送消息（非流式）")
     public Result<MessageResponse> sendMessage(@PathVariable String id,
                                                 @Valid @RequestBody SendMessageRequest request) {
-        log.info("[Message] 发送: convId={}, len={}", id, request.getContent().length());
         MessageResponse userMsg = MessageResponse.from(
                 messageService.saveUserMessage(id, request.getContent()));
         return Result.ok(userMsg);
@@ -84,22 +81,8 @@ public class MessageController {
     @Operation(summary = "消息反馈")
     public Result<Void> feedback(@PathVariable String id,
                                   @PathVariable String msgId,
-                                  @Valid @RequestBody FeedbackRequest request) {
+                                  @Valid @RequestBody MessageFeedbackRequest request) {
         messageService.updateFeedback(msgId, request.getFeedback());
         return Result.ok();
-    }
-
-    // ==================== DTOs ====================
-
-    @Data
-    public static class SendMessageRequest {
-        @NotBlank
-        private String content;
-    }
-
-    @Data
-    public static class FeedbackRequest {
-        @NotNull
-        private FeedbackType feedback;
     }
 }

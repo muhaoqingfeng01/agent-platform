@@ -20,6 +20,9 @@
 | 6 | 2026-06-13 | [06-会话总结-2026-06-13.md](06-会话总结-2026-06-13.md) | 当日工作总结 |
 | 7 | 2026-06-14 | [07-日志链路追踪与数据库仓储实战化.md](07-日志链路追踪与数据库仓储实战化.md) | TraceFilter、Tenant/Role/Permission 仓储 MyBatis 实战化 |
 | 8 | 2026-06-14 | [08-日志配置与会话记录重组.md](08-日志配置与会话记录重组.md) | logback-spring.xml 按天分目录、sessions/ 目录重组、开发进度同步 |
+| 9 | 2026-06-14 | [09-意图识别与对话管理.md](09-意图识别与对话管理.md) | P1-T3 核心实现：3 层意图识别链、对话管理、SSE/WebSocket 流式、状态机、长期记忆 |
+| 10 | 2026-06-14 | [10-DDD架构重构与会话修复.md](10-DDD架构重构与会话修复.md) | ChatClient Bean 修复、DTO 抽取、DDD 分层强约束、用户权限领域建模 |
+| 11 | 2026-06-14 | [11-DDD架构强制约束.md](11-DDD架构强制约束.md) | 🔴 强制规则：所有后续代码开发必须遵守 DDD 四层架构 |
 
 ## 当前项目状态快照
 
@@ -27,12 +30,16 @@
 - **Spring Boot**: 3.3.7
 - **构建**: ✅ BUILD SUCCESS（7/7 模块）
 - **启动**: ⚠️ 需要 MySQL + Redis + Milvus 外部服务
-- **代码**: 59 个 Java 文件（含 Controller/Service/Repository/PO/Mapper/Filter）
+- **代码**: ~155 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/DTO）
 - **Swagger**: 已集成，`/swagger-ui.html`
-- **数据库**: 13 张表 V1.0.0 + 16 张表 V1.1.0 + 种子数据 V1.2.0（Flyway 就绪）
+- **数据库**: 13 张表 V1.0.0 + 16 张表 V1.1.0 + 种子数据 V1.2.0 + 业务 ID 字段 V1.2.1（Flyway 就绪）
 - **日志**: traceId + spanId 全链路追踪（MDC），logback-spring.xml 按天分目录
+- **LLM**: DeepSeek（`spring.ai.deepseek`），ChatClient Bean 已配置（`AiConfig.java`）
+- **DDD 分层**: Controller → ApplicationService → DomainService → Repository，无越层调用
+- **DTO 规范**: Request/Response 独立分包，Application 层 16 个 + Interfaces 层 10 个
 - **会话记录**: `sessions/` — 按日期分目录管理
 - **P0 进度**: 🟡 ~85%（待完成：ServiceImpl 切换、XML Mapper、单元测试）
+- **P1-T3 进度**: 🟡 ~80%（DDD 分层重构完毕，待联调）
 
 ## 会话记录目录结构
 

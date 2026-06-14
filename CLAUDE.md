@@ -56,6 +56,26 @@
 
 ---
 
+## 🔴 DDD 分层架构 — 强制约束
+
+**所有后续代码开发与迭代必须严格遵守以下规则：**
+
+```
+interfaces → application → domain ← infrastructure
+```
+
+| 规则 | 说明 |
+|------|------|
+| **禁止越层调用** | Controller 绝不能直接注入 Repository |
+| **Application 层不 import interfaces 层** | DTO 必须下沉到 Application 层 |
+| **DomainService 封装业务规则** | 领域不变式不得泄漏到 Application 层 |
+| **新功能流程** | Domain 建模 → Repository 接口 → DomainService → ApplicationService → Controller |
+| **反模式检测** | 见 `[[11-DDD架构强制约束]]` 完整清单 |
+
+> 📋 详细规范：`docs/project-memory/11-DDD架构强制约束.md`
+
+---
+
 ## 项目定位
 
 **企业级 AI Agent 平台** — DDD 六模块 Maven 多模块项目，当前为脚手架阶段（零业务逻辑）。
@@ -91,40 +111,48 @@
 5. **langfuse-java 最新是 0.2.0**（不是 2.0.4）
 6. **Swagger 配置在 interfaces 模块**，不在 infrastructure（会缺依赖）
 7. **MySQL 用 8.0.33** 不是 3.0.33（那个版本不存在）
+8. **Spring AI 只自动配置 `ChatClient.Builder`**，`ChatClient` 需手动 `@Bean` 包装（见 `AiConfig.java`）
+9. **必须显式添加 `spring-ai-autoconfigure-model-deepseek` + `spring-ai-autoconfigure-model-chat-client`**，否则 ChatModel/ChatClient.Builder 均不会创建
+10. **`spring-ai-alibaba-agent-framework` 不含 ChatModel**，需单独引入模型依赖（项目用 DeepSeek）
+11. **新增依赖后必须 `mvn install`**，否则 bootstrap 模块解析不到传递依赖
+12. **Application 层禁止 import interfaces 层** — DTO 必须下沉到 Application 层，否则循环依赖
 
 ---
 
-## 当前 Java 代码（18 个文件，零业务逻辑）
+## 当前 Java 代码（~155 个文件，P0 + P1-T3 已实现）
 
 ```
-AgentPlatformApplication.java          ← @SpringBootApplication 入口
-AgentPlatformApplicationTests.java     ← 空 @SpringBootTest
-16 个 package-info.java                ← 各包 Javadoc
+agent-platform-bootstrap/    1 文件  ← @SpringBootApplication + @EnableAsync
+agent-platform-common/       8 文件  ← Result、5 异常、PageResponse、IdGenerator
+agent-platform-domain/      33 文件  ← 8 实体 + 8 仓储接口 + 6 值对象 + 4 DomainService + 1 领域事件 + ...
+agent-platform-application/ 35 文件  ← 10 AppService + 3 识别器 + 5 提取器 + 16 DTO + 1 责任链 + ...
+agent-platform-infrastructure/ 51 文件 ← 8 PO + 8 Mapper + 8 Impl + 9 Config + Filter/Interceptor + ...
+agent-platform-interfaces/   24 文件  ← 8 Controller + 10 DTO + 4 认证 DTO + ExceptionHandler + SwaggerConfig
 ```
 
-> ⚠️ 所有 Controller/Service/Repository/Entity 均未实现。
+> ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、DDD 分层强约束
+> 📐 DDD 架构：Controller → ApplicationService → DomainService → Repository，禁止越层调用
+> 📦 DTO 分离：Application 层 16 个（Tenant/User/Role/Permission）+ Interfaces 层 10 个（Intent/Conversation/Message）
+> ⚠️ 待完成：提示词管理(P1-T4)、任务规划(P1-T5)、RAG(P2)、安全(P3)、观测(P4)
 
 ---
 
-## 数据库（28 张表，Flyway 管理）
+## 数据库（28 张表 + V1.2.1，Flyway 管理）
 
 - **V1.0.0** (13张): t_tenant, t_user, t_role, t_permission, t_user_role, t_role_permission, t_agent_config, t_conversation, t_message, t_knowledge_base, t_tool_registry, t_prompt_template, t_evaluation_run
-- **V1.1.0** (15张，未执行): t_intent, t_long_term_memory, t_prompt_template_version, t_task_execution, t_task_step_execution, t_document, t_document_chunk, t_knowledge_hit_record, t_tool_invocation_log, t_sensitive_word, t_security_event, t_audit_log, t_approval_workflow, t_evaluation_dataset, t_evaluation_dataset_item, t_optimization_ticket
-
-> 注：T1-T12 目录已废弃，全部技术方案已拆分至 P0-P5 目录下。详见 `docs/project-memory/05-对话自动快照系统.md` 及后续会话记录。
+- **V1.1.0** (15张): t_intent, t_long_term_memory, t_prompt_template_version, t_task_execution, t_task_step_execution, t_document, t_document_chunk, t_knowledge_hit_record, t_tool_invocation_log, t_sensitive_word, t_security_event, t_audit_log, t_approval_workflow, t_evaluation_dataset, t_evaluation_dataset_item, t_optimization_ticket
+- **V1.2.0**: 管理员种子数据 (admin/Mhqf@123456)
+- **V1.2.1**: 业务 ID 字段补充（conversation/message/intent/long_term_memory 表）
 
 ---
 
 ## 开发优先级
 
 ```
-P0(5天) → P1(8天) → P2(6天) → P3(3天) → P4(4天) → P5(前端独立)
-统一网关    意图识别    RAG引擎    安全围栏    全链路      交互端
-多租户      提示词管理   MCP平台    人机协同    效果评估
-          任务规划
+P0(收尾) → P1-T3(联调) → P1-T4/T5(2天) → P2(6天) → P3(3天) → P4(4天) → P5(前端独立)
+统一网关    意图识别✅   提示词+任务    RAG引擎    安全围栏    全链路      交互端
+多租户      对话管理✅   规划引擎       MCP平台    人机协同    效果评估
 ```
-
-**P0 先做**: 多租户 + 安全认证(Sa-Token) — 所有功能的基础底座
 
 **P5**: 前端交互层（Web聊天/审批卡片/反馈/IM），与后端并行开发
 
