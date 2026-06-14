@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.IntentMapper">
+
+    <resultMap id="IntentPOMap" type="com.example.agent.infrastructure.persistence.po.IntentPO">
+        <id     column="id"              property="id"/>
+        <result column="intent_id"        property="intentId"/>
+        <result column="tenant_id"        property="tenantId"/>
+        <result column="intent_code"      property="intentCode"/>
+        <result column="intent_name"      property="intentName"/>
+        <result column="category"         property="category"/>
+        <result column="patterns"         property="patterns"/>
+        <result column="examples"         property="examples"/>
+        <result column="llm_prompt"       property="llmPrompt"/>
+        <result column="required_params"  property="requiredParams"/>
+        <result column="risk_level"       property="riskLevel"/>
+        <result column="status"           property="status"/>
+        <result column="created_at"       property="createdAt"/>
+        <result column="updated_at"       property="updatedAt"/>
+        <result column="deleted"          property="deleted"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_intent (
+            intent_id, tenant_id, intent_code, intent_name, category,
+            patterns, examples, llm_prompt, required_params,
+            risk_level, status, created_at, updated_at
+        ) VALUES (
+            #{intentId}, #{tenantId}, #{intentCode}, #{intentName}, #{category},
+            #{patterns}, #{examples}, #{llmPrompt}, #{requiredParams},
+            #{riskLevel}, #{status}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE t_intent
+        SET intent_name = #{intentName},
+            patterns = #{patterns},
+            examples = #{examples},
+            llm_prompt = #{llmPrompt},
+            required_params = #{requiredParams},
+            risk_level = #{riskLevel},
+            updated_at = NOW()
+        WHERE intent_id = #{intentId} AND deleted = 0
+    </update>
+
+    <update id="updateStatus">
+        UPDATE t_intent
+        SET status = #{status}, updated_at = NOW()
+        WHERE intent_id = #{intentId}
+    </update>
+
+    <update id="softDelete">
+        UPDATE t_intent
+        SET deleted = 1, updated_at = NOW()
+        WHERE intent_id = #{intentId}
+    </update>
+
+    <select id="selectByIntentId" resultMap="IntentPOMap">
+        SELECT id, intent_id, tenant_id, intent_code, intent_name, category,
+               patterns, examples, llm_prompt, required_params,
+               risk_level, status, created_at, updated_at
+        FROM t_intent
+        WHERE intent_id = #{intentId} AND deleted = 0
+    </select>
+
+    <select id="selectActiveByTenant" resultMap="IntentPOMap">
+        SELECT id, intent_id, tenant_id, intent_code, intent_name, category,
+               patterns, examples, llm_prompt, required_params,
+               risk_level, status, created_at, updated_at
+        FROM t_intent
+        WHERE tenant_id = #{tenantId}
+          AND status = 'ACTIVE'
+          AND deleted = 0
+    </select>
+
+    <select id="selectByTenant" resultMap="IntentPOMap">
+        SELECT id, intent_id, tenant_id, intent_code, intent_name, category,
+               patterns, examples, llm_prompt, required_params,
+               risk_level, status, created_at, updated_at
+        FROM t_intent
+        WHERE tenant_id = #{tenantId}
+          AND deleted = 0
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByTenant" resultType="long">
+        SELECT COUNT(1) FROM t_intent
+        WHERE tenant_id = #{tenantId} AND deleted = 0
+    </select>
+
+    <select id="existsByTenantAndCode" resultType="boolean">
+        SELECT COUNT(1) > 0 FROM t_intent
+        WHERE tenant_id = #{tenantId}
+          AND intent_code = #{intentCode}
+          AND deleted = 0
+    </select>
+
+</mapper>

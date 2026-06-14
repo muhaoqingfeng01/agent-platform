@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.ConversationMapper">
+
+    <resultMap id="ConversationPOMap" type="com.example.agent.infrastructure.persistence.po.ConversationPO">
+        <id     column="id"              property="id"/>
+        <result column="tenant_id"        property="tenantId"/>
+        <result column="conversation_id"  property="conversationId"/>
+        <result column="agent_id"         property="agentId"/>
+        <result column="user_id"          property="userId"/>
+        <result column="title"            property="title"/>
+        <result column="status"           property="status"/>
+        <result column="message_count"    property="messageCount"/>
+        <result column="total_tokens"     property="totalTokens"/>
+        <result column="metadata_json"    property="metadataJson"/>
+        <result column="created_at"       property="createdAt"/>
+        <result column="updated_at"       property="updatedAt"/>
+        <result column="deleted"          property="deleted"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_conversation (
+            tenant_id, conversation_id, agent_id, user_id,
+            title, status, message_count, total_tokens, metadata_json,
+            created_at, updated_at
+        ) VALUES (
+            #{tenantId}, #{conversationId}, #{agentId}, #{userId},
+            #{title}, #{status}, #{messageCount}, #{totalTokens}, #{metadataJson},
+            #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectByConversationId" resultMap="ConversationPOMap">
+        SELECT id, conversation_id, tenant_id, agent_id, user_id,
+               title, status, message_count, total_tokens, metadata_json,
+               created_at, updated_at
+        FROM t_conversation
+        WHERE conversation_id = #{conversationId}
+          AND deleted = 0
+    </select>
+
+    <select id="selectByUserId" resultMap="ConversationPOMap">
+        SELECT id, conversation_id, tenant_id, agent_id, user_id,
+               title, status, message_count, total_tokens, metadata_json,
+               created_at, updated_at
+        FROM t_conversation
+        WHERE tenant_id = #{tenantId}
+          AND user_id = #{userId}
+          AND deleted = 0
+        ORDER BY updated_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByUserId" resultType="long">
+        SELECT COUNT(1)
+        FROM t_conversation
+        WHERE tenant_id = #{tenantId}
+          AND user_id = #{userId}
+          AND deleted = 0
+    </select>
+
+    <update id="updateTitle">
+        UPDATE t_conversation
+        SET title = #{title}, updated_at = NOW()
+        WHERE conversation_id = #{conversationId} AND deleted = 0
+    </update>
+
+    <update id="updateStatus">
+        UPDATE t_conversation
+        SET status = #{status}, updated_at = NOW()
+        WHERE conversation_id = #{conversationId} AND deleted = 0
+    </update>
+
+    <update id="incrementMessageCount">
+        UPDATE t_conversation
+        SET message_count = message_count + #{delta}, updated_at = NOW()
+        WHERE conversation_id = #{conversationId} AND deleted = 0
+    </update>
+
+    <update id="addTokens">
+        UPDATE t_conversation
+        SET total_tokens = total_tokens + #{tokens}, updated_at = NOW()
+        WHERE conversation_id = #{conversationId} AND deleted = 0
+    </update>
+
+    <update id="softDelete">
+        UPDATE t_conversation
+        SET deleted = 1, updated_at = NOW()
+        WHERE conversation_id = #{conversationId} AND deleted = 0
+    </update>
+
+</mapper>

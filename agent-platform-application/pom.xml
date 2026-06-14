@@ -39,5 +39,17 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
         </dependency>
+
+        <!-- Infrastructure Module (for TenantContext, SSE config) -->
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>agent-platform-infrastructure</artifactId>
+        </dependency>
+
+        <!-- Spring Data Redis (for RedisTemplate in CacheRecognizer, SessionMemory) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
     </dependencies>
 </project>

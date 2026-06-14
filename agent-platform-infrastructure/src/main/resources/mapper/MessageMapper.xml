@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.MessageMapper">
+
+    <resultMap id="MessagePOMap" type="com.example.agent.infrastructure.persistence.po.MessagePO">
+        <id     column="id"              property="id"/>
+        <result column="conversation_id"  property="conversationId"/>
+        <result column="message_id"       property="messageId"/>
+        <result column="role"             property="role"/>
+        <result column="content"          property="content"/>
+        <result column="token_count"      property="tokenCount"/>
+        <result column="metadata_json"    property="metadataJson"/>
+        <result column="feedback"         property="feedback"/>
+        <result column="created_at"       property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_message (
+            conversation_id, message_id, role, content,
+            token_count, metadata_json, created_at
+        ) VALUES (
+            #{conversationId}, #{messageId}, #{role}, #{content},
+            #{tokenCount}, #{metadataJson}, #{createdAt}
+        )
+    </insert>
+
+    <select id="selectByConversationId" resultMap="MessagePOMap">
+        SELECT id, conversation_id, message_id, role, content,
+               token_count, metadata_json, feedback, created_at
+        FROM t_message
+        WHERE conversation_id = #{conversationId}
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="selectBefore" resultMap="MessagePOMap">
+        SELECT id, conversation_id, message_id, role, content,
+               token_count, metadata_json, feedback, created_at
+        FROM t_message
+        WHERE conversation_id = #{conversationId}
+          AND created_at &lt; (
+              SELECT created_at FROM t_message WHERE message_id = #{beforeMessageId}
+          )
+        ORDER BY created_at DESC
+        LIMIT #{size}
+    </select>
+
+    <update id="updateFeedback">
+        UPDATE t_message
+        SET feedback = #{feedback}
+        WHERE message_id = #{messageId}
+    </update>
+
+</mapper>

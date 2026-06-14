@@ -41,17 +41,15 @@ spring:
       max-file-size: 50MB
       max-request-size: 100MB
 
-  # --- Spring AI Alibaba ---
+  # --- Spring AI (DeepSeek) ---
   ai:
-    alibaba:
-      # DashScope API (default LLM)
-      dashscope:
-        api-key: ${DASHSCOPE_API_KEY:}
-        chat:
-          options:
-            model: ${AI_MODEL:qwen-max}
-            temperature: 0.7
-            max-tokens: 4096
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY:sk-2ef99c0b14cb4e2c959ad9bcaaf6d11e}
+      chat:
+        options:
+          model: ${AI_MODEL:deepseek-chat}
+          temperature: 0.7
+          max-tokens: 4096
 
 # ============================================================
 # Sa-Token (Authentication & Authorization)
