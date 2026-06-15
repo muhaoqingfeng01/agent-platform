@@ -9,6 +9,7 @@ import com.example.agent.application.role.AssignRoleToUserRequest;
 import com.example.agent.application.role.CreateRoleRequest;
 import com.example.agent.application.role.UpdateRoleRequest;
 import com.example.agent.application.role.RoleResponse;
+import com.example.agent.infrastructure.context.TenantContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -44,8 +45,8 @@ public class RoleController {
     @GetMapping
     @SaCheckPermission("user:read")
     @Operation(summary = "角色列表")
-    public Result<List<RoleResponse>> list(
-            @Parameter(description = "租户标识", required = true) @RequestParam String tenantId) {
+    public Result<List<RoleResponse>> list() {
+        String tenantId = TenantContext.getCurrentTenantId();
         return Result.ok(roleService.listRoles(tenantId));
     }
 

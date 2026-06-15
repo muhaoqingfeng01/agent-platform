@@ -9,6 +9,7 @@ import com.example.agent.application.user.CreateUserRequest;
 import com.example.agent.application.user.UpdateUserRequest;
 import com.example.agent.application.user.UpdateUserStatusRequest;
 import com.example.agent.application.user.UserResponse;
+import com.example.agent.infrastructure.context.TenantContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -47,9 +48,9 @@ public class UserController {
     @SaCheckPermission("user:read")
     @Operation(summary = "用户列表")
     public Result<List<UserResponse>> list(
-            @Parameter(description = "租户标识", required = true) @RequestParam String tenantId,
             @Parameter(description = "页码（从 0 开始）") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "20") int size) {
+        String tenantId = TenantContext.getCurrentTenantId();
         return Result.ok(userService.listUsers(tenantId, page, size));
     }
 
