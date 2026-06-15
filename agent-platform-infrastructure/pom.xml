@@ -86,12 +86,6 @@
             <artifactId>tika-core</artifactId>
         </dependency>
 
-        <!-- Flowable (Workflow Engine) -->
-        <dependency>
-            <groupId>org.flowable</groupId>
-            <artifactId>flowable-spring-boot-starter</artifactId>
-        </dependency>
-
         <!-- Spring AI Alibaba -->
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>

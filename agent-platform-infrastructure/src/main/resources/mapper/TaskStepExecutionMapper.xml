@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.TaskStepExecutionMapper">
+
+    <resultMap id="TaskStepExecutionPOMap" type="com.example.agent.infrastructure.persistence.po.TaskStepExecutionPO">
+        <id     column="id"              property="id"/>
+        <result column="execution_id"     property="executionId"/>
+        <result column="step_id"          property="stepId"/>
+        <result column="action"           property="action"/>
+        <result column="handler_class"    property="handlerClass"/>
+        <result column="input_json"       property="inputJson"/>
+        <result column="output_json"      property="outputJson"/>
+        <result column="status"           property="status"/>
+        <result column="retry_count"      property="retryCount"/>
+        <result column="max_retries"      property="maxRetries"/>
+        <result column="duration_ms"      property="durationMs"/>
+        <result column="error_message"    property="errorMessage"/>
+        <result column="started_at"       property="startedAt"/>
+        <result column="finished_at"      property="finishedAt"/>
+        <result column="created_at"       property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_task_step_execution (
+            execution_id, step_id, action, handler_class,
+            input_json, status, retry_count, max_retries, created_at
+        ) VALUES (
+            #{executionId}, #{stepId}, #{action}, #{handlerClass},
+            #{inputJson}, #{status}, #{retryCount}, #{maxRetries}, NOW()
+        )
+    </insert>
+
+    <insert id="batchInsert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_task_step_execution (
+            execution_id, step_id, action, handler_class,
+            input_json, status, retry_count, max_retries, created_at
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.executionId}, #{item.stepId}, #{item.action}, #{item.handlerClass},
+             #{item.inputJson}, #{item.status}, #{item.retryCount}, #{item.maxRetries}, NOW())
+        </foreach>
+    </insert>
+
+    <update id="updateStatus">
+        UPDATE t_task_step_execution
+        SET status = #{status},
+            started_at = IF(#{status} = 'RUNNING', NOW(), started_at),
+            finished_at = IF(#{status} IN ('SUCCESS','FAILED','SKIPPED'), NOW(), finished_at)
+        WHERE execution_id = #{executionId} AND step_id = #{stepId}
+    </update>
+
+    <update id="updateResult">
+        UPDATE t_task_step_execution
+        SET status = #{status},
+            output_json = #{outputJson},
+            error_message = #{errorMessage},
+            duration_ms = #{durationMs},
+            finished_at = NOW()
+        WHERE execution_id = #{executionId} AND step_id = #{stepId}
+    </update>
+
+    <update id="updateRetry">
+        UPDATE t_task_step_execution
+        SET retry_count = #{retryCount},
+            status = #{status},
+            error_message = NULL
+        WHERE execution_id = #{executionId} AND step_id = #{stepId}
+    </update>
+
+    <select id="selectByExecIdAndStepId" resultMap="TaskStepExecutionPOMap">
+        SELECT id, execution_id, step_id, action, handler_class,
+               input_json, output_json, status, retry_count, max_retries,
+               duration_ms, error_message, started_at, finished_at, created_at
+        FROM t_task_step_execution
+        WHERE execution_id = #{executionId} AND step_id = #{stepId}
+    </select>
+
+    <select id="selectByExecutionId" resultMap="TaskStepExecutionPOMap">
+        SELECT id, execution_id, step_id, action, handler_class,
+               input_json, output_json, status, retry_count, max_retries,
+               duration_ms, error_message, started_at, finished_at, created_at
+        FROM t_task_step_execution
+        WHERE execution_id = #{executionId}
+        ORDER BY id ASC
+    </select>
+
+    <update id="batchUpdateStatusByExecutionId">
+        UPDATE t_task_step_execution
+        SET status = #{status},
+            finished_at = NOW()
+        WHERE execution_id = #{executionId}
+          AND status IN ('PENDING', 'RUNNING')
+    </update>
+
+</mapper>

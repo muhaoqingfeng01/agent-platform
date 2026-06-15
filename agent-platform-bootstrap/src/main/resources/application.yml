@@ -11,7 +11,7 @@ spring:
   datasource:
     url: ${MYSQL_URL:jdbc:mysql://localhost:3306/agent_platform_dev?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
     username: ${MYSQL_USER:root}
-    password: ${MYSQL_PASSWORD:}
+    password: ${MYSQL_PASSWORD:Mhqf@123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       minimum-idle: 5
@@ -44,7 +44,7 @@ spring:
   # --- Spring AI (DeepSeek) ---
   ai:
     deepseek:
-      api-key: ${DEEPSEEK_API_KEY:}
+      api-key: ${DEEPSEEK_API_KEY:sk-2ef99c0b14cb4e2c959ad9bcaaf6d11e}
       chat:
         options:
           model: ${AI_MODEL:deepseek-chat}

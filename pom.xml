@@ -64,9 +64,6 @@
         <micrometer.version>1.13.8</micrometer.version>
         <langfuse.version>0.2.0</langfuse.version>
 
-        <!-- Workflow Engine -->
-        <flowable.version>7.0.1</flowable.version>
-
         <!-- Sa-Token (Auth + Permission) -->
         <sa-token.version>1.39.0</sa-token.version>
 
@@ -173,13 +170,6 @@
                 <groupId>org.apache.tika</groupId>
                 <artifactId>tika-parsers-standard-package</artifactId>
                 <version>${tika.version}</version>
-            </dependency>
-
-            <!-- Flowable (Workflow Engine) -->
-            <dependency>
-                <groupId>org.flowable</groupId>
-                <artifactId>flowable-spring-boot-starter</artifactId>
-                <version>${flowable.version}</version>
             </dependency>
 
             <!-- Langfuse (Observability) -->
