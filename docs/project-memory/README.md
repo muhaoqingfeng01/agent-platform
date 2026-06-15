@@ -29,6 +29,7 @@
 | 15 | 2025-06-15 | [14-T6-向量检索精度控制方案.md](14-T6-向量检索精度控制方案.md) | T6-RAG：五层精度控制体系（索引选型+量化+检索参数+多阶段+监控闭环） |
 | 16 | 2025-06-15 | [12-T6-RAG知识库引擎实现.md](12-T6-RAG知识库引擎实现.md) | T6-RAG 完整实现：~72 文件、DDD 四层、6 切片策略、混合检索、四级精度配置 |
 | 17 | 2026-06-16 | [15-T6-知识库文件管理系统方案.md](15-T6-知识库文件管理系统方案.md) | V1.4.0 方案设计：KB 状态机、手动解析触发、Milvus 级联删除、指定 KB 检索、创建者权限 |
+| 18 | 2026-06-16 | [16-T6-V1.4.0-知识库文件管理系统实现.md](16-T6-V1.4.0-知识库文件管理系统实现.md) | V1.4.0 完整实现：~25 文件变更、P0 阻塞修复 3 项、Milvus 补齐 4 项、KB 管理 17 项、8 新 API、编译通过 |
 
 ## 当前项目状态快照
 
@@ -36,7 +37,7 @@
 - **Spring Boot**: 3.3.7
 - **构建**: ✅ BUILD SUCCESS（7/7 模块）
 - **启动**: ⚠️ 需要 MySQL + Redis + Milvus 外部服务
-- **代码**: ~175 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO）
+- **代码**: ~270 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO）
 - **Swagger**: 已集成，`/swagger-ui.html`
 - **数据库**: V1.0.0(13张) + V1.1.0(15张) + V1.2.0(种子) + V1.2.1(业务ID) + V1.3.0(切片/精度) + **V1.4.0(KB创建者+状态迁移+chunk软删)**
 - **日志**: traceId + spanId 全链路追踪（MDC），logback-spring.xml 按天分目录
