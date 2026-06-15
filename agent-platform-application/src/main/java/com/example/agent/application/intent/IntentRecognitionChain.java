@@ -29,8 +29,15 @@ public class IntentRecognitionChain {
     private final LLMRecognizer llmRecognizer;
 
     public IntentResult recognize(String userInput) {
+        return recognize(TenantContext.getCurrentTenantId(), userInput);
+    }
+
+    /**
+     * 意图识别（显式传入 tenantId）.
+     * <p>用于异步/线程池场景（如 SSE 流式），此时 ThreadLocal 中的租户上下文不可用.
+     */
+    public IntentResult recognize(String tenantId, String userInput) {
         long startTime = System.currentTimeMillis();
-        String tenantId = TenantContext.getCurrentTenantId();
 
         try {
             // Layer 1: 规则匹配

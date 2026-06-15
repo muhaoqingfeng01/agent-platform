@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.KnowledgeHitRecordMapper">
+
+    <resultMap id="KnowledgeHitRecordPOMap" type="com.example.agent.infrastructure.persistence.po.KnowledgeHitRecordPO">
+        <id     column="id"                property="id"/>
+        <result column="tenant_id"          property="tenantId"/>
+        <result column="conversation_id"    property="conversationId"/>
+        <result column="message_id"         property="messageId"/>
+        <result column="chunk_id"           property="chunkId"/>
+        <result column="query_text"         property="queryText"/>
+        <result column="relevance_score"    property="relevanceScore"/>
+        <result column="rank_position"      property="rankPosition"/>
+        <result column="used_in_prompt"     property="usedInPrompt"/>
+        <result column="human_feedback"     property="humanFeedback"/>
+        <result column="feedback_note"      property="feedbackNote"/>
+        <result column="created_at"         property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_knowledge_hit_record (
+            tenant_id, conversation_id, message_id, chunk_id,
+            query_text, relevance_score, rank_position,
+            used_in_prompt, human_feedback, feedback_note, created_at
+        ) VALUES (
+            #{tenantId}, #{conversationId}, #{messageId}, #{chunkId},
+            #{queryText}, #{relevanceScore}, #{rankPosition},
+            #{usedInPrompt}, #{humanFeedback}, #{feedbackNote}, #{createdAt}
+        )
+    </insert>
+
+    <insert id="batchInsert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_knowledge_hit_record (
+            tenant_id, conversation_id, message_id, chunk_id,
+            query_text, relevance_score, rank_position,
+            used_in_prompt, created_at
+        ) VALUES
+        <foreach collection="records" item="r" separator=",">
+            (#{r.tenantId}, #{r.conversationId}, #{r.messageId}, #{r.chunkId},
+             #{r.queryText}, #{r.relevanceScore}, #{r.rankPosition},
+             #{r.usedInPrompt}, #{r.createdAt})
+        </foreach>
+    </insert>
+
+    <select id="selectByConversationId" resultMap="KnowledgeHitRecordPOMap">
+        SELECT id, tenant_id, conversation_id, message_id, chunk_id,
+               query_text, relevance_score, rank_position,
+               used_in_prompt, human_feedback, feedback_note, created_at
+        FROM t_knowledge_hit_record
+        WHERE conversation_id = #{conversationId}
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByConversationId" resultType="long">
+        SELECT COUNT(1) FROM t_knowledge_hit_record
+        WHERE conversation_id = #{conversationId}
+    </select>
+
+    <select id="selectByChunkId" resultMap="KnowledgeHitRecordPOMap">
+        SELECT id, tenant_id, conversation_id, message_id, chunk_id,
+               query_text, relevance_score, rank_position,
+               used_in_prompt, human_feedback, feedback_note, created_at
+        FROM t_knowledge_hit_record
+        WHERE chunk_id = #{chunkId}
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <update id="updateFeedback">
+        UPDATE t_knowledge_hit_record
+        SET human_feedback = #{humanFeedback},
+            feedback_note = #{feedbackNote}
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectPositiveFeedbackByTenant" resultMap="KnowledgeHitRecordPOMap">
+        SELECT id, tenant_id, conversation_id, message_id, chunk_id,
+               query_text, relevance_score, rank_position,
+               used_in_prompt, human_feedback, feedback_note, created_at
+        FROM t_knowledge_hit_record
+        WHERE tenant_id = #{tenantId}
+          AND human_feedback = 'EXCELLENT'
+        ORDER BY created_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="countByTenantAndDateRange" resultType="long">
+        SELECT COUNT(1) FROM t_knowledge_hit_record
+        WHERE tenant_id = #{tenantId}
+          AND created_at &gt;= #{startDate}
+          AND created_at &lt;= #{endDate}
+    </select>
+
+</mapper>

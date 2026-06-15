@@ -45,7 +45,7 @@ public class LongTermMemoryService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Async
-    public void extractAndSave(String conversationId, String userId) {
+    public void extractAndSave(String conversationId, String userId, String tenantId) {
         log.info("[LTM] 开始提取: convId={}", conversationId);
         try {
             List<Message> history = sessionMemoryService.getRecentMessages(conversationId, MAX_ROUNDS);
@@ -55,7 +55,6 @@ public class LongTermMemoryService {
             }
             String summary = summarizeConversation(history);
             List<MemoryFact> facts = parseFacts(summary);
-            String tenantId = TenantContext.getCurrentTenantId();
 
             for (MemoryFact fact : facts) {
                 MemoryExtractor extractor = extractorRegistry.get(fact.getType());

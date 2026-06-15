@@ -9,7 +9,6 @@ import com.example.agent.domain.conversation.valueobject.FeedbackType;
 import com.example.agent.domain.conversation.valueobject.MessageRole;
 import com.example.agent.application.memory.SessionMemoryService;
 import com.example.agent.application.memory.LongTermMemoryService;
-import com.example.agent.infrastructure.context.TenantContext;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -66,8 +65,8 @@ public class MessageApplicationService {
     }
 
     @Async
-    public void extractLongTermMemoryAsync(String conversationId) {
-        longTermMemoryService.extractAndSave(conversationId, TenantContext.getCurrentUserId());
+    public void extractLongTermMemoryAsync(String conversationId, String userId, String tenantId) {
+        longTermMemoryService.extractAndSave(conversationId, userId, tenantId);
     }
 
     private Message saveMessage(String conversationId, MessageRole role, String content,

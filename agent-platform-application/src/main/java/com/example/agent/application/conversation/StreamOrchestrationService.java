@@ -5,6 +5,7 @@ import com.example.agent.application.intent.model.IntentResult;
 import com.example.agent.application.memory.SessionMemoryService;
 import com.example.agent.domain.conversation.entity.Message;
 import com.example.agent.infrastructure.config.sse.SseEventFactory;
+import com.example.agent.infrastructure.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -36,7 +37,12 @@ public class StreamOrchestrationService {
 
     private static final long HEARTBEAT_INTERVAL_MS = 15_000L;
 
-    public void executeStreamPipeline(String conversationId, String userContent, SseEmitter emitter) {
+    public void executeStreamPipeline(String conversationId, String tenantId, String userId,
+                                        String userContent, SseEmitter emitter) {
+        // 将 HTTP 线程捕获的上下文注入当前执行线程，确保下游 ThreadLocal 链路完整
+        TenantContext.setTenantId(tenantId);
+        TenantContext.setUserId(userId);
+
         ScheduledExecutorService heartbeatExecutor = null;
         try {
             // Step 1: 保存用户消息
@@ -45,8 +51,8 @@ public class StreamOrchestrationService {
             // Step 2: 加载会话上下文
             List<Message> history = sessionMemoryService.getRecentMessages(conversationId, 10);
 
-            // Step 3: 意图识别
-            IntentResult intent = intentRecognitionChain.recognize(userContent);
+            // Step 3: 意图识别（显式传入 tenantId，因当前执行在线程池线程中，ThreadLocal 不可用）
+            IntentResult intent = intentRecognitionChain.recognize(tenantId, userContent);
             log.info("[Stream] 意图识别: convId={}, intent={}, confidence={}",
                     conversationId, intent.getIntentCode(), intent.getConfidence());
 
@@ -80,7 +86,7 @@ public class StreamOrchestrationService {
                                 conversationId, fullResponse.toString(), tokenCount.get());
                         sendEvent(emitter, SseEventFactory.done(tokenCount.get(), assistantMsg.getMessageId()));
                         emitter.complete();
-                        messageService.extractLongTermMemoryAsync(conversationId);
+                        messageService.extractLongTermMemoryAsync(conversationId, userId, tenantId);
                     })
                     .doOnError(error -> {
                         log.error("[Stream] LLM 调用失败: convId={}", conversationId, error);

@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.DocumentMapper">
+
+    <resultMap id="DocumentPOMap" type="com.example.agent.infrastructure.persistence.po.DocumentPO">
+        <id     column="id"                          property="id"/>
+        <result column="tenant_id"                    property="tenantId"/>
+        <result column="knowledge_id"                 property="knowledgeId"/>
+        <result column="document_id"                  property="documentId"/>
+        <result column="filename"                     property="filename"/>
+        <result column="file_type"                    property="fileType"/>
+        <result column="file_size"                    property="fileSize"/>
+        <result column="minio_path"                   property="minioPath"/>
+        <result column="content_hash"                 property="contentHash"/>
+        <result column="chunk_count"                  property="chunkCount"/>
+        <result column="status"                       property="status"/>
+        <result column="error_message"                property="errorMessage"/>
+        <result column="uploaded_by"                  property="uploadedBy"/>
+        <result column="uploaded_at"                  property="uploadedAt"/>
+        <result column="chunk_strategy"               property="chunkStrategy"/>
+        <result column="chunk_config_json"            property="chunkConfigJson"/>
+        <result column="search_strategy_override"     property="searchStrategyOverride"/>
+        <result column="search_params_override_json"  property="searchParamsOverrideJson"/>
+        <result column="multi_stage_override_json"    property="multiStageOverrideJson"/>
+        <result column="created_at"                   property="createdAt"/>
+        <result column="updated_at"                   property="updatedAt"/>
+        <result column="deleted"                      property="deleted"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_document (
+            tenant_id, knowledge_id, document_id, filename, file_type,
+            file_size, minio_path, content_hash, chunk_count, status,
+            error_message, uploaded_by, uploaded_at,
+            chunk_strategy, chunk_config_json,
+            search_strategy_override, search_params_override_json,
+            multi_stage_override_json,
+            created_at, updated_at
+        ) VALUES (
+            #{tenantId}, #{knowledgeId}, #{documentId}, #{filename}, #{fileType},
+            #{fileSize}, #{minioPath}, #{contentHash}, #{chunkCount}, #{status},
+            #{errorMessage}, #{uploadedBy}, #{uploadedAt},
+            #{chunkStrategy}, #{chunkConfigJson},
+            #{searchStrategyOverride}, #{searchParamsOverrideJson},
+            #{multiStageOverrideJson},
+            #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE t_document
+        SET filename = #{filename},
+            file_type = #{fileType},
+            file_size = #{fileSize},
+            minio_path = #{minioPath},
+            chunk_strategy = #{chunkStrategy},
+            chunk_config_json = #{chunkConfigJson},
+            search_params_override_json = #{searchParamsOverrideJson},
+            multi_stage_override_json = #{multiStageOverrideJson},
+            updated_at = NOW()
+        WHERE document_id = #{documentId} AND deleted = 0
+    </update>
+
+    <update id="updateStatus">
+        UPDATE t_document
+        SET status = #{status}, updated_at = NOW()
+        WHERE document_id = #{documentId}
+    </update>
+
+    <update id="updateChunkCount">
+        UPDATE t_document
+        SET chunk_count = #{chunkCount}, updated_at = NOW()
+        WHERE document_id = #{documentId}
+    </update>
+
+    <update id="updateErrorMessage">
+        UPDATE t_document
+        SET error_message = #{errorMessage}, updated_at = NOW()
+        WHERE document_id = #{documentId}
+    </update>
+
+    <update id="softDelete">
+        UPDATE t_document
+        SET deleted = 1, updated_at = NOW()
+        WHERE document_id = #{documentId}
+    </update>
+
+    <update id="softDeleteByKnowledgeId">
+        UPDATE t_document
+        SET deleted = 1, updated_at = NOW()
+        WHERE knowledge_id = #{knowledgeId} AND deleted = 0
+    </update>
+
+    <select id="countByKnowledgeIdAndStatus" resultType="long">
+        SELECT COUNT(1) FROM t_document
+        WHERE knowledge_id = #{knowledgeId} AND status = #{status} AND deleted = 0
+    </select>
+
+    <select id="selectByDocumentId" resultMap="DocumentPOMap">
+        SELECT id, tenant_id, knowledge_id, document_id, filename, file_type,
+               file_size, minio_path, content_hash, chunk_count, status,
+               error_message, uploaded_by, uploaded_at,
+               chunk_strategy, chunk_config_json,
+               search_strategy_override, search_params_override_json,
+               multi_stage_override_json,
+               created_at, updated_at, deleted
+        FROM t_document
+        WHERE document_id = #{documentId} AND deleted = 0
+    </select>
+
+    <select id="selectByKnowledgeId" resultMap="DocumentPOMap">
+        SELECT id, tenant_id, knowledge_id, document_id, filename, file_type,
+               file_size, minio_path, content_hash, chunk_count, status,
+               error_message, uploaded_by, uploaded_at,
+               chunk_strategy, chunk_config_json,
+               search_strategy_override, search_params_override_json,
+               multi_stage_override_json,
+               created_at, updated_at, deleted
+        FROM t_document
+        WHERE knowledge_id = #{knowledgeId} AND deleted = 0
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByKnowledgeId" resultType="long">
+        SELECT COUNT(1) FROM t_document
+        WHERE knowledge_id = #{knowledgeId} AND deleted = 0
+    </select>
+
+    <select id="selectByStatus" resultMap="DocumentPOMap">
+        SELECT id, tenant_id, knowledge_id, document_id, filename, file_type,
+               file_size, minio_path, content_hash, chunk_count, status,
+               error_message, uploaded_by, uploaded_at,
+               chunk_strategy, chunk_config_json,
+               search_strategy_override, search_params_override_json,
+               multi_stage_override_json,
+               created_at, updated_at, deleted
+        FROM t_document
+        WHERE status = #{status} AND deleted = 0
+        ORDER BY created_at ASC
+    </select>
+
+    <!-- ★ 新增: 批量按 ID 查询，用于检索结果溯源 -->
+    <select id="selectByDocumentIds" resultMap="DocumentPOMap">
+        SELECT id, tenant_id, knowledge_id, document_id, filename, file_type,
+               file_size, minio_path, content_hash, chunk_count, status,
+               error_message, uploaded_by, uploaded_at,
+               chunk_strategy, chunk_config_json,
+               search_strategy_override, search_params_override_json,
+               multi_stage_override_json,
+               created_at, updated_at, deleted
+        FROM t_document
+        WHERE document_id IN
+        <foreach collection="documentIds" item="docId" open="(" separator="," close=")">
+            #{docId}
+        </foreach>
+          AND deleted = 0
+    </select>
+
+</mapper>

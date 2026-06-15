@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 角色仓储 MyBatis 实现 — 替换 {@code RoleRepositoryStub}
+ * 角色仓储 MyBatis 数据库实现
  */
 @Slf4j
 @Repository

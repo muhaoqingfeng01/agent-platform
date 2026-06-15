@@ -20,6 +20,8 @@ public interface UserMapper {
     Optional<UserPO> findByTenantAndUsername(@Param("tenantId") String tenantId,
                                               @Param("username") String username);
 
+    Optional<UserPO> findByUsername(@Param("username") String username);
+
     List<UserPO> findByTenant(@Param("tenantId") String tenantId,
                                @Param("offset") int offset,
                                @Param("size") int size);

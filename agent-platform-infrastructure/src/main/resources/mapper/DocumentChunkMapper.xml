@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.DocumentChunkMapper">
+
+    <resultMap id="DocumentChunkPOMap" type="com.example.agent.infrastructure.persistence.po.DocumentChunkPO">
+        <id     column="id"             property="id"/>
+        <result column="document_id"     property="documentId"/>
+        <result column="knowledge_id"    property="knowledgeId"/>
+        <result column="chunk_index"     property="chunkIndex"/>
+        <result column="content"         property="content"/>
+        <result column="token_count"     property="tokenCount"/>
+        <result column="content_hash"    property="contentHash"/>
+        <result column="milvus_id"       property="milvusId"/>
+        <result column="metadata_json"   property="metadataJson"/>
+        <result column="created_at"      property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_document_chunk (
+            document_id, knowledge_id, chunk_index, content,
+            token_count, content_hash, milvus_id, metadata_json, created_at
+        ) VALUES (
+            #{documentId}, #{knowledgeId}, #{chunkIndex}, #{content},
+            #{tokenCount}, #{contentHash}, #{milvusId}, #{metadataJson}, #{createdAt}
+        )
+    </insert>
+
+    <insert id="batchInsert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_document_chunk (
+            document_id, knowledge_id, chunk_index, content,
+            token_count, content_hash, milvus_id, metadata_json, created_at
+        ) VALUES
+        <foreach collection="chunks" item="c" separator=",">
+            (#{c.documentId}, #{c.knowledgeId}, #{c.chunkIndex}, #{c.content},
+             #{c.tokenCount}, #{c.contentHash}, #{c.milvusId}, #{c.metadataJson}, #{c.createdAt})
+        </foreach>
+    </insert>
+
+    <select id="selectByDocumentId" resultMap="DocumentChunkPOMap">
+        SELECT id, document_id, knowledge_id, chunk_index, content,
+               token_count, content_hash, milvus_id, metadata_json, created_at
+        FROM t_document_chunk
+        WHERE document_id = #{documentId}
+        ORDER BY chunk_index ASC
+    </select>
+
+    <select id="selectByDocumentIdPaged" resultMap="DocumentChunkPOMap">
+        SELECT id, document_id, knowledge_id, chunk_index, content,
+               token_count, content_hash, milvus_id, metadata_json, created_at
+        FROM t_document_chunk
+        WHERE document_id = #{documentId}
+        ORDER BY chunk_index ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectByIds" resultMap="DocumentChunkPOMap">
+        SELECT id, document_id, knowledge_id, chunk_index, content,
+               token_count, content_hash, milvus_id, metadata_json, created_at
+        FROM t_document_chunk
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="countByDocumentId" resultType="int">
+        SELECT COUNT(1) FROM t_document_chunk
+        WHERE document_id = #{documentId}
+    </select>
+
+    <delete id="deleteByDocumentId">
+        DELETE FROM t_document_chunk WHERE document_id = #{documentId}
+    </delete>
+
+    <delete id="deleteByKnowledgeId">
+        DELETE FROM t_document_chunk WHERE knowledge_id = #{knowledgeId}
+    </delete>
+
+    <update id="softDeleteByDocumentId">
+        UPDATE t_document_chunk SET deleted = 1
+        WHERE document_id = #{documentId}
+    </update>
+
+    <update id="softDeleteByKnowledgeId">
+        UPDATE t_document_chunk SET deleted = 1
+        WHERE knowledge_id = #{knowledgeId}
+    </update>
+
+</mapper>

@@ -77,7 +77,12 @@ public class EmbeddingService {
     }
 
     /**
-     * 批量向量化并写入 Milvus
+     * 批量向量化并写入 Milvus（同时写入 document_id 标量字段，支持检索结果溯源）.
+     *
+     * Milvus 中存储 document_id 的理由：
+     *   - 向量检索返回结果时直接携带所属文档 ID，无需二次查 MySQL
+     *   - 前端直接渲染"来自 xxx.pdf 第 N 段"的溯源链接
+     *   - 检索结果可按 document_id 做聚合去重
      */
     public void embedAndStore(String documentId, List<Chunk> chunks) {
         Document doc = documentRepository.findByDocumentId(documentId);
@@ -90,6 +95,7 @@ public class EmbeddingService {
         List<Long> ids = new ArrayList<>();
         List<List<Float>> vectors = new ArrayList<>();
         List<String> contents = new ArrayList<>();
+        List<String> docIds = new ArrayList<>();               // ★ 新增: 文档 ID
 
         for (Chunk chunk : chunks) {
             float[] vector = embed(chunk.getContent());
@@ -99,6 +105,7 @@ public class EmbeddingService {
             ids.add(milvusId);
             vectors.add(toList(vector));
             contents.add(chunk.getContent());
+            docIds.add(documentId);                            // ★ 新增: 存储 document_id
 
             // 写入 MySQL 元数据
             DocumentChunk chunkEntity = DocumentChunk.builder()
@@ -113,8 +120,8 @@ public class EmbeddingService {
             chunkRepository.save(chunkEntity);
         }
 
-        // 批量插入 Milvus
-        milvusClient.insert(collectionName, ids, vectors);
+        // 批量插入 Milvus（含 document_id 标量字段）
+        milvusClient.insert(collectionName, ids, vectors, contents, docIds);
         milvusClient.flush(collectionName);
     }
 }
@@ -142,11 +149,16 @@ public class MilvusCollectionManager {
         FieldType contentField = FieldType.newBuilder()
                 .withName("content").withDataType(DataType.VarChar).withMaxLength(65535)
                 .build();
+        // ★ 新增: document_id 标量字段 — 检索时直接返回所属文档，支持溯源
+        FieldType docIdField = FieldType.newBuilder()
+                .withName("document_id").withDataType(DataType.VarChar).withMaxLength(128)
+                .build();
 
         CreateCollectionParam param = CreateCollectionParam.newBuilder()
                 .withCollectionName(collectionName)
                 .withDescription("Knowledge Base: " + collectionName)
-                .addFieldType(idField).addFieldType(vectorField).addFieldType(contentField)
+                .addFieldType(idField).addFieldType(vectorField)
+                .addFieldType(contentField).addFieldType(docIdField)    // ★
                 .build();
 
         milvusClient.createCollection(param);
@@ -160,8 +172,23 @@ public class MilvusCollectionManager {
                 .withExtraParam("{\"nlist\":128}")
                 .build());
 
+        // ★ 为 document_id 创建标量索引，加速按文档筛选
+        milvusClient.createIndex(CreateIndexParam.newBuilder()
+                .withCollectionName(collectionName)
+                .withFieldName("document_id")
+                .withIndexType(IndexType.TRIE)                // Trie 适合字符串精确匹配
+                .build());
+
         milvusClient.loadCollection(LoadCollectionParam.newBuilder()
                 .withCollectionName(collectionName).build());
     }
 }
 ```
+
+> **为什么要在 Milvus 中存储 `document_id` 而不是仅在 MySQL 中？**
+>
+> 1. **检索即溯源**: 向量检索的 topK 结果直接附带 `document_id`，省去一次 MySQL 回表查询
+> 2. **前端直连**: 搜索结果渲染时，"来自 `部署手册.md` 第 3 段" 无需额外 HTTP 请求
+> 3. **存储开销可忽略**: `document_id`(VarChar 128) / chunk，1 万向量仅 ≈ 1.2 MB
+> 4. **MySQL 仍为 Source of Truth**: 文档元数据（文件名、大小、上传时间等）变更只改 MySQL，Milvus 中仅存不可变的 `document_id`
+> 5. **按文档筛选**: 删除文档时直接用 `document_id == "doc_xxx"` 表达式过滤删除，无需先查 MySQL 再删 Milvus

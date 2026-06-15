@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 用户仓储 MyBatis 实现 — 替换 {@code UserRepositoryStub}
+ * 用户仓储 MyBatis 数据库实现
  */
 @Slf4j
 @Repository
@@ -36,6 +36,11 @@ public class UserRepositoryImpl implements UserRepository {
     @Override
     public Optional<User> findByTenantAndUsername(String tenantId, String username) {
         return userMapper.findByTenantAndUsername(tenantId, username).map(this::toDomain);
+    }
+
+    @Override
+    public Optional<User> findByUsername(String username) {
+        return userMapper.findByUsername(username).map(this::toDomain);
     }
 
     @Override

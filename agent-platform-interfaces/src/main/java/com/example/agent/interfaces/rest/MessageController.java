@@ -7,6 +7,7 @@ import com.example.agent.application.conversation.StreamOrchestrationService;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.result.Result;
 import com.example.agent.infrastructure.config.sse.SseEmitterFactory;
+import com.example.agent.infrastructure.context.TenantContext;
 import com.example.agent.interfaces.dto.request.message.MessageFeedbackRequest;
 import com.example.agent.interfaces.dto.request.message.SendMessageRequest;
 import io.swagger.v3.oas.annotations.Operation;
@@ -53,8 +54,12 @@ public class MessageController {
     @Operation(summary = "发送消息（SSE 流式）")
     public SseEmitter streamChat(@PathVariable String id,
                                   @Valid @RequestBody SendMessageRequest request) {
+        // 在线程池线程执行前捕获 ThreadLocal 上下文
+        String tenantId = TenantContext.getCurrentTenantId();
+        String userId = TenantContext.getCurrentUserId();
         SseEmitter emitter = SseEmitterFactory.create(300_000L);
-        streamExecutor.submit(() -> streamService.executeStreamPipeline(id, request.getContent(), emitter));
+        streamExecutor.submit(() -> streamService.executeStreamPipeline(
+                id, tenantId, userId, request.getContent(), emitter));
         return emitter;
     }
 

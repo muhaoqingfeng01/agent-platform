@@ -27,15 +27,9 @@ public class UserServiceImpl implements UserService {
     private final RoleService roleService;
 
     /**
-     * 校验用户名密码
-     * <p>
-     * 如果提供 tenantId，则在指定租户内查找；
-     * 否则尝试跨租户查找。
-     * <p>
-     * TODO: 管理员 mock 登录流程待移除。
-     * 当前 admin 用户的跨租户登录依赖 V1.2.0 种子数据中的 {@code user-admin-001} 硬编码 fallback。
-     * 后续 P0 多租户模块完成后，应改为：未指定 tenantId 时要求用户输入 tenantId，
-     * 或通过 username 在所有租户中匹配（需在 t_user 的 username 列加索引并移除硬编码）。
+     * 校验用户名密码.
+     * <p>如果提供 tenantId，则在指定租户内查找；否则通过 username 跨租户查找.
+     * <p>跨租户匹配时取第一条记录，生产环境建议要求用户必须提供 tenantId.
      */
     @Override
     public UserView authenticate(String tenantId, String username, String password) {
@@ -43,17 +37,9 @@ public class UserServiceImpl implements UserService {
 
         User user;
         if (tenantId != null && !tenantId.isBlank()) {
-            // 指定租户查找 — 真实数据库查询
             user = userRepository.findByTenantAndUsername(tenantId, username).orElse(null);
         } else {
-            // TODO: 管理员 mock 登录流程 — 待 P0 完成后替换为通用的跨租户查找
-            // 当前为支持 admin 用户不指定 tenantId 登录，硬编码 user-admin-001
-            log.warn("[UserService] TODO 使用管理员 mock 登录（硬编码 user-admin-001）");
-            user = userRepository.findByUserId("user-admin-001").orElse(null);
-            if (user == null) {
-                // fallback: 尝试在默认租户 1000001 中查找
-                user = userRepository.findByTenantAndUsername("1000001", username).orElse(null);
-            }
+            user = userRepository.findByUsername(username).orElse(null);
         }
 
         if (user == null) {

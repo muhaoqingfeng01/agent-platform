@@ -11,7 +11,7 @@ spring:
   datasource:
     url: ${MYSQL_URL:jdbc:mysql://localhost:3306/agent_platform_dev?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
     username: ${MYSQL_USER:root}
-    password: ${MYSQL_PASSWORD:Mhqf@123456}
+    password: ${MYSQL_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       minimum-idle: 5
@@ -41,15 +41,27 @@ spring:
       max-file-size: 50MB
       max-request-size: 100MB
 
-  # --- Spring AI (DeepSeek) ---
+  # --- Spring AI (DeepSeek Chat + OpenAI Embedding) ---
   ai:
     deepseek:
       api-key: ${DEEPSEEK_API_KEY:sk-2ef99c0b14cb4e2c959ad9bcaaf6d11e}
       chat:
         options:
-          model: ${AI_MODEL:deepseek-chat}
+          model: ${AI_MODEL:deepseek-v4-pro}
           temperature: 0.7
           max-tokens: 4096
+    # OpenAI 仅用于 Embedding，禁用 ChatModel 避免与 DeepSeek 冲突
+    openai:
+      api-key: ${EMBEDDING_API_KEY:sk-2ef99c0b14cb4e2c959ad9bcaaf6d11e}
+      base-url: ${EMBEDDING_BASE_URL:https://api.deepseek.com}
+      embedding:
+        options:
+          model: ${EMBEDDING_MODEL:text-embedding-3-small}
+        # TODO: 若使用 DashScope Embedding，修改 base-url 为 https://dashscope.aliyuncs.com/compatible-mode/v1
+        # TODO: 若使用 OpenAI 原生 Embedding，修改 base-url 为 https://api.openai.com
+      # ⚠️ 禁用 OpenAI ChatModel，仅保留 Embedding 功能
+      chat:
+        enabled: false
 
 # ============================================================
 # Sa-Token (Authentication & Authorization)
@@ -98,6 +110,17 @@ milvus:
   client-key-path: ""
   client-cert-path: ""
   server-cert-path: ""
+
+# ============================================================
+# MinIO (Object Storage for RAG Document Upload)
+# ============================================================
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket: ${MINIO_BUCKET:knowledge-docs}
+  # 预签名 URL 有效期（分钟）
+  presigned-expiry-minutes: 10
 
 # ============================================================
 # Redisson (Distributed Lock & Cache)

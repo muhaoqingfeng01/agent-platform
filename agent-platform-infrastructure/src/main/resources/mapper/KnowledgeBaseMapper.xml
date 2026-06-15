@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.KnowledgeBaseMapper">
+
+    <resultMap id="KnowledgeBasePOMap" type="com.example.agent.infrastructure.persistence.po.KnowledgeBasePO">
+        <id     column="id"                       property="id"/>
+        <result column="tenant_id"                 property="tenantId"/>
+        <result column="knowledge_id"              property="knowledgeId"/>
+        <result column="name"                      property="name"/>
+        <result column="description"               property="description"/>
+        <result column="embedding_model"           property="embeddingModel"/>
+        <result column="chunk_size"                property="chunkSize"/>
+        <result column="chunk_overlap"             property="chunkOverlap"/>
+        <result column="document_count"            property="documentCount"/>
+        <result column="status"                    property="status"/>
+        <result column="created_by"                property="createdBy"/>
+        <result column="default_chunk_strategy"    property="defaultChunkStrategy"/>
+        <result column="chunk_config_json"         property="chunkConfigJson"/>
+        <result column="index_type"                property="indexType"/>
+        <result column="index_params_json"         property="indexParamsJson"/>
+        <result column="search_strategy"           property="searchStrategy"/>
+        <result column="search_params_json"        property="searchParamsJson"/>
+        <result column="multi_stage_params_json"   property="multiStageParamsJson"/>
+        <result column="monitoring_params_json"    property="monitoringParamsJson"/>
+        <result column="created_at"                property="createdAt"/>
+        <result column="updated_at"                property="updatedAt"/>
+        <result column="deleted"                   property="deleted"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_knowledge_base (
+            tenant_id, knowledge_id, name, description, embedding_model,
+            chunk_size, chunk_overlap, document_count, status,
+            created_by,
+            default_chunk_strategy, chunk_config_json,
+            index_type, index_params_json,
+            search_strategy, search_params_json,
+            multi_stage_params_json, monitoring_params_json,
+            created_at, updated_at
+        ) VALUES (
+            #{tenantId}, #{knowledgeId}, #{name}, #{description}, #{embeddingModel},
+            #{chunkSize}, #{chunkOverlap}, #{documentCount}, #{status},
+            #{createdBy},
+            #{defaultChunkStrategy}, #{chunkConfigJson},
+            #{indexType}, #{indexParamsJson},
+            #{searchStrategy}, #{searchParamsJson},
+            #{multiStageParamsJson}, #{monitoringParamsJson},
+            #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE t_knowledge_base
+        SET name = #{name},
+            description = #{description},
+            embedding_model = #{embeddingModel},
+            chunk_size = #{chunkSize},
+            chunk_overlap = #{chunkOverlap},
+            updated_at = NOW()
+        WHERE knowledge_id = #{knowledgeId} AND deleted = 0
+    </update>
+
+    <update id="updateDocumentCount">
+        UPDATE t_knowledge_base
+        SET document_count = #{documentCount}, updated_at = NOW()
+        WHERE knowledge_id = #{knowledgeId}
+    </update>
+
+    <update id="incrementDocumentCount">
+        UPDATE t_knowledge_base
+        SET document_count = document_count + 1, updated_at = NOW()
+        WHERE knowledge_id = #{knowledgeId}
+    </update>
+
+    <update id="decrementDocumentCount">
+        UPDATE t_knowledge_base
+        SET document_count = GREATEST(document_count - 1, 0), updated_at = NOW()
+        WHERE knowledge_id = #{knowledgeId}
+    </update>
+
+    <update id="updateChunkStrategy">
+        UPDATE t_knowledge_base
+        SET default_chunk_strategy = #{defaultChunkStrategy},
+            chunk_config_json = #{chunkConfigJson},
+            updated_at = NOW()
+        WHERE knowledge_id = #{knowledgeId}
+    </update>
+
+    <update id="updateIndexConfig">
+        UPDATE t_knowledge_base
+        SET index_type = #{indexType},
+            index_params_json = #{indexParamsJson},
+            updated_at = NOW()
+        WHERE knowledge_id = #{knowledgeId}
+    </update>
+
+    <update id="updateSearchConfig">
+        UPDATE t_knowledge_base
+        SET search_strategy = #{searchStrategy},
+            search_params_json = #{searchParamsJson},
+            multi_stage_params_json = #{multiStageParamsJson},
+            monitoring_params_json = #{monitoringParamsJson},
+            updated_at = NOW()
+        WHERE knowledge_id = #{knowledgeId}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE t_knowledge_base
+        SET status = #{status}, updated_at = NOW()
+        WHERE knowledge_id = #{knowledgeId}
+    </update>
+
+    <update id="softDelete">
+        UPDATE t_knowledge_base
+        SET deleted = 1, updated_at = NOW()
+        WHERE knowledge_id = #{knowledgeId}
+    </update>
+
+    <select id="selectByKnowledgeId" resultMap="KnowledgeBasePOMap">
+        SELECT id, tenant_id, knowledge_id, name, description, embedding_model,
+               chunk_size, chunk_overlap, document_count, status,
+               created_by,
+               default_chunk_strategy, chunk_config_json,
+               index_type, index_params_json,
+               search_strategy, search_params_json,
+               multi_stage_params_json, monitoring_params_json,
+               created_at, updated_at, deleted
+        FROM t_knowledge_base
+        WHERE knowledge_id = #{knowledgeId} AND deleted = 0
+    </select>
+
+    <select id="selectByTenant" resultMap="KnowledgeBasePOMap">
+        SELECT id, tenant_id, knowledge_id, name, description, embedding_model,
+               chunk_size, chunk_overlap, document_count, status,
+               created_by,
+               default_chunk_strategy, chunk_config_json,
+               index_type, index_params_json,
+               search_strategy, search_params_json,
+               multi_stage_params_json, monitoring_params_json,
+               created_at, updated_at, deleted
+        FROM t_knowledge_base
+        WHERE tenant_id = #{tenantId} AND deleted = 0
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByTenant" resultType="long">
+        SELECT COUNT(1) FROM t_knowledge_base
+        WHERE tenant_id = #{tenantId} AND deleted = 0
+    </select>
+
+    <select id="findEnabledKnowledgeIds" resultType="String">
+        SELECT knowledge_id FROM t_knowledge_base
+        WHERE tenant_id = #{tenantId} AND status = 'ENABLED' AND deleted = 0
+    </select>
+
+    <select id="selectByTenantAndStatus" resultMap="KnowledgeBasePOMap">
+        SELECT id, tenant_id, knowledge_id, name, description, embedding_model,
+               chunk_size, chunk_overlap, document_count, status,
+               created_by,
+               default_chunk_strategy, chunk_config_json,
+               index_type, index_params_json,
+               search_strategy, search_params_json,
+               multi_stage_params_json, monitoring_params_json,
+               created_at, updated_at, deleted
+        FROM t_knowledge_base
+        WHERE tenant_id = #{tenantId} AND status = #{status} AND deleted = 0
+        ORDER BY created_at DESC
+    </select>
+
+</mapper>

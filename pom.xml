@@ -47,6 +47,7 @@
 
         <!-- Milvus -->
         <milvus-sdk.version>2.6.9</milvus-sdk.version>
+        <protobuf.version>3.25.5</protobuf.version>
 
         <!-- Redis / Redisson -->
         <redisson.version>3.37.0</redisson.version>
@@ -59,6 +60,9 @@
 
         <!-- Tika (Document Parsing) -->
         <tika.version>2.9.2</tika.version>
+
+        <!-- MinIO (Object Storage) -->
+        <minio.version>8.5.10</minio.version>
 
         <!-- Observability -->
         <micrometer.version>1.13.8</micrometer.version>
@@ -153,6 +157,13 @@
                 <version>${milvus-sdk.version}</version>
             </dependency>
 
+            <!-- Protobuf (Milvus 依赖) -->
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>${protobuf.version}</version>
+            </dependency>
+
             <!-- Redisson -->
             <dependency>
                 <groupId>org.redisson</groupId>
@@ -170,6 +181,13 @@
                 <groupId>org.apache.tika</groupId>
                 <artifactId>tika-parsers-standard-package</artifactId>
                 <version>${tika.version}</version>
+            </dependency>
+
+            <!-- MinIO (Object Storage for RAG) -->
+            <dependency>
+                <groupId>io.minio</groupId>
+                <artifactId>minio</artifactId>
+                <version>${minio.version}</version>
             </dependency>
 
             <!-- Langfuse (Observability) -->

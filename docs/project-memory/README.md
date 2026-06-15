@@ -25,6 +25,10 @@
 | 11 | 2026-06-14 | [11-DDD架构强制约束.md](11-DDD架构强制约束.md) | 🔴 强制规则：所有后续代码开发必须遵守 DDD 四层架构 |
 | 12 | 2026-06-14 | [12-T4-提示词管理与版本控制实现.md](12-T4-提示词管理与版本控制实现.md) | P1-T4 提示词管理：CRUD + 版本发布/回滚 + 变量渲染链（20 个新文件） |
 | 13 | 2026-06-14 | [12-T5任务规划执行引擎实现.md](12-T5任务规划执行引擎实现.md) | P1-T5 任务规划与执行：LLM 规划 + DAG 并行调度 + ActionHandler 注册与重试（31 个新文件） |
+| 14 | 2025-06-15 | [13-T6-多策略切片方案设计.md](13-T6-多策略切片方案设计.md) | T6-RAG：6 种切片策略设计、手动选择+文件类型兜底、策略对比矩阵 |
+| 15 | 2025-06-15 | [14-T6-向量检索精度控制方案.md](14-T6-向量检索精度控制方案.md) | T6-RAG：五层精度控制体系（索引选型+量化+检索参数+多阶段+监控闭环） |
+| 16 | 2025-06-15 | [12-T6-RAG知识库引擎实现.md](12-T6-RAG知识库引擎实现.md) | T6-RAG 完整实现：~72 文件、DDD 四层、6 切片策略、混合检索、四级精度配置 |
+| 17 | 2026-06-16 | [15-T6-知识库文件管理系统方案.md](15-T6-知识库文件管理系统方案.md) | V1.4.0 方案设计：KB 状态机、手动解析触发、Milvus 级联删除、指定 KB 检索、创建者权限 |
 
 ## 当前项目状态快照
 
@@ -34,7 +38,7 @@
 - **启动**: ⚠️ 需要 MySQL + Redis + Milvus 外部服务
 - **代码**: ~175 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO）
 - **Swagger**: 已集成，`/swagger-ui.html`
-- **数据库**: 13 张表 V1.0.0 + 16 张表 V1.1.0 + 种子数据 V1.2.0 + 业务 ID 字段 V1.2.1（Flyway 就绪）
+- **数据库**: V1.0.0(13张) + V1.1.0(15张) + V1.2.0(种子) + V1.2.1(业务ID) + V1.3.0(切片/精度) + **V1.4.0(KB创建者+状态迁移+chunk软删)**
 - **日志**: traceId + spanId 全链路追踪（MDC），logback-spring.xml 按天分目录
 - **LLM**: DeepSeek（`spring.ai.deepseek`），ChatClient Bean 已配置（`AiConfig.java`）
 - **DDD 分层**: Controller → ApplicationService → DomainService → Repository，无越层调用

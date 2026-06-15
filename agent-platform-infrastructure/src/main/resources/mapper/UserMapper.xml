@@ -30,6 +30,13 @@
         WHERE tenant_id = #{tenantId} AND username = #{username} AND deleted = 0
     </select>
 
+    <!-- 跨租户用户名查找（认证兜底，未指定 tenantId 时使用） -->
+    <select id="findByUsername" resultMap="UserPOMap">
+        SELECT * FROM t_user
+        WHERE username = #{username} AND deleted = 0
+        LIMIT 1
+    </select>
+
     <select id="findByTenant" resultMap="UserPOMap">
         SELECT * FROM t_user
         WHERE tenant_id = #{tenantId} AND deleted = 0
