@@ -78,7 +78,7 @@ interfaces → application → domain ← infrastructure
 
 ## 项目定位
 
-**企业级 AI Agent 平台** — DDD 六模块 Maven 多模块项目，当前为脚手架阶段（零业务逻辑）。
+**企业级 AI Agent 平台** — DDD 六模块 Maven 多模块项目，P2 阶段（T6 RAG + T7 MCP 已完成）。
 
 - **路径**: `D:\mhqf_project\heavenly-craft-agent\agent-platform`
 - **包名**: `com.example.agent`
@@ -119,39 +119,44 @@ interfaces → application → domain ← infrastructure
 
 ---
 
-## 当前 Java 代码（~155 个文件，P0 + P1-T3 已实现）
+## 当前 Java 代码（~301 个文件，P0 + P1 + P2-T6 + P2-T7 已实现）
 
 ```
 agent-platform-bootstrap/    1 文件  ← @SpringBootApplication + @EnableAsync
 agent-platform-common/       8 文件  ← Result、5 异常、PageResponse、IdGenerator
-agent-platform-domain/      33 文件  ← 8 实体 + 8 仓储接口 + 6 值对象 + 4 DomainService + 1 领域事件 + ...
-agent-platform-application/ 35 文件  ← 10 AppService + 3 识别器 + 5 提取器 + 16 DTO + 1 责任链 + ...
-agent-platform-infrastructure/ 51 文件 ← 8 PO + 8 Mapper + 8 Impl + 9 Config + Filter/Interceptor + ...
-agent-platform-interfaces/   24 文件  ← 8 Controller + 10 DTO + 4 认证 DTO + ExceptionHandler + SwaggerConfig
+agent-platform-domain/      85 文件  ← 16 实体 + 16 仓储接口 + 25 值对象 + 5 安全接口 + 19 DomainService/端口
+agent-platform-application/ 78 文件  ← 15 AppService + 3 识别器 + 5 提取器 + 4 Resolver + 5 Handler + 7 切片策略 + 1 管线 + 6 Tool DTO + ...
+agent-platform-infrastructure/ 81 文件 ← 16 PO + 16 Mapper + 16 Impl + 3 ServiceImpl + 11 Config + 4 Rag + McpClientManager + HttpToolAdapter + ...
+agent-platform-interfaces/   48 文件  ← 15 Controller + 25 Request DTO + ExceptionHandler + SwaggerConfig + 4 认证 DTO
 ```
 
-> ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、DDD 分层强约束
+> ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、T4 提示词管理、T5 任务规划引擎、T6 RAG 知识库、T7 MCP 工具平台
 > 📐 DDD 架构：Controller → ApplicationService → DomainService → Repository，禁止越层调用
-> 📦 DTO 分离：Application 层 16 个（Tenant/User/Role/Permission）+ Interfaces 层 10 个（Intent/Conversation/Message）
-> ⚠️ 待完成：提示词管理(P1-T4)、任务规划(P1-T5)、RAG(P2)、安全(P3)、观测(P4)
+> 📦 DTO 分离：Application 层 DTO 独立分包 + Interfaces 层 Request DTO 独立分包
+> 🔜 待完成：安全围栏(P3-T10)、人机协同审批(P3-T11)、全链路观测(P4-T9)、效果评估(P4-T12)
 
 ---
 
-## 数据库（28 张表 + V1.2.1，Flyway 管理）
+## 数据库（28 张表 + V1.4.0 + V1.2.2，Flyway 管理）
 
 - **V1.0.0** (13张): t_tenant, t_user, t_role, t_permission, t_user_role, t_role_permission, t_agent_config, t_conversation, t_message, t_knowledge_base, t_tool_registry, t_prompt_template, t_evaluation_run
 - **V1.1.0** (15张): t_intent, t_long_term_memory, t_prompt_template_version, t_task_execution, t_task_step_execution, t_document, t_document_chunk, t_knowledge_hit_record, t_tool_invocation_log, t_sensitive_word, t_security_event, t_audit_log, t_approval_workflow, t_evaluation_dataset, t_evaluation_dataset_item, t_optimization_ticket
 - **V1.2.0**: 管理员种子数据 (admin/Mhqf@123456)
 - **V1.2.1**: 业务 ID 字段补充（conversation/message/intent/long_term_memory 表）
+- **V1.2.2**: 🆕 T7 工具调用日志业务 ID（t_tool_invocation_log.invocation_id）
+- **V1.3.0**: T6-RAG: t_knowledge_base 14 个精度控制字段
+- **V1.4.0**: 🆕 KB 文件管理升级: created_by + 状态迁移 + chunk.deleted
 
 ---
 
 ## 开发优先级
 
 ```
-P0(收尾) → P1-T3(联调) → P1-T4/T5(2天) → P2(6天) → P3(3天) → P4(4天) → P5(前端独立)
-统一网关    意图识别✅   提示词+任务    RAG引擎    安全围栏    全链路      交互端
-多租户      对话管理✅   规划引擎       MCP平台    人机协同    效果评估
+P0(收尾) → P1(T3-T5) → P2(T6-T7) → P3(安全) → P4(观测) → P5(前端独立)
+统一网关     意图识别✅   RAG引擎✅   安全围栏     全链路      交互端
+多租户       对话管理✅   MCP平台✅   人机协同     效果评估
+            提示词管理✅
+            任务规划引擎✅
 ```
 
 **P5**: 前端交互层（Web聊天/审批卡片/反馈/IM），与后端并行开发

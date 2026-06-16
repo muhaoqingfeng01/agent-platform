@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.ToolInvocationLogMapper">
+
+    <resultMap id="ToolInvocationLogPOMap" type="com.example.agent.infrastructure.persistence.po.ToolInvocationLogPO">
+        <id     column="id"              property="id"/>
+        <result column="invocation_id"   property="invocationId"/>
+        <result column="tenant_id"       property="tenantId"/>
+        <result column="tool_id"         property="toolId"/>
+        <result column="conversation_id" property="conversationId"/>
+        <result column="message_id"      property="messageId"/>
+        <result column="execution_id"    property="executionId"/>
+        <result column="input_json"      property="inputJson"/>
+        <result column="output_json"     property="outputJson"/>
+        <result column="status"          property="status"/>
+        <result column="duration_ms"     property="durationMs"/>
+        <result column="error_message"   property="errorMessage"/>
+        <result column="created_at"      property="createdAt"/>
+    </resultMap>
+
+    <!-- ==================== 插入（仅追加，不更新） ==================== -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_tool_invocation_log (
+            invocation_id, tenant_id, tool_id, conversation_id, message_id,
+            execution_id, input_json, output_json, status,
+            duration_ms, error_message, created_at
+        ) VALUES (
+            #{invocationId}, #{tenantId}, #{toolId}, #{conversationId}, #{messageId},
+            #{executionId}, #{inputJson}, #{outputJson}, #{status},
+            #{durationMs}, #{errorMessage}, #{createdAt}
+        )
+    </insert>
+
+    <!-- ==================== 查询 ==================== -->
+    <select id="selectByToolId" resultMap="ToolInvocationLogPOMap">
+        SELECT id, invocation_id, tenant_id, tool_id, conversation_id, message_id,
+               execution_id, input_json, output_json, status,
+               duration_ms, error_message, created_at
+        FROM t_tool_invocation_log
+        WHERE tool_id = #{toolId}
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByToolId" resultType="long">
+        SELECT COUNT(1) FROM t_tool_invocation_log
+        WHERE tool_id = #{toolId}
+    </select>
+
+    <select id="selectByTenant" resultMap="ToolInvocationLogPOMap">
+        SELECT id, invocation_id, tenant_id, tool_id, conversation_id, message_id,
+               execution_id, input_json, output_json, status,
+               duration_ms, error_message, created_at
+        FROM t_tool_invocation_log
+        WHERE tenant_id = #{tenantId}
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByTenant" resultType="long">
+        SELECT COUNT(1) FROM t_tool_invocation_log
+        WHERE tenant_id = #{tenantId}
+    </select>
+
+</mapper>

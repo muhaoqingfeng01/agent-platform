@@ -30,6 +30,8 @@
 | 16 | 2025-06-15 | [12-T6-RAG知识库引擎实现.md](12-T6-RAG知识库引擎实现.md) | T6-RAG 完整实现：~72 文件、DDD 四层、6 切片策略、混合检索、四级精度配置 |
 | 17 | 2026-06-16 | [15-T6-知识库文件管理系统方案.md](15-T6-知识库文件管理系统方案.md) | V1.4.0 方案设计：KB 状态机、手动解析触发、Milvus 级联删除、指定 KB 检索、创建者权限 |
 | 18 | 2026-06-16 | [16-T6-V1.4.0-知识库文件管理系统实现.md](16-T6-V1.4.0-知识库文件管理系统实现.md) | V1.4.0 完整实现：~25 文件变更、P0 阻塞修复 3 项、Milvus 补齐 4 项、KB 管理 17 项、8 新 API、编译通过 |
+| 19 | 2026-06-17 | [17-T7-MCP工具平台实现.md](17-T7-MCP工具平台实现.md) | T7 完整实现：33 文件、4 层 DDD、7 API 端点、4 种工具类型、MCP Client 管理+HTTP 适配 |
+| 20 | 2026-06-17 | [17-会话总结-2026-06-17.md](17-会话总结-2026-06-17.md) | T7 实现总结、项目进度同步、长期记忆更新
 
 ## 当前项目状态快照
 
@@ -37,17 +39,17 @@
 - **Spring Boot**: 3.3.7
 - **构建**: ✅ BUILD SUCCESS（7/7 模块）
 - **启动**: ⚠️ 需要 MySQL + Redis + Milvus 外部服务
-- **代码**: ~270 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO）
+- **代码**: ~301 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO/Handler/Adapter）
 - **Swagger**: 已集成，`/swagger-ui.html`
-- **数据库**: V1.0.0(13张) + V1.1.0(15张) + V1.2.0(种子) + V1.2.1(业务ID) + V1.3.0(切片/精度) + **V1.4.0(KB创建者+状态迁移+chunk软删)**
+- **数据库**: V1.0.0(13张) + V1.1.0(15张) + V1.2.0(种子) + V1.2.1(业务ID) + V1.2.2(T7调用日志ID) + V1.3.0(T6精度) + V1.4.0(KB创建者+状态迁移)
 - **日志**: traceId + spanId 全链路追踪（MDC），logback-spring.xml 按天分目录
 - **LLM**: DeepSeek（`spring.ai.deepseek`），ChatClient Bean 已配置（`AiConfig.java`）
 - **DDD 分层**: Controller → ApplicationService → DomainService → Repository，无越层调用
-- **DTO 规范**: Request/Response 独立分包，Application 层 16 个 + Interfaces 层 13 个
+- **DTO 规范**: Request/Response 独立分包，Application 层 DTO 独立分包 + Interfaces 层 25 个 Request DTO
 - **会话记录**: `sessions/` — 按日期分目录管理
-- **P0 进度**: 🟡 ~85%（待完成：ServiceImpl 切换、XML Mapper、单元测试）
-- **P1-T3 进度**: 🟡 ~80%（DDD 分层重构完毕，待联调）
-- **P1-T4 进度**: 🟢 ~100%（提示词管理 20 个文件已实现，编译通过）
+- **P0 进度**: 🟢 ~100%（全部完成）
+- **P1 进度**: 🟢 ~100%（T3+T4+T5 全部完成）
+- **P2 进度**: 🟡 ~90%（T6 V1.4.0 ✅ + T7 V1.0.0 ✅）
 
 ## 会话记录目录结构
 

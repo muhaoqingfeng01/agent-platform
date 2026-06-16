@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.ToolRegistryMapper">
+
+    <resultMap id="ToolRegistryPOMap" type="com.example.agent.infrastructure.persistence.po.ToolRegistryPO">
+        <id     column="id"                property="id"/>
+        <result column="tenant_id"         property="tenantId"/>
+        <result column="tool_id"           property="toolId"/>
+        <result column="name"              property="name"/>
+        <result column="description"       property="description"/>
+        <result column="tool_type"         property="toolType"/>
+        <result column="schema_json"       property="schemaJson"/>
+        <result column="endpoint"          property="endpoint"/>
+        <result column="auth_config"       property="authConfig"/>
+        <result column="require_approval"  property="requireApproval"/>
+        <result column="status"            property="status"/>
+        <result column="created_at"        property="createdAt"/>
+        <result column="updated_at"        property="updatedAt"/>
+        <result column="deleted"           property="deleted"/>
+    </resultMap>
+
+    <!-- ==================== 插入 ==================== -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_tool_registry (
+            tenant_id, tool_id, name, description, tool_type,
+            schema_json, endpoint, auth_config, require_approval,
+            status, created_at, updated_at
+        ) VALUES (
+            #{tenantId}, #{toolId}, #{name}, #{description}, #{toolType},
+            #{schemaJson}, #{endpoint}, #{authConfig}, #{requireApproval},
+            #{status}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <!-- ==================== 更新 ==================== -->
+    <update id="update">
+        UPDATE t_tool_registry
+        SET name = #{name},
+            description = #{description},
+            tool_type = #{toolType},
+            schema_json = #{schemaJson},
+            endpoint = #{endpoint},
+            auth_config = #{authConfig},
+            require_approval = #{requireApproval},
+            updated_at = NOW()
+        WHERE tool_id = #{toolId} AND deleted = 0
+    </update>
+
+    <update id="updateStatus">
+        UPDATE t_tool_registry
+        SET status = #{status}, updated_at = NOW()
+        WHERE tool_id = #{toolId} AND deleted = 0
+    </update>
+
+    <update id="softDelete">
+        UPDATE t_tool_registry
+        SET deleted = 1, updated_at = NOW()
+        WHERE tool_id = #{toolId}
+    </update>
+
+    <!-- ==================== 查询 ==================== -->
+    <select id="selectByToolId" resultMap="ToolRegistryPOMap">
+        SELECT id, tenant_id, tool_id, name, description, tool_type,
+               schema_json, endpoint, auth_config, require_approval,
+               status, created_at, updated_at, deleted
+        FROM t_tool_registry
+        WHERE tool_id = #{toolId} AND deleted = 0
+    </select>
+
+    <select id="selectByTenant" resultMap="ToolRegistryPOMap">
+        SELECT id, tenant_id, tool_id, name, description, tool_type,
+               schema_json, endpoint, auth_config, require_approval,
+               status, created_at, updated_at, deleted
+        FROM t_tool_registry
+        WHERE tenant_id = #{tenantId} AND deleted = 0
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByTenant" resultType="long">
+        SELECT COUNT(1) FROM t_tool_registry
+        WHERE tenant_id = #{tenantId} AND deleted = 0
+    </select>
+
+    <select id="selectByTenantAndType" resultMap="ToolRegistryPOMap">
+        SELECT id, tenant_id, tool_id, name, description, tool_type,
+               schema_json, endpoint, auth_config, require_approval,
+               status, created_at, updated_at, deleted
+        FROM t_tool_registry
+        WHERE tenant_id = #{tenantId} AND tool_type = #{toolType} AND deleted = 0
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByTenantAndType" resultType="long">
+        SELECT COUNT(1) FROM t_tool_registry
+        WHERE tenant_id = #{tenantId} AND tool_type = #{toolType} AND deleted = 0
+    </select>
+
+    <select id="selectByTypeAndStatus" resultMap="ToolRegistryPOMap">
+        SELECT id, tenant_id, tool_id, name, description, tool_type,
+               schema_json, endpoint, auth_config, require_approval,
+               status, created_at, updated_at, deleted
+        FROM t_tool_registry
+        WHERE tool_type = #{toolType} AND status = #{status} AND deleted = 0
+        ORDER BY created_at DESC
+    </select>
+
+</mapper>
