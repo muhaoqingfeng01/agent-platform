@@ -47,6 +47,22 @@
 
 每次写入新快照后，**必须同步更新** `docs/project-memory/README.md` 的会话列表。
 
+### 🔴 代码完成后自动同步（强制）
+
+**每次代码开发任务完成后，无需等待用户提醒，自动执行以下同步：**
+
+| # | 同步文件 | 更新内容 |
+|:--:|------|------|
+| 1 | `docs/开发进度.md` | 模块状态、功能清单、API 端点、代码统计、下一步 |
+| 2 | `docs/project-memory/00-项目现状摘要.md` | 代码文件数、开发进度表、日期 |
+| 3 | `CLAUDE.md` | 当前阶段、文件数、优先级图 ✅ 标记、待完成列表 |
+| 4 | `docs/project-memory/XX-任务名.md` | 实现快照：做了什么、关键决策、踩坑 |
+| 5 | `docs/project-memory/XX-会话总结-YYYY-MM-DD.md` | 会话总结 |
+| 6 | `docs/project-memory/README.md` | 新增会话条目 |
+| 7 | `memory/MEMORY.md` + 独立文件 | 关键技术决策、架构模式、踩坑 |
+
+> 📋 详见记忆: [[auto-sync-progress-and-memory]]
+
 ### Stop Hook 自动机制
 
 - `Stop` 事件 → 运行 `.claude/hooks/session-snapshot.py`
@@ -78,7 +94,7 @@ interfaces → application → domain ← infrastructure
 
 ## 项目定位
 
-**企业级 AI Agent 平台** — DDD 六模块 Maven 多模块项目，P2 阶段（T6 RAG + T7 MCP 已完成）。
+**企业级 AI Agent 平台** — DDD 六模块 Maven 多模块项目，P3 阶段已完成（P0+P1+P2+P3 全部实现）。
 
 - **路径**: `D:\mhqf_project\heavenly-craft-agent\agent-platform`
 - **包名**: `com.example.agent`
@@ -119,21 +135,21 @@ interfaces → application → domain ← infrastructure
 
 ---
 
-## 当前 Java 代码（~301 个文件，P0 + P1 + P2-T6 + P2-T7 已实现）
+## 当前 Java 代码（~343 个文件，P0 + P1 + P2 + P3 已实现）
 
 ```
 agent-platform-bootstrap/    1 文件  ← @SpringBootApplication + @EnableAsync
-agent-platform-common/       8 文件  ← Result、5 异常、PageResponse、IdGenerator
-agent-platform-domain/      85 文件  ← 16 实体 + 16 仓储接口 + 25 值对象 + 5 安全接口 + 19 DomainService/端口
-agent-platform-application/ 78 文件  ← 15 AppService + 3 识别器 + 5 提取器 + 4 Resolver + 5 Handler + 7 切片策略 + 1 管线 + 6 Tool DTO + ...
-agent-platform-infrastructure/ 81 文件 ← 16 PO + 16 Mapper + 16 Impl + 3 ServiceImpl + 11 Config + 4 Rag + McpClientManager + HttpToolAdapter + ...
-agent-platform-interfaces/   48 文件  ← 15 Controller + 25 Request DTO + ExceptionHandler + SwaggerConfig + 4 认证 DTO
+agent-platform-common/       9 文件  ← Result、6 异常、PageResponse、IdGenerator
+agent-platform-domain/      96 文件  ← 19 实体 + 19 仓储接口 + 31 值对象 + 5 安全接口 + 19 DomainService/端口
+agent-platform-application/ 94 文件  ← 17 AppService + 3 识别器 + 5 提取器 + 4 Resolver + 5 Handler + 7 切片策略 + 1 管线 + 10 Security DTO + ...
+agent-platform-infrastructure/ 91 文件 ← 19 PO + 19 Mapper + 19 Impl + 3 ServiceImpl + 11 Config + 4 Rag + McpClientManager + HttpToolAdapter + ...
+agent-platform-interfaces/   52 文件  ← 17 Controller + 28 Request DTO + ExceptionHandler + SwaggerConfig + 4 认证 DTO
 ```
 
-> ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、T4 提示词管理、T5 任务规划引擎、T6 RAG 知识库、T7 MCP 工具平台
+> ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、T4 提示词管理、T5 任务规划引擎、T6 RAG 知识库、T7 MCP 工具平台、T10 安全围栏、T11 人机协同审批
 > 📐 DDD 架构：Controller → ApplicationService → DomainService → Repository，禁止越层调用
 > 📦 DTO 分离：Application 层 DTO 独立分包 + Interfaces 层 Request DTO 独立分包
-> 🔜 待完成：安全围栏(P3-T10)、人机协同审批(P3-T11)、全链路观测(P4-T9)、效果评估(P4-T12)
+> 🔜 待完成：全链路观测(P4-T9)、效果评估(P4-T12)
 
 ---
 
@@ -153,8 +169,8 @@ agent-platform-interfaces/   48 文件  ← 15 Controller + 25 Request DTO + Exc
 
 ```
 P0(收尾) → P1(T3-T5) → P2(T6-T7) → P3(安全) → P4(观测) → P5(前端独立)
-统一网关     意图识别✅   RAG引擎✅   安全围栏     全链路      交互端
-多租户       对话管理✅   MCP平台✅   人机协同     效果评估
+统一网关     意图识别✅   RAG引擎✅   安全围栏✅   全链路      交互端
+多租户       对话管理✅   MCP平台✅   人机协同✅   效果评估
             提示词管理✅
             任务规划引擎✅
 ```
