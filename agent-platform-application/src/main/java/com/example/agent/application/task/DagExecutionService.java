@@ -350,6 +350,75 @@ public class DagExecutionService {
         log.info("[DagExec] 任务已取消: executionId={}", executionId);
     }
 
+    /**
+     * 取消执行并记录原因（审批拒绝/超时时调用）.
+     *
+     * @param executionId 执行 ID
+     * @param reason      取消原因
+     */
+    @Transactional
+    public void cancelExecution(String executionId, String reason) {
+        TaskExecution execution = executionRepository.findByExecutionId(executionId)
+                .orElseThrow(() -> new BusinessException(404, "执行记录不存在: " + executionId));
+
+        if (!execution.getStatus().isActive()) {
+            throw new BusinessException(409, "任务无法取消，当前状态: " + execution.getStatus());
+        }
+
+        execution.cancel(reason);
+        executionRepository.update(execution);
+        stepExecutionRepository.batchUpdateStatusByExecutionId(executionId, StepStatus.SKIPPED);
+
+        log.info("[DagExec] 任务已取消: executionId={}, reason={}", executionId, reason);
+
+        // WebSocket 推送取消通知
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("executionId", executionId);
+        payload.put("status", "CANCELLED");
+        payload.put("reason", reason);
+        WebSocketMessage msg = WebSocketMessage.builder()
+                .type("task_cancelled")
+                .payload(payload)
+                .timestamp(System.currentTimeMillis())
+                .build();
+        wsHandler.pushMessage(execution.getConversationId(), msg);
+    }
+
+    /**
+     * 恢复执行（审批通过后调用）.
+     *
+     * <p>将任务从 WAITING_APPROVAL 状态恢复为 RUNNING，并重新触发 DAG 执行。
+     *
+     * @param executionId 执行 ID
+     */
+    @Transactional
+    public void resumeExecution(String executionId) {
+        TaskExecution execution = executionRepository.findByExecutionId(executionId)
+                .orElseThrow(() -> new BusinessException(404, "执行记录不存在: " + executionId));
+
+        if (execution.getStatus() != ExecutionStatus.WAITING_APPROVAL) {
+            throw new BusinessException(409,
+                    "只有 WAITING_APPROVAL 状态的任务才能恢复，当前: " + execution.getStatus());
+        }
+
+        // 恢复为 RUNNING
+        execution.resumeFromApproval();
+        executionRepository.update(execution);
+
+        log.info("[DagExec] 任务恢复执行: executionId={}", executionId);
+
+        // 重新异步执行 DAG
+        try {
+            DagGraph graph = objectMapper.readValue(execution.getPlanJson(), DagGraph.class);
+            String conversationId = execution.getConversationId();
+            this.execute(graph, executionId, conversationId);
+        } catch (JsonProcessingException e) {
+            log.error("[DagExec] 解析 DAG 计划失败: executionId={}", executionId, e);
+            execution.fail(null, "恢复执行失败: 计划解析异常");
+            executionRepository.markFailed(executionId, null, "恢复执行失败: " + e.getMessage());
+        }
+    }
+
     // ==================== DTOs ====================
 
     @Data

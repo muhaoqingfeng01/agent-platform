@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.SecurityEventMapper">
+
+    <resultMap id="SecurityEventPOMap" type="com.example.agent.infrastructure.persistence.po.SecurityEventPO">
+        <id     column="id"                property="id"/>
+        <result column="tenant_id"         property="tenantId"/>
+        <result column="event_type"        property="eventType"/>
+        <result column="rule_id"           property="ruleId"/>
+        <result column="conversation_id"   property="conversationId"/>
+        <result column="message_id"        property="messageId"/>
+        <result column="original_content"  property="originalContent"/>
+        <result column="processed_content" property="processedContent"/>
+        <result column="matched_pattern"   property="matchedPattern"/>
+        <result column="action_taken"      property="actionTaken"/>
+        <result column="operator"          property="operator"/>
+        <result column="created_at"        property="createdAt"/>
+    </resultMap>
+
+    <!-- ==================== 插入（仅追加） ==================== -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_security_event (
+            tenant_id, event_type, rule_id, conversation_id, message_id,
+            original_content, processed_content, matched_pattern, action_taken,
+            operator, created_at
+        ) VALUES (
+            #{tenantId}, #{eventType}, #{ruleId}, #{conversationId}, #{messageId},
+            #{originalContent}, #{processedContent}, #{matchedPattern}, #{actionTaken},
+            #{operator}, #{createdAt}
+        )
+    </insert>
+
+    <!-- ==================== 查询 ==================== -->
+    <select id="selectByTenant" resultMap="SecurityEventPOMap">
+        SELECT id, tenant_id, event_type, rule_id, conversation_id, message_id,
+               original_content, processed_content, matched_pattern, action_taken,
+               operator, created_at
+        FROM t_security_event
+        WHERE tenant_id = #{tenantId}
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByTenant" resultType="long">
+        SELECT COUNT(1) FROM t_security_event WHERE tenant_id = #{tenantId}
+    </select>
+
+    <select id="selectByConversation" resultMap="SecurityEventPOMap">
+        SELECT id, tenant_id, event_type, rule_id, conversation_id, message_id,
+               original_content, processed_content, matched_pattern, action_taken,
+               operator, created_at
+        FROM t_security_event
+        WHERE conversation_id = #{conversationId}
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="selectByEventType" resultMap="SecurityEventPOMap">
+        SELECT id, tenant_id, event_type, rule_id, conversation_id, message_id,
+               original_content, processed_content, matched_pattern, action_taken,
+               operator, created_at
+        FROM t_security_event
+        WHERE tenant_id = #{tenantId} AND event_type = #{eventType}
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+</mapper>

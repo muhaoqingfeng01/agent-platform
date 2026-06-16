@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.ApprovalWorkflowMapper">
+
+    <resultMap id="ApprovalWorkflowPOMap" type="com.example.agent.infrastructure.persistence.po.ApprovalWorkflowPO">
+        <id     column="id"               property="id"/>
+        <result column="tenant_id"        property="tenantId"/>
+        <result column="approval_id"      property="approvalId"/>
+        <result column="tool_id"          property="toolId"/>
+        <result column="conversation_id"  property="conversationId"/>
+        <result column="execution_id"     property="executionId"/>
+        <result column="requester_id"     property="requesterId"/>
+        <result column="approver_id"      property="approverId"/>
+        <result column="title"            property="title"/>
+        <result column="operation_detail" property="operationDetail"/>
+        <result column="status"           property="status"/>
+        <result column="approve_comment"  property="approveComment"/>
+        <result column="timeout_at"       property="timeoutAt"/>
+        <result column="approved_at"      property="approvedAt"/>
+        <result column="created_at"       property="createdAt"/>
+        <result column="updated_at"       property="updatedAt"/>
+    </resultMap>
+
+    <!-- ==================== 插入 ==================== -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_approval_workflow (
+            tenant_id, approval_id, tool_id, conversation_id, execution_id,
+            requester_id, approver_id, title, operation_detail, status,
+            approve_comment, timeout_at, approved_at, created_at, updated_at
+        ) VALUES (
+            #{tenantId}, #{approvalId}, #{toolId}, #{conversationId}, #{executionId},
+            #{requesterId}, #{approverId}, #{title}, #{operationDetail}, #{status},
+            #{approveComment}, #{timeoutAt}, #{approvedAt}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <!-- ==================== 更新 ==================== -->
+    <update id="update">
+        UPDATE t_approval_workflow
+        SET approver_id     = #{approverId},
+            status          = #{status},
+            approve_comment = #{approveComment},
+            approved_at     = #{approvedAt},
+            updated_at      = #{updatedAt}
+        WHERE approval_id = #{approvalId}
+    </update>
+
+    <!-- ==================== 查询 ==================== -->
+    <select id="selectByApprovalId" resultMap="ApprovalWorkflowPOMap">
+        SELECT *
+        FROM t_approval_workflow
+        WHERE approval_id = #{approvalId}
+    </select>
+
+    <select id="selectByTenant" resultMap="ApprovalWorkflowPOMap">
+        SELECT *
+        FROM t_approval_workflow
+        WHERE tenant_id = #{tenantId}
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByTenant" resultType="long">
+        SELECT COUNT(1) FROM t_approval_workflow WHERE tenant_id = #{tenantId}
+    </select>
+
+    <select id="selectByRequester" resultMap="ApprovalWorkflowPOMap">
+        SELECT *
+        FROM t_approval_workflow
+        WHERE requester_id = #{requesterId}
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="selectByApprover" resultMap="ApprovalWorkflowPOMap">
+        SELECT *
+        FROM t_approval_workflow
+        WHERE approver_id = #{approverId}
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <!-- 查询超时的待审批工单 — 由定时任务调用 -->
+    <select id="selectTimeoutPending" resultMap="ApprovalWorkflowPOMap">
+        SELECT *
+        FROM t_approval_workflow
+        WHERE status = 'PENDING'
+          AND timeout_at &lt; #{now}
+    </select>
+
+    <select id="countByStatus" resultType="long">
+        SELECT COUNT(1) FROM t_approval_workflow
+        WHERE tenant_id = #{tenantId} AND status = #{status}
+    </select>
+
+    <select id="selectByTenantAndStatus" resultMap="ApprovalWorkflowPOMap">
+        SELECT *
+        FROM t_approval_workflow
+        WHERE tenant_id = #{tenantId} AND status = #{status}
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+</mapper>

@@ -95,13 +95,37 @@ public class TaskExecution {
         this.finishedAt = LocalDateTime.now();
     }
 
-    /** 取消任务 — STATE: PENDING|RUNNING → CANCELLED */
+    /** 取消任务 — STATE: PENDING|RUNNING|WAITING_APPROVAL → CANCELLED */
     public void cancel() {
-        if (this.status != ExecutionStatus.PENDING && this.status != ExecutionStatus.RUNNING) {
-            throw new IllegalStateException("只有 PENDING 或 RUNNING 状态的任务才能取消，当前: " + this.status);
+        if (this.status != ExecutionStatus.PENDING
+                && this.status != ExecutionStatus.RUNNING
+                && this.status != ExecutionStatus.WAITING_APPROVAL) {
+            throw new IllegalStateException("只有 PENDING/RUNNING/WAITING_APPROVAL 状态的任务才能取消，当前: " + this.status);
         }
         this.status = ExecutionStatus.CANCELLED;
         this.finishedAt = LocalDateTime.now();
+    }
+
+    /** 取消任务并记录原因 — 审批拒绝/超时时调用 */
+    public void cancel(String reason) {
+        this.cancel();
+        this.errorMessage = reason;
+    }
+
+    /** 暂停等待审批 — STATE: RUNNING → WAITING_APPROVAL */
+    public void waitForApproval() {
+        if (this.status != ExecutionStatus.RUNNING) {
+            throw new IllegalStateException("只有 RUNNING 状态的任务才能暂停等待审批，当前: " + this.status);
+        }
+        this.status = ExecutionStatus.WAITING_APPROVAL;
+    }
+
+    /** 审批通过恢复执行 — STATE: WAITING_APPROVAL → RUNNING */
+    public void resumeFromApproval() {
+        if (this.status != ExecutionStatus.WAITING_APPROVAL) {
+            throw new IllegalStateException("只有 WAITING_APPROVAL 状态的任务才能恢复，当前: " + this.status);
+        }
+        this.status = ExecutionStatus.RUNNING;
     }
 
     /** 增加已完成步骤计数 */

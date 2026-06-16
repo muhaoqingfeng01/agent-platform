@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.SensitiveWordMapper">
+
+    <resultMap id="SensitiveWordPOMap" type="com.example.agent.infrastructure.persistence.po.SensitiveWordPO">
+        <id     column="id"          property="id"/>
+        <result column="tenant_id"   property="tenantId"/>
+        <result column="word"        property="word"/>
+        <result column="match_type"  property="matchType"/>
+        <result column="category"    property="category"/>
+        <result column="severity"    property="severity"/>
+        <result column="action"      property="action"/>
+        <result column="status"      property="status"/>
+        <result column="created_at"  property="createdAt"/>
+        <result column="updated_at"  property="updatedAt"/>
+    </resultMap>
+
+    <!-- ==================== 插入 ==================== -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_sensitive_word (
+            tenant_id, word, match_type, category, severity, action, status, created_at, updated_at
+        ) VALUES (
+            #{tenantId}, #{word}, #{matchType}, #{category}, #{severity}, #{action}, #{status},
+            #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <!-- ==================== 更新 ==================== -->
+    <update id="update">
+        UPDATE t_sensitive_word
+        SET word       = #{word},
+            match_type = #{matchType},
+            category   = #{category},
+            severity   = #{severity},
+            action     = #{action},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE t_sensitive_word
+        SET status = #{status}, updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- ==================== 查询 ==================== -->
+    <select id="selectById" resultMap="SensitiveWordPOMap">
+        SELECT id, tenant_id, word, match_type, category, severity, action, status, created_at, updated_at
+        FROM t_sensitive_word
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByTenant" resultMap="SensitiveWordPOMap">
+        SELECT id, tenant_id, word, match_type, category, severity, action, status, created_at, updated_at
+        FROM t_sensitive_word
+        WHERE tenant_id = #{tenantId}
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByTenant" resultType="long">
+        SELECT COUNT(1) FROM t_sensitive_word WHERE tenant_id = #{tenantId}
+    </select>
+
+    <select id="selectActiveByTenantAndGlobal" resultMap="SensitiveWordPOMap">
+        SELECT id, tenant_id, word, match_type, category, severity, action, status, created_at, updated_at
+        FROM t_sensitive_word
+        WHERE status = 'ACTIVE'
+          AND (tenant_id = #{tenantId} OR tenant_id IS NULL)
+        ORDER BY FIELD(severity, 'BLOCK', 'HIGH', 'MEDIUM', 'LOW')
+    </select>
+
+    <select id="selectActiveByCategory" resultMap="SensitiveWordPOMap">
+        SELECT id, tenant_id, word, match_type, category, severity, action, status, created_at, updated_at
+        FROM t_sensitive_word
+        WHERE status = 'ACTIVE'
+          AND (tenant_id = #{tenantId} OR tenant_id IS NULL)
+          AND category = #{category}
+        ORDER BY FIELD(severity, 'BLOCK', 'HIGH', 'MEDIUM', 'LOW')
+    </select>
+
+    <select id="selectActiveGlobal" resultMap="SensitiveWordPOMap">
+        SELECT id, tenant_id, word, match_type, category, severity, action, status, created_at, updated_at
+        FROM t_sensitive_word
+        WHERE status = 'ACTIVE' AND tenant_id IS NULL
+        ORDER BY FIELD(severity, 'BLOCK', 'HIGH', 'MEDIUM', 'LOW')
+    </select>
+
+    <!-- ==================== 删除 ==================== -->
+    <delete id="deleteById">
+        DELETE FROM t_sensitive_word WHERE id = #{id}
+    </delete>
+
+</mapper>

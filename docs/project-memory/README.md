@@ -31,7 +31,9 @@
 | 17 | 2026-06-16 | [15-T6-知识库文件管理系统方案.md](15-T6-知识库文件管理系统方案.md) | V1.4.0 方案设计：KB 状态机、手动解析触发、Milvus 级联删除、指定 KB 检索、创建者权限 |
 | 18 | 2026-06-16 | [16-T6-V1.4.0-知识库文件管理系统实现.md](16-T6-V1.4.0-知识库文件管理系统实现.md) | V1.4.0 完整实现：~25 文件变更、P0 阻塞修复 3 项、Milvus 补齐 4 项、KB 管理 17 项、8 新 API、编译通过 |
 | 19 | 2026-06-17 | [17-T7-MCP工具平台实现.md](17-T7-MCP工具平台实现.md) | T7 完整实现：33 文件、4 层 DDD、7 API 端点、4 种工具类型、MCP Client 管理+HTTP 适配 |
-| 20 | 2026-06-17 | [17-会话总结-2026-06-17.md](17-会话总结-2026-06-17.md) | T7 实现总结、项目进度同步、长期记忆更新
+| 20 | 2026-06-17 | [17-会话总结-2026-06-17.md](17-会话总结-2026-06-17.md) | T7 实现总结、项目进度同步、长期记忆更新 |
+| 21 | 2026-06-17 | [18-P3-安全治理实现.md](18-P3-安全治理实现.md) | 🆕 P3-T10+T11 完整实现：42 文件、安全围栏 4 层过滤链 + 人机协同审批状态机 |
+| 22 | 2026-06-17 | [18-会话总结-2026-06-17.md](18-会话总结-2026-06-17.md) | P3 实现总结、开发进度同步 ⚪→🟢
 
 ## 当前项目状态快照
 
@@ -39,7 +41,7 @@
 - **Spring Boot**: 3.3.7
 - **构建**: ✅ BUILD SUCCESS（7/7 模块）
 - **启动**: ⚠️ 需要 MySQL + Redis + Milvus 外部服务
-- **代码**: ~301 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO/Handler/Adapter）
+- **代码**: ~343 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO/Handler/Adapter/SecurityFilter）
 - **Swagger**: 已集成，`/swagger-ui.html`
 - **数据库**: V1.0.0(13张) + V1.1.0(15张) + V1.2.0(种子) + V1.2.1(业务ID) + V1.2.2(T7调用日志ID) + V1.3.0(T6精度) + V1.4.0(KB创建者+状态迁移)
 - **日志**: traceId + spanId 全链路追踪（MDC），logback-spring.xml 按天分目录
