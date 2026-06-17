@@ -20,18 +20,18 @@ public interface PromptTemplateMapper {
 
     Optional<PromptTemplatePO> selectByPromptId(@Param("promptId") String promptId);
 
-    List<PromptTemplatePO> selectByTenantId(@Param("tenantId") String tenantId,
+    List<PromptTemplatePO> selectByTenantId(@Param("tenantId") Long tenantId,
                                              @Param("offset") int offset,
                                              @Param("size") int size);
 
-    long countByTenantId(@Param("tenantId") String tenantId);
+    long countByTenantId(@Param("tenantId") Long tenantId);
 
-    List<PromptTemplatePO> selectByTenantIdAndStatus(@Param("tenantId") String tenantId,
+    List<PromptTemplatePO> selectByTenantIdAndStatus(@Param("tenantId") Long tenantId,
                                                        @Param("status") String status,
                                                        @Param("offset") int offset,
                                                        @Param("size") int size);
 
-    Optional<PromptTemplatePO> selectByTenantIdAndName(@Param("tenantId") String tenantId,
+    Optional<PromptTemplatePO> selectByTenantIdAndName(@Param("tenantId") Long tenantId,
                                                          @Param("name") String name);
 
     int updateContent(@Param("promptId") String promptId,
@@ -50,10 +50,10 @@ public interface PromptTemplateMapper {
 
     int softDelete(@Param("promptId") String promptId);
 
-    Optional<PromptTemplatePO> selectLatestPublished(@Param("tenantId") String tenantId,
+    Optional<PromptTemplatePO> selectLatestPublished(@Param("tenantId") Long tenantId,
                                                        @Param("name") String name);
 
-    Optional<PromptTemplatePO> selectByVersion(@Param("tenantId") String tenantId,
+    Optional<PromptTemplatePO> selectByVersion(@Param("tenantId") Long tenantId,
                                                 @Param("name") String name,
                                                 @Param("version") int version);
 }

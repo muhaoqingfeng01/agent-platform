@@ -52,13 +52,13 @@ public class LongTermMemoryRepositoryImpl implements LongTermMemoryRepository {
     }
 
     @Override
-    public List<LongTermMemory> findByUserId(String tenantId, String userId) {
+    public List<LongTermMemory> findByUserId(Long tenantId, String userId) {
         return memoryMapper.selectByUserId(tenantId, userId)
                 .stream().map(this::toDomain).toList();
     }
 
     @Override
-    public List<LongTermMemory> findByUserIdAndType(String tenantId, String userId, MemoryType type) {
+    public List<LongTermMemory> findByUserIdAndType(Long tenantId, String userId, MemoryType type) {
         return memoryMapper.selectByUserIdAndType(tenantId, userId, type.name())
                 .stream().map(this::toDomain).toList();
     }

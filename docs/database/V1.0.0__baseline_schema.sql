@@ -7,7 +7,7 @@
 -- Tenant table (multi-tenant isolation)
 CREATE TABLE IF NOT EXISTS t_tenant (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id   VARCHAR(64)  NOT NULL UNIQUE COMMENT '租户唯一标识',
+    tenant_id   BIGINT  NOT NULL UNIQUE COMMENT '租户唯一标识',
     name        VARCHAR(128) NOT NULL COMMENT '租户名称',
     status      VARCHAR(32)  NOT NULL DEFAULT 'ACTIVE' COMMENT '状态: ACTIVE, SUSPENDED, DELETED',
     tier        VARCHAR(32)  NOT NULL DEFAULT 'STANDARD' COMMENT '套餐: STANDARD, PREMIUM, ENTERPRISE',
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS t_tenant (
 -- User table
 CREATE TABLE IF NOT EXISTS t_user (
     id            BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id     VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id     BIGINT  NOT NULL COMMENT '所属租户',
     user_id       VARCHAR(64)  NOT NULL UNIQUE COMMENT '用户唯一标识',
     username      VARCHAR(64)  NOT NULL COMMENT '用户名',
     password_hash VARCHAR(256) NOT NULL COMMENT '密码哈希',
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS t_user (
 -- Role table (RBAC)
 CREATE TABLE IF NOT EXISTS t_role (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id   VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id   BIGINT  NOT NULL COMMENT '所属租户',
     role_code   VARCHAR(64)  NOT NULL COMMENT '角色编码',
     role_name   VARCHAR(128) NOT NULL COMMENT '角色名称',
     description VARCHAR(512) COMMENT '角色描述',
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS t_role_permission (
 -- Agent configuration table
 CREATE TABLE IF NOT EXISTS t_agent_config (
     id            BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id     VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id     BIGINT  NOT NULL COMMENT '所属租户',
     agent_id      VARCHAR(64)  NOT NULL UNIQUE COMMENT 'Agent唯一标识',
     name          VARCHAR(128) NOT NULL COMMENT 'Agent名称',
     description   TEXT         COMMENT 'Agent描述',
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS t_agent_config (
 -- Conversation table
 CREATE TABLE IF NOT EXISTS t_conversation (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id       VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id       BIGINT  NOT NULL COMMENT '所属租户',
     conversation_id VARCHAR(64)  NOT NULL UNIQUE COMMENT '会话唯一标识',
     agent_id        VARCHAR(64)  NOT NULL COMMENT '关联Agent',
     user_id         VARCHAR(64)  NOT NULL COMMENT '发起用户',
@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS t_message (
 -- Knowledge base table
 CREATE TABLE IF NOT EXISTS t_knowledge_base (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id       VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id       BIGINT  NOT NULL COMMENT '所属租户',
     knowledge_id    VARCHAR(64)  NOT NULL UNIQUE COMMENT '知识库唯一标识',
     name            VARCHAR(256) NOT NULL COMMENT '知识库名称',
     description     TEXT         COMMENT '描述',
@@ -153,7 +153,7 @@ CREATE TABLE IF NOT EXISTS t_knowledge_base (
 -- Tool registry table
 CREATE TABLE IF NOT EXISTS t_tool_registry (
     id            BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id     VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id     BIGINT  NOT NULL COMMENT '所属租户',
     tool_id       VARCHAR(64)  NOT NULL UNIQUE COMMENT '工具唯一标识',
     name          VARCHAR(128) NOT NULL COMMENT '工具名称',
     description   TEXT         COMMENT '工具描述',
@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS t_tool_registry (
 -- Prompt template table
 CREATE TABLE IF NOT EXISTS t_prompt_template (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id       VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id       BIGINT  NOT NULL COMMENT '所属租户',
     prompt_id       VARCHAR(64)  NOT NULL COMMENT 'Prompt唯一标识',
     name            VARCHAR(256) NOT NULL COMMENT '模板名称',
     description     TEXT         COMMENT '描述',
@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS t_prompt_template (
 -- Evaluation run table
 CREATE TABLE IF NOT EXISTS t_evaluation_run (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id       VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id       BIGINT  NOT NULL COMMENT '所属租户',
     evaluation_id   VARCHAR(64)  NOT NULL UNIQUE COMMENT '评测唯一标识',
     agent_id        VARCHAR(64)  NOT NULL COMMENT '被评测Agent',
     dataset_id      VARCHAR(64)  NOT NULL COMMENT '使用数据集',

@@ -19,7 +19,7 @@ public interface AuditLogMapper {
 
     List<AuditLogPO> selectByTraceId(@Param("traceId") String traceId);
 
-    List<AuditLogPO> selectByTenant(@Param("tenantId") String tenantId,
+    List<AuditLogPO> selectByTenant(@Param("tenantId") Long tenantId,
                                     @Param("offset") int offset,
                                     @Param("size") int size);
 
@@ -27,5 +27,5 @@ public interface AuditLogMapper {
                                           @Param("offset") int offset,
                                           @Param("size") int size);
 
-    long countByTenant(@Param("tenantId") String tenantId);
+    long countByTenant(@Param("tenantId") Long tenantId);
 }

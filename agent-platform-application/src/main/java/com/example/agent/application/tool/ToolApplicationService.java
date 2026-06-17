@@ -88,7 +88,7 @@ public class ToolApplicationService {
      */
     @Transactional
     public ToolResponse create(CreateToolRequest request) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         log.info("[Tool] 创建工具: name={}, type={}, tenantId={}", request.getName(), request.getToolType(), tenantId);
 
         // 组装 ToolSchema
@@ -134,7 +134,7 @@ public class ToolApplicationService {
      * @throws ResourceNotFoundException 如果工具不存在
      */
     public ToolResponse getByToolId(String toolId) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         log.debug("[Tool] 查询工具详情: toolId={}", toolId);
 
         // L2 缓存（Redis）→ 回源 MySQL
@@ -160,7 +160,7 @@ public class ToolApplicationService {
      * @return 分页结果
      */
     public PageResponse<ToolResponse> list(int page, int size, String toolType) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         log.debug("[Tool] 查询工具列表: page={}, size={}, type={}", page, size, toolType);
 
         List<ToolRegistry> tools;
@@ -194,7 +194,7 @@ public class ToolApplicationService {
      */
     @Transactional
     public ToolResponse update(String toolId, UpdateToolRequest request) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         log.info("[Tool] 编辑工具: toolId={}", toolId);
 
         ToolRegistry existing = toolRepository.findByToolId(toolId)
@@ -261,7 +261,7 @@ public class ToolApplicationService {
      */
     @Transactional
     public ToolResponse toggleStatus(String toolId, String newStatus) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         log.info("[Tool] 启停工具: toolId={}, targetStatus={}", toolId, newStatus);
 
         ToolRegistry tool = toolRepository.findByToolId(toolId)
@@ -294,7 +294,7 @@ public class ToolApplicationService {
      * 版本历史列表.
      */
     public List<VersionResponse> getVersionHistory(String toolId) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         // 校验存在 + 租户隔离
         ToolRegistry tool = toolRepository.findByToolId(toolId)
                 .orElseThrow(() -> new ResourceNotFoundException("工具", toolId));
@@ -309,7 +309,7 @@ public class ToolApplicationService {
      * 版本详情.
      */
     public VersionResponse getVersionDetail(String toolId, int version) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         ToolRegistry tool = toolRepository.findByToolId(toolId)
                 .orElseThrow(() -> new ResourceNotFoundException("工具", toolId));
         domainService.assertTenantAccess(tool, tenantId);
@@ -324,7 +324,7 @@ public class ToolApplicationService {
      */
     @Transactional
     public ToolResponse rollback(String toolId, int targetVersion) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         String operator = TenantContext.getCurrentUserId();
 
         ToolRegistry tool = toolRepository.findByToolId(toolId)
@@ -362,7 +362,7 @@ public class ToolApplicationService {
     @Auditable(action = "TOOL_TEST", resourceType = "TOOL", resourceId = "#toolId", recordResponse = true)
     @Transactional
     public ToolTestResponse test(String toolId, Map<String, Object> params) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         log.info("[Tool] 测试工具调用: toolId={}", toolId);
 
         ToolRegistry tool = toolRepository.findByToolId(toolId)
@@ -458,7 +458,7 @@ public class ToolApplicationService {
      * @return 分页的调用日志列表
      */
     public PageResponse<ToolInvocationLogResponse> listInvocations(String toolId, int page, int size) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         log.debug("[Tool] 查询调用日志: toolId={}, page={}, size={}", toolId, page, size);
 
         List<ToolInvocationLog> logs;
@@ -569,7 +569,7 @@ public class ToolApplicationService {
      * @param durationMs     耗时
      * @param errorMessage   错误信息
      */
-    private void saveInvocationLog(String invocationId, String tenantId, String toolId,
+    private void saveInvocationLog(String invocationId, Long tenantId, String toolId,
                                     String conversationId, String messageId, String executionId,
                                     String inputJson, String outputJson,
                                     InvocationStatus status, Long durationMs, String errorMessage) {

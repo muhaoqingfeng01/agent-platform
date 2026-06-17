@@ -18,13 +18,13 @@ public interface OptimizationTicketRepository {
 
     OptimizationTicket findByTicketId(String ticketId);
 
-    List<OptimizationTicket> findByTenant(String tenantId, int page, int size);
+    List<OptimizationTicket> findByTenant(Long tenantId, int page, int size);
 
-    List<OptimizationTicket> findByAssignee(String tenantId, String assignee, int page, int size);
+    List<OptimizationTicket> findByAssignee(Long tenantId, String assignee, int page, int size);
 
-    List<OptimizationTicket> findByStatus(String tenantId, String status, int page, int size);
+    List<OptimizationTicket> findByStatus(Long tenantId, String status, int page, int size);
 
-    long countByStatusAndSince(String tenantId, String status, java.time.LocalDateTime since);
+    long countByStatusAndSince(Long tenantId, String status, java.time.LocalDateTime since);
 
-    long countCreatedSince(String tenantId, java.time.LocalDateTime since);
+    long countCreatedSince(Long tenantId, java.time.LocalDateTime since);
 }

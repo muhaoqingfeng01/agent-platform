@@ -26,14 +26,14 @@ public interface IntentMapper {
 
     Optional<IntentPO> selectByIntentId(@Param("intentId") String intentId);
 
-    List<IntentPO> selectActiveByTenant(@Param("tenantId") String tenantId);
+    List<IntentPO> selectActiveByTenant(@Param("tenantId") Long tenantId);
 
-    List<IntentPO> selectByTenant(@Param("tenantId") String tenantId,
+    List<IntentPO> selectByTenant(@Param("tenantId") Long tenantId,
                                    @Param("offset") int offset,
                                    @Param("size") int size);
 
-    long countByTenant(@Param("tenantId") String tenantId);
+    long countByTenant(@Param("tenantId") Long tenantId);
 
-    boolean existsByTenantAndCode(@Param("tenantId") String tenantId,
+    boolean existsByTenantAndCode(@Param("tenantId") Long tenantId,
                                   @Param("intentCode") String intentCode);
 }

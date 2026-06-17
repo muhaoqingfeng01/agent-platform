@@ -43,13 +43,13 @@ public class KnowledgeBaseRepositoryImpl implements KnowledgeBaseRepository {
     }
 
     @Override
-    public List<KnowledgeBase> findByTenant(String tenantId, int page, int size) {
+    public List<KnowledgeBase> findByTenant(Long tenantId, int page, int size) {
         int offset = page * size;
         return mapper.selectByTenant(tenantId, offset, size).stream().map(this::toDomain).toList();
     }
 
     @Override
-    public long countByTenant(String tenantId) { return mapper.countByTenant(tenantId); }
+    public long countByTenant(Long tenantId) { return mapper.countByTenant(tenantId); }
 
     @Override
     public void updateDocumentCount(String knowledgeId, int documentCount) {
@@ -90,7 +90,7 @@ public class KnowledgeBaseRepositoryImpl implements KnowledgeBaseRepository {
     }
 
     @Override
-    public Set<String> findEnabledKnowledgeIds(String tenantId) {
+    public Set<String> findEnabledKnowledgeIds(Long tenantId) {
         return mapper.findEnabledKnowledgeIds(tenantId);
     }
 
@@ -100,7 +100,7 @@ public class KnowledgeBaseRepositoryImpl implements KnowledgeBaseRepository {
     }
 
     @Override
-    public List<KnowledgeBase> findByTenantAndStatus(String tenantId, KnowledgeBaseStatus status) {
+    public List<KnowledgeBase> findByTenantAndStatus(Long tenantId, KnowledgeBaseStatus status) {
         return mapper.selectByTenantAndStatus(tenantId, status.name()).stream()
                 .map(this::toDomain).toList();
     }

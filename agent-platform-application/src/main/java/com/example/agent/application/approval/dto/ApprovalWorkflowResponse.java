@@ -22,7 +22,7 @@ public class ApprovalWorkflowResponse {
     private String approvalId;
 
     @Schema(description = "所属租户 ID")
-    private String tenantId;
+    private Long tenantId;
 
     @Schema(description = "关联工具 ID")
     private String toolId;

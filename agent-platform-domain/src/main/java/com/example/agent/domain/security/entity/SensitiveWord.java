@@ -35,7 +35,7 @@ public class SensitiveWord {
     private Long id;
 
     /** 所属租户 ID — NULL 表示全局规则 */
-    private String tenantId;
+    private Long tenantId;
 
     /** 敏感词或正则表达式 */
     private String word;

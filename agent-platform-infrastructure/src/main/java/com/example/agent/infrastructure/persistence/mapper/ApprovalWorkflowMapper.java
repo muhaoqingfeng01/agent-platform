@@ -22,11 +22,11 @@ public interface ApprovalWorkflowMapper {
 
     ApprovalWorkflowPO selectByApprovalId(@Param("approvalId") String approvalId);
 
-    List<ApprovalWorkflowPO> selectByTenant(@Param("tenantId") String tenantId,
+    List<ApprovalWorkflowPO> selectByTenant(@Param("tenantId") Long tenantId,
                                              @Param("offset") int offset,
                                              @Param("size") int size);
 
-    long countByTenant(@Param("tenantId") String tenantId);
+    long countByTenant(@Param("tenantId") Long tenantId);
 
     List<ApprovalWorkflowPO> selectByRequester(@Param("requesterId") String requesterId,
                                                 @Param("offset") int offset,
@@ -39,9 +39,9 @@ public interface ApprovalWorkflowMapper {
     /** 查询超时的待审批工单 */
     List<ApprovalWorkflowPO> selectTimeoutPending(@Param("now") LocalDateTime now);
 
-    long countByStatus(@Param("tenantId") String tenantId, @Param("status") String status);
+    long countByStatus(@Param("tenantId") Long tenantId, @Param("status") String status);
 
-    List<ApprovalWorkflowPO> selectByTenantAndStatus(@Param("tenantId") String tenantId,
+    List<ApprovalWorkflowPO> selectByTenantAndStatus(@Param("tenantId") Long tenantId,
                                                       @Param("status") String status,
                                                       @Param("offset") int offset,
                                                       @Param("size") int size);

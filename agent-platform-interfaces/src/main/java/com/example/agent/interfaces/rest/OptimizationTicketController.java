@@ -25,7 +25,7 @@ public class OptimizationTicketController {
     @Operation(summary = "工单列表")
     public Result<List<OptimizationTicketResponse>> list(@RequestParam(defaultValue = "1") int page,
                                                           @RequestParam(defaultValue = "20") int size) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         return Result.ok(ticketService.list(tenantId, page, size));
     }
 

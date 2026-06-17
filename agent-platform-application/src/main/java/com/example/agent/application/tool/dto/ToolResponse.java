@@ -25,7 +25,7 @@ public class ToolResponse {
 
     /** 所属租户 ID */
     @Schema(description = "租户 ID")
-    private String tenantId;
+    private Long tenantId;
 
     /** 工具名称 */
     @Schema(description = "工具名称")

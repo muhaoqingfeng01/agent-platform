@@ -39,14 +39,14 @@ public class EvaluationDatasetRepositoryImpl implements EvaluationDatasetReposit
     }
 
     @Override
-    public List<EvaluationDataset> findByTenant(String tenantId, int page, int size) {
+    public List<EvaluationDataset> findByTenant(Long tenantId, int page, int size) {
         int offset = (page - 1) * size;
         return mapper.selectByTenant(tenantId, offset, size).stream()
                 .map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
-    public long countByTenant(String tenantId) {
+    public long countByTenant(Long tenantId) {
         return mapper.countByTenant(tenantId);
     }
 

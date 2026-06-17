@@ -20,7 +20,7 @@ import java.util.Map;
 public class Conversation {
 
     private String conversationId;
-    private String tenantId;
+    private Long tenantId;
     private String agentId;
     private String userId;
     private String title;

@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Data
 public class UserResponse {
     @Schema(description = "主键 ID") private Long id;
-    @Schema(description = "所属租户") private String tenantId;
+    @Schema(description = "所属租户") private Long tenantId;
     @Schema(description = "用户唯一标识") private String userId;
     @Schema(description = "用户名") private String username;
     @Schema(description = "邮箱") private String email;

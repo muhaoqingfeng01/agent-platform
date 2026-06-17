@@ -17,17 +17,17 @@ public interface SecurityEventMapper {
 
     int insert(SecurityEventPO po);
 
-    List<SecurityEventPO> selectByTenant(@Param("tenantId") String tenantId,
+    List<SecurityEventPO> selectByTenant(@Param("tenantId") Long tenantId,
                                           @Param("offset") int offset,
                                           @Param("size") int size);
 
-    long countByTenant(@Param("tenantId") String tenantId);
+    long countByTenant(@Param("tenantId") Long tenantId);
 
     List<SecurityEventPO> selectByConversation(@Param("conversationId") String conversationId,
                                                 @Param("offset") int offset,
                                                 @Param("size") int size);
 
-    List<SecurityEventPO> selectByEventType(@Param("tenantId") String tenantId,
+    List<SecurityEventPO> selectByEventType(@Param("tenantId") Long tenantId,
                                              @Param("eventType") String eventType,
                                              @Param("offset") int offset,
                                              @Param("size") int size);

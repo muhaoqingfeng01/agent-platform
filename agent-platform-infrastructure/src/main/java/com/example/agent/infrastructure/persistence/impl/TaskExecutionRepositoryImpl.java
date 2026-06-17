@@ -76,7 +76,7 @@ public class TaskExecutionRepositoryImpl implements TaskExecutionRepository {
     }
 
     @Override
-    public List<TaskExecution> findActiveByTenant(String tenantId) {
+    public List<TaskExecution> findActiveByTenant(Long tenantId) {
         return mapper.selectActiveByTenant(tenantId)
                 .stream().map(this::toDomain).toList();
     }

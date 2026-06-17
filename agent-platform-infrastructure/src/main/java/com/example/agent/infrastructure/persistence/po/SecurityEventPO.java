@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 public class SecurityEventPO {
 
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String eventType;
     private Long ruleId;
     private String conversationId;

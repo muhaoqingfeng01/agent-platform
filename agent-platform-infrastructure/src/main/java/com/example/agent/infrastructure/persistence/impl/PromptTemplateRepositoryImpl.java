@@ -45,25 +45,25 @@ public class PromptTemplateRepositoryImpl implements PromptTemplateRepository {
     }
 
     @Override
-    public List<PromptTemplate> findByTenantId(String tenantId, int offset, int size) {
+    public List<PromptTemplate> findByTenantId(Long tenantId, int offset, int size) {
         return promptTemplateMapper.selectByTenantId(tenantId, offset, size)
                 .stream().map(this::toDomain).toList();
     }
 
     @Override
-    public long countByTenantId(String tenantId) {
+    public long countByTenantId(Long tenantId) {
         return promptTemplateMapper.countByTenantId(tenantId);
     }
 
     @Override
-    public List<PromptTemplate> findByTenantIdAndStatus(String tenantId, PromptStatus status,
+    public List<PromptTemplate> findByTenantIdAndStatus(Long tenantId, PromptStatus status,
                                                          int offset, int size) {
         return promptTemplateMapper.selectByTenantIdAndStatus(tenantId, status.name(), offset, size)
                 .stream().map(this::toDomain).toList();
     }
 
     @Override
-    public Optional<PromptTemplate> findByTenantIdAndName(String tenantId, String name) {
+    public Optional<PromptTemplate> findByTenantIdAndName(Long tenantId, String name) {
         return promptTemplateMapper.selectByTenantIdAndName(tenantId, name).map(this::toDomain);
     }
 
@@ -89,12 +89,12 @@ public class PromptTemplateRepositoryImpl implements PromptTemplateRepository {
     }
 
     @Override
-    public Optional<PromptTemplate> findLatestPublished(String tenantId, String name) {
+    public Optional<PromptTemplate> findLatestPublished(Long tenantId, String name) {
         return promptTemplateMapper.selectLatestPublished(tenantId, name).map(this::toDomain);
     }
 
     @Override
-    public Optional<PromptTemplate> findByVersion(String tenantId, String name, int version) {
+    public Optional<PromptTemplate> findByVersion(Long tenantId, String name, int version) {
         return promptTemplateMapper.selectByVersion(tenantId, name, version).map(this::toDomain);
     }
 

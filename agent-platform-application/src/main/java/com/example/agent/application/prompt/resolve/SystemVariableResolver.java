@@ -44,7 +44,7 @@ public class SystemVariableResolver implements VariableResolver {
             case "user_name" -> TenantContext.getCurrentUserId() != null
                     ? TenantContext.getCurrentUserId() : "未知用户";
             case "tenant_name" -> TenantContext.getCurrentTenantId() != null
-                    ? TenantContext.getCurrentTenantId() : "默认租户";
+                    ? String.valueOf(TenantContext.getCurrentTenantId()) : "默认租户";
             case "current_time" -> LocalDateTime.now().format(DATETIME_FMT);
             case "current_date" -> LocalDateTime.now().format(DATE_FMT);
             default -> null;

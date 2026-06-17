@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 public class UserPO {
 
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String userId;
     private String username;
     private String passwordHash;

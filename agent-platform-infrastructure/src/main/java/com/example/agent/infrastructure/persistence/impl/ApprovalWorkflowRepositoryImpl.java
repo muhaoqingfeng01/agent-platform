@@ -45,13 +45,13 @@ public class ApprovalWorkflowRepositoryImpl implements ApprovalWorkflowRepositor
     }
 
     @Override
-    public List<ApprovalWorkflow> findByTenant(String tenantId, int page, int size) {
+    public List<ApprovalWorkflow> findByTenant(Long tenantId, int page, int size) {
         return mapper.selectByTenant(tenantId, page * size, size).stream()
                 .map(this::toDomain).toList();
     }
 
     @Override
-    public long countByTenant(String tenantId) {
+    public long countByTenant(Long tenantId) {
         return mapper.countByTenant(tenantId);
     }
 
@@ -74,12 +74,12 @@ public class ApprovalWorkflowRepositoryImpl implements ApprovalWorkflowRepositor
     }
 
     @Override
-    public long countByStatus(String tenantId, String status) {
+    public long countByStatus(Long tenantId, String status) {
         return mapper.countByStatus(tenantId, status);
     }
 
     @Override
-    public List<ApprovalWorkflow> findByTenantAndStatus(String tenantId, String status, int page, int size) {
+    public List<ApprovalWorkflow> findByTenantAndStatus(Long tenantId, String status, int page, int size) {
         return mapper.selectByTenantAndStatus(tenantId, status, page * size, size).stream()
                 .map(this::toDomain).toList();
     }

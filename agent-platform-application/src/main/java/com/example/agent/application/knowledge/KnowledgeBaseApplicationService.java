@@ -78,7 +78,7 @@ public class KnowledgeBaseApplicationService {
     }
 
     public PageResponse<KnowledgeBaseDTO> list(int page, int size) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         List<KnowledgeBase> list = kbRepository.findByTenant(tenantId, page, size);
         long total = kbRepository.countByTenant(tenantId);
         return PageResponse.of(list.stream().map(KnowledgeBaseDTO::from).toList(), total, page, size);

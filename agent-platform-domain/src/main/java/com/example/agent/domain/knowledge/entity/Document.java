@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 public class Document {
 
     private String documentId;
-    private String tenantId;
+    private Long tenantId;
     private String knowledgeId;
     private String filename;
     private String fileType;

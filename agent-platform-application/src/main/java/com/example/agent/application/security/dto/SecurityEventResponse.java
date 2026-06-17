@@ -22,7 +22,7 @@ public class SecurityEventResponse {
     private Long id;
 
     @Schema(description = "所属租户 ID")
-    private String tenantId;
+    private Long tenantId;
 
     @Schema(description = "事件类型")
     private String eventType;

@@ -18,7 +18,7 @@ public interface EvaluationRunRepository {
 
     EvaluationRun findByEvaluationId(String evaluationId);
 
-    List<EvaluationRun> findByTenant(String tenantId, int page, int size);
+    List<EvaluationRun> findByTenant(Long tenantId, int page, int size);
 
     List<EvaluationRun> findByDatasetId(String datasetId, int page, int size);
 }

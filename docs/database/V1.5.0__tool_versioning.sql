@@ -9,7 +9,7 @@ ALTER TABLE t_tool_registry
 -- 2. 创建版本历史表
 CREATE TABLE t_tool_registry_version (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id       VARCHAR(64)  NOT NULL,
+    tenant_id       BIGINT  NOT NULL,
     tool_id         VARCHAR(64)  NOT NULL COMMENT '关联 t_tool_registry.tool_id',
     version         INT          NOT NULL DEFAULT 1,
     tool_name       VARCHAR(128) NOT NULL,

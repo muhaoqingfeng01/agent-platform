@@ -23,16 +23,16 @@ public interface SensitiveWordMapper {
 
     SensitiveWordPO selectById(@Param("id") Long id);
 
-    List<SensitiveWordPO> selectByTenant(@Param("tenantId") String tenantId,
+    List<SensitiveWordPO> selectByTenant(@Param("tenantId") Long tenantId,
                                           @Param("offset") int offset,
                                           @Param("size") int size);
 
-    long countByTenant(@Param("tenantId") String tenantId);
+    long countByTenant(@Param("tenantId") Long tenantId);
 
     /** 查询租户专属 + 全局的启用规则 */
-    List<SensitiveWordPO> selectActiveByTenantAndGlobal(@Param("tenantId") String tenantId);
+    List<SensitiveWordPO> selectActiveByTenantAndGlobal(@Param("tenantId") Long tenantId);
 
-    List<SensitiveWordPO> selectActiveByCategory(@Param("tenantId") String tenantId,
+    List<SensitiveWordPO> selectActiveByCategory(@Param("tenantId") Long tenantId,
                                                    @Param("category") String category);
 
     List<SensitiveWordPO> selectActiveGlobal();

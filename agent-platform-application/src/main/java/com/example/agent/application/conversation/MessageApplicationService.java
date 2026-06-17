@@ -65,7 +65,7 @@ public class MessageApplicationService {
     }
 
     @Async
-    public void extractLongTermMemoryAsync(String conversationId, String userId, String tenantId) {
+    public void extractLongTermMemoryAsync(String conversationId, String userId, Long tenantId) {
         longTermMemoryService.extractAndSave(conversationId, userId, tenantId);
     }
 

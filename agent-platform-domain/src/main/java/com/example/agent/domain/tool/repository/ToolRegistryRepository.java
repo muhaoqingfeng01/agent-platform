@@ -41,7 +41,7 @@ public interface ToolRegistryRepository {
      * @param size     每页数量
      * @return 工具列表
      */
-    List<ToolRegistry> findByTenant(String tenantId, int page, int size);
+    List<ToolRegistry> findByTenant(Long tenantId, int page, int size);
 
     /**
      * 统计租户下的工具总数.
@@ -49,7 +49,7 @@ public interface ToolRegistryRepository {
      * @param tenantId 租户 ID
      * @return 工具数量
      */
-    long countByTenant(String tenantId);
+    long countByTenant(Long tenantId);
 
     /**
      * 按工具类型筛选分页查询.
@@ -60,7 +60,7 @@ public interface ToolRegistryRepository {
      * @param size     每页数量
      * @return 符合条件的工具列表
      */
-    List<ToolRegistry> findByTenantAndType(String tenantId, ToolType toolType, int page, int size);
+    List<ToolRegistry> findByTenantAndType(Long tenantId, ToolType toolType, int page, int size);
 
     /**
      * 按工具类型统计数量.
@@ -69,7 +69,7 @@ public interface ToolRegistryRepository {
      * @param toolType 工具类型
      * @return 符合条件的工具数量
      */
-    long countByTenantAndType(String tenantId, ToolType toolType);
+    long countByTenantAndType(Long tenantId, ToolType toolType);
 
     /**
      * 查询指定类型和状态的所有工具 — 供 McpClientManager 定时刷新使用.

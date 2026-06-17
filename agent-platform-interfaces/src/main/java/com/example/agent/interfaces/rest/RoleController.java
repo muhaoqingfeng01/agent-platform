@@ -46,7 +46,7 @@ public class RoleController {
     @SaCheckPermission("user:read")
     @Operation(summary = "角色列表")
     public Result<List<RoleResponse>> list() {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         return Result.ok(roleService.listRoles(tenantId));
     }
 

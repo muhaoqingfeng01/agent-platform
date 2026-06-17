@@ -81,7 +81,7 @@ public class UserApplicationService {
                 });
     }
 
-    public List<UserResponse> listUsers(String tenantId, int page, int size) {
+    public List<UserResponse> listUsers(Long tenantId, int page, int size) {
         log.debug("[User] 列表: tenantId={}, page={}, size={}", tenantId, page, size);
         return userRepository.findByTenant(tenantId, page, size).stream()
                 .map(UserResponse::from).toList();

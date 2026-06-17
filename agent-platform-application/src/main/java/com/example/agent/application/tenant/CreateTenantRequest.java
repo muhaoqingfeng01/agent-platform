@@ -9,7 +9,7 @@ import lombok.Data;
 public class CreateTenantRequest {
     @NotBlank @Size(min = 2, max = 64)
     @Schema(description = "租户唯一标识", example = "tenant_acme")
-    private String tenantId;
+    private Long tenantId;
 
     @NotBlank @Size(min = 2, max = 128)
     @Schema(description = "租户名称", example = "ACME 科技有限公司")

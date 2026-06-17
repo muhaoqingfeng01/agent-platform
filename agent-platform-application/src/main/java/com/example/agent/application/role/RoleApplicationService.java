@@ -36,7 +36,7 @@ public class RoleApplicationService {
         return RoleResponse.from(role);
     }
 
-    public List<RoleResponse> listRoles(String tenantId) {
+    public List<RoleResponse> listRoles(Long tenantId) {
         log.debug("[Role] 列表: tenantId={}", tenantId);
         return roleRepository.findByTenant(tenantId).stream()
                 .map(RoleResponse::from).toList();

@@ -26,7 +26,7 @@ public class ToolRegistryPO {
     private Long id;
 
     /** 所属租户 ID */
-    private String tenantId;
+    private Long tenantId;
 
     /** 工具业务唯一标识 — 格式: tool_{snowflake_id} */
     private String toolId;

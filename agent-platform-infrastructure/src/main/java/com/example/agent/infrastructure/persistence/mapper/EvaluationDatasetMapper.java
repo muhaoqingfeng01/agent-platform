@@ -18,11 +18,11 @@ public interface EvaluationDatasetMapper {
 
     EvaluationDatasetPO selectByDatasetId(@Param("datasetId") String datasetId);
 
-    List<EvaluationDatasetPO> selectByTenant(@Param("tenantId") String tenantId,
+    List<EvaluationDatasetPO> selectByTenant(@Param("tenantId") Long tenantId,
                                               @Param("offset") int offset,
                                               @Param("size") int size);
 
-    long countByTenant(@Param("tenantId") String tenantId);
+    long countByTenant(@Param("tenantId") Long tenantId);
 
     // Items
     int insertItem(EvaluationDatasetItemPO po);

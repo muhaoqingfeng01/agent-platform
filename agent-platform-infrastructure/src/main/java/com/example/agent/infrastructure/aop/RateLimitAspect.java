@@ -95,11 +95,14 @@ public class RateLimitAspect {
      * 无法获取时使用 "unknown" 兜底。
      */
     private String appendTenantDimension(String resource) {
-        String tenantId = TenantContext.getCurrentTenantId();
-        if (tenantId == null || tenantId.isEmpty()) {
-            tenantId = "unknown";
+        Long tenantId = TenantContext.getCurrentTenantId();
+        String tenantStr;
+        if (tenantId == null) {
+            tenantStr = "unknown";
+        } else {
+            tenantStr = String.valueOf(tenantId);
         }
-        return resource + ":tenant:" + tenantId;
+        return resource + ":tenant:" + tenantStr;
     }
 
     /**

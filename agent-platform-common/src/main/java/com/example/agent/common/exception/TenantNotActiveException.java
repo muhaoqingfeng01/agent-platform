@@ -7,7 +7,7 @@ package com.example.agent.common.exception;
  */
 public class TenantNotActiveException extends BusinessException {
 
-    public TenantNotActiveException(String tenantId) {
+    public TenantNotActiveException(Long tenantId) {
         super(403, "租户已停用: " + tenantId);
     }
 }

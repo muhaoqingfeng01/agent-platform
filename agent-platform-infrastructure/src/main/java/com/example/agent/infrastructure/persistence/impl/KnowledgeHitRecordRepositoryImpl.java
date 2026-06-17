@@ -58,13 +58,13 @@ public class KnowledgeHitRecordRepositoryImpl implements KnowledgeHitRecordRepos
     }
 
     @Override
-    public List<KnowledgeHitRecord> findPositiveFeedbackByTenant(String tenantId, int limit) {
+    public List<KnowledgeHitRecord> findPositiveFeedbackByTenant(Long tenantId, int limit) {
         return mapper.selectPositiveFeedbackByTenant(tenantId, limit)
                 .stream().map(this::toDomain).toList();
     }
 
     @Override
-    public long countByTenantAndDateRange(String tenantId, String startDate, String endDate) {
+    public long countByTenantAndDateRange(Long tenantId, String startDate, String endDate) {
         return mapper.countByTenantAndDateRange(tenantId, startDate, endDate);
     }
 

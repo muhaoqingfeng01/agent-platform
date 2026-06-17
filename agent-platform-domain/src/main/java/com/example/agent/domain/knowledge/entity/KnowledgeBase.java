@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 public class KnowledgeBase {
 
     private String knowledgeId;
-    private String tenantId;
+    private Long tenantId;
     private String name;
     private String description;
     private String embeddingModel;

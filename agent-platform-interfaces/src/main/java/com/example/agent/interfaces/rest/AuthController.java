@@ -162,7 +162,7 @@ public class AuthController {
     public Result<UserInfo> currentUser() {
         String userId = (String) StpUtil.getLoginId();
         String username = StpUtil.getSession().getString("username");
-        String tenantId = StpUtil.getSession().getString("tenantId");
+        Long tenantId = StpUtil.getSession().getLong("tenantId");
         log.debug("[Auth] 查询当前用户: userId={}, tenantId={}", userId, tenantId);
         return Result.ok(new UserInfo(userId, username, tenantId));
     }

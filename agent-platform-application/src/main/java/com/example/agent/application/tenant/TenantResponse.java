@@ -11,7 +11,7 @@ public class TenantResponse {
     @Schema(description = "主键 ID")
     private Long id;
     @Schema(description = "租户唯一标识")
-    private String tenantId;
+    private Long tenantId;
     @Schema(description = "租户名称")
     private String name;
     @Schema(description = "状态")

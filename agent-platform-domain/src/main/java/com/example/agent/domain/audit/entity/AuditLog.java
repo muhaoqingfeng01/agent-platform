@@ -23,7 +23,7 @@ public class AuditLog {
     private Long id;
 
     /** 所属租户 ID */
-    private String tenantId;
+    private Long tenantId;
 
     /** 全链路追踪 ID（串联 T9） */
     private String traceId;

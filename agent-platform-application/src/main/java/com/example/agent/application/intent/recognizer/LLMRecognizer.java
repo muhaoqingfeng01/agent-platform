@@ -27,7 +27,7 @@ public class LLMRecognizer {
     private final ChatClient chatClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public IntentResult recognize(String tenantId, String userInput) {
+    public IntentResult recognize(Long tenantId, String userInput) {
         List<Intent> intents = intentRepository.findActiveByTenant(tenantId);
         if (intents.isEmpty()) {
             return IntentResult.unknown("当前租户未配置任何活跃意图");

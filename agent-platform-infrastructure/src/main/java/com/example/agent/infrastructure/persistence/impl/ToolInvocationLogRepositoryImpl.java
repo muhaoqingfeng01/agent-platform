@@ -46,7 +46,7 @@ public class ToolInvocationLogRepositoryImpl implements ToolInvocationLogReposit
     }
 
     @Override
-    public List<ToolInvocationLog> findByTenant(String tenantId, int page, int size) {
+    public List<ToolInvocationLog> findByTenant(Long tenantId, int page, int size) {
         int offset = page * size;
         return mapper.selectByTenant(tenantId, offset, size).stream()
                 .map(this::toDomain).toList();
@@ -58,7 +58,7 @@ public class ToolInvocationLogRepositoryImpl implements ToolInvocationLogReposit
     }
 
     @Override
-    public long countByTenant(String tenantId) {
+    public long countByTenant(Long tenantId) {
         return mapper.countByTenant(tenantId);
     }
 

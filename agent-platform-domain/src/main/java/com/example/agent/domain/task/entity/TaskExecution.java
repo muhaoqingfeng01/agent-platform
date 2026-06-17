@@ -23,7 +23,7 @@ public class TaskExecution {
     private Long id;
 
     /** 租户 ID */
-    private String tenantId;
+    private Long tenantId;
 
     /** 执行唯一标识 */
     private String executionId;

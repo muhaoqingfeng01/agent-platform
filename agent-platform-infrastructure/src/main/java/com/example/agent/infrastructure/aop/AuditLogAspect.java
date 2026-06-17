@@ -60,7 +60,7 @@ public class AuditLogAspect {
     public Object around(ProceedingJoinPoint joinPoint, Auditable auditable) throws Throwable {
         long start = System.currentTimeMillis();
         String traceId = MDC.get("traceId");
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         String userId = TenantContext.getCurrentUserId();
         String status = "SUCCESS";
         String requestJson = null;

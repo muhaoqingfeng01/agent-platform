@@ -24,9 +24,9 @@ public interface KnowledgeBaseRepository {
 
     Optional<KnowledgeBase> findByKnowledgeId(String knowledgeId);
 
-    List<KnowledgeBase> findByTenant(String tenantId, int page, int size);
+    List<KnowledgeBase> findByTenant(Long tenantId, int page, int size);
 
-    long countByTenant(String tenantId);
+    long countByTenant(Long tenantId);
 
     void updateDocumentCount(String knowledgeId, int documentCount);
 
@@ -46,10 +46,10 @@ public interface KnowledgeBaseRepository {
 
     void updateKnowledgeBaseStatus(String knowledgeId, KnowledgeBaseStatus status);
 
-    List<KnowledgeBase> findByTenantAndStatus(String tenantId, KnowledgeBaseStatus status);
+    List<KnowledgeBase> findByTenantAndStatus(Long tenantId, KnowledgeBaseStatus status);
 
     /** ★ V1.4.0: 获取租户下所有 ENABLED 状态的知识库 ID（用于检索过滤） */
-    Set<String> findEnabledKnowledgeIds(String tenantId);
+    Set<String> findEnabledKnowledgeIds(Long tenantId);
 
     void softDelete(String knowledgeId);
 }

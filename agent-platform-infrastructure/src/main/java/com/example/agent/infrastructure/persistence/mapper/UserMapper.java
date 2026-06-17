@@ -17,16 +17,16 @@ public interface UserMapper {
 
     Optional<UserPO> findByUserId(@Param("userId") String userId);
 
-    Optional<UserPO> findByTenantAndUsername(@Param("tenantId") String tenantId,
+    Optional<UserPO> findByTenantAndUsername(@Param("tenantId") Long tenantId,
                                               @Param("username") String username);
 
     Optional<UserPO> findByUsername(@Param("username") String username);
 
-    List<UserPO> findByTenant(@Param("tenantId") String tenantId,
+    List<UserPO> findByTenant(@Param("tenantId") Long tenantId,
                                @Param("offset") int offset,
                                @Param("size") int size);
 
-    long countByTenant(@Param("tenantId") String tenantId);
+    long countByTenant(@Param("tenantId") Long tenantId);
 
     int insert(UserPO user);
 

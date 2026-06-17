@@ -44,7 +44,7 @@ public class StreamOrchestrationService {
     private static final long HEARTBEAT_INTERVAL_MS = 15_000L;
 
     @Auditable(action = "LLM_CALL", resourceType = "CONVERSATION", recordResponse = false)
-    public void executeStreamPipeline(String conversationId, String tenantId, String userId,
+    public void executeStreamPipeline(String conversationId, Long tenantId, String userId,
                                         String userContent, SseEmitter emitter) {
         // 将 HTTP 线程捕获的上下文注入当前执行线程，确保下游 ThreadLocal 链路完整
         TenantContext.setTenantId(tenantId);

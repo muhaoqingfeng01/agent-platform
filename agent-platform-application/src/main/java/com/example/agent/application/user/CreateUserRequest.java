@@ -9,7 +9,7 @@ import lombok.Data;
 public class CreateUserRequest {
     @NotBlank
     @Schema(description = "所属租户标识", example = "tenant_acme")
-    private String tenantId;
+    private Long tenantId;
 
     @NotBlank @Size(min = 3, max = 64)
     @Schema(description = "用户名", example = "zhangsan")

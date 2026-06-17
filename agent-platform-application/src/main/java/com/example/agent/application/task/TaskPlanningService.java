@@ -85,7 +85,7 @@ public class TaskPlanningService {
      */
     @Transactional
     public PlanResult plan(PlanRequest request) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
 
         // 1. 检查是否有可用的 Handler
         if (handlerRegistry.size() == 0) {

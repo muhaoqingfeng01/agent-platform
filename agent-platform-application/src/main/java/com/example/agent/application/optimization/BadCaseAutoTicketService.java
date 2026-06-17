@@ -44,7 +44,7 @@ public class BadCaseAutoTicketService {
         try {
             String messageId = event.getMessageId();
             String conversationId = event.getConversationId();
-            String tenantId = event.getTenantId();
+            Long tenantId = event.getTenantId();
 
             // 获取被点踩的消息上下文
             List<Message> context = messageRepository.findByConversationId(conversationId, 0, 5);

@@ -24,7 +24,7 @@ public class RuleRecognizer {
 
     private final IntentRepository intentRepository;
 
-    public Optional<IntentResult> recognize(String tenantId, String userInput) {
+    public Optional<IntentResult> recognize(Long tenantId, String userInput) {
         List<Intent> intents = intentRepository.findActiveByTenant(tenantId);
         if (intents.isEmpty()) {
             return Optional.empty();

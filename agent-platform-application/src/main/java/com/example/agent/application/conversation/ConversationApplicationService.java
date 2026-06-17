@@ -63,7 +63,7 @@ public class ConversationApplicationService {
     }
 
     public PageResponse<ConversationResponse> listConversations(int page, int size) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         String userId = TenantContext.getCurrentUserId();
         List<Conversation> conversations = conversationRepository.findByUserId(tenantId, userId, page, size);
         long total = conversationRepository.countByUserId(tenantId, userId);

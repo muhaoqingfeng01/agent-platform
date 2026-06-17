@@ -57,7 +57,7 @@ public class PromptApplicationService {
      */
     @Transactional
     public PromptResponse createPrompt(CreatePromptRequest request) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         String promptId = IdGenerator.generate("prompt");
 
         List<VariableDef> variables = request.getVariables() != null
@@ -130,7 +130,7 @@ public class PromptApplicationService {
      * 分页查询模板列表.
      */
     public PageResponse<PromptResponse> listPrompts(int page, int size, String statusFilter) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         int offset = page * size;
 
         List<PromptTemplate> templates;
@@ -339,7 +339,7 @@ public class PromptApplicationService {
     public static class PromptResponse {
         private Long id;
         private String promptId;
-        private String tenantId;
+        private Long tenantId;
         private String name;
         private String description;
         private String templateText;

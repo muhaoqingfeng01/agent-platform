@@ -20,9 +20,9 @@ public interface ConversationRepository {
 
     Optional<Conversation> findByConversationId(String conversationId);
 
-    List<Conversation> findByUserId(String tenantId, String userId, int page, int size);
+    List<Conversation> findByUserId(Long tenantId, String userId, int page, int size);
 
-    long countByUserId(String tenantId, String userId);
+    long countByUserId(Long tenantId, String userId);
 
     void updateTitle(String conversationId, String title);
 

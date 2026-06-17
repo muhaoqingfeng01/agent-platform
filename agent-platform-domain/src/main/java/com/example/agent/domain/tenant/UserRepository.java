@@ -12,7 +12,7 @@ public interface UserRepository {
 
     Optional<User> findByUserId(String userId);
 
-    Optional<User> findByTenantAndUsername(String tenantId, String username);
+    Optional<User> findByTenantAndUsername(Long tenantId, String username);
 
     /**
      * 跨租户用户名查找（用于未指定租户时的认证兜底）.
@@ -20,9 +20,9 @@ public interface UserRepository {
      */
     Optional<User> findByUsername(String username);
 
-    List<User> findByTenant(String tenantId, int page, int size);
+    List<User> findByTenant(Long tenantId, int page, int size);
 
-    long countByTenant(String tenantId);
+    long countByTenant(Long tenantId);
 
     void save(User user);
 

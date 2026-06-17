@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Data
 public class RoleResponse {
     @Schema(description = "主键 ID") private Long id;
-    @Schema(description = "所属租户") private String tenantId;
+    @Schema(description = "所属租户") private Long tenantId;
     @Schema(description = "角色编码") private String roleCode;
     @Schema(description = "角色名称") private String roleName;
     @Schema(description = "角色描述") private String description;

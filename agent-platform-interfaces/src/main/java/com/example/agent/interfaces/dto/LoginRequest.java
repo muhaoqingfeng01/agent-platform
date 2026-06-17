@@ -24,7 +24,7 @@ public class LoginRequest implements Serializable {
     private String password;
 
     /** 租户标识（可选，多租户登录时指定） */
-    private String tenantId;
+    private Long tenantId;
 
     /** 认证提供者类型（可选，LOCAL/LDAP/SSO，默认 LOCAL） */
     private String provider;

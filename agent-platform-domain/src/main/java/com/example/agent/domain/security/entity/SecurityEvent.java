@@ -22,7 +22,7 @@ public class SecurityEvent {
     private Long id;
 
     /** 所属租户 ID */
-    private String tenantId;
+    private Long tenantId;
 
     /** 事件类型: INPUT_FILTER / OUTPUT_DESENSITIZE / INJECTION_DETECTED / JAILBREAK_DETECTED */
     private String eventType;

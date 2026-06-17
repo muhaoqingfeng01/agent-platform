@@ -23,5 +23,5 @@ public class UserInfo implements Serializable {
     private String username;
 
     /** 所属租户 */
-    private String tenantId;
+    private Long tenantId;
 }

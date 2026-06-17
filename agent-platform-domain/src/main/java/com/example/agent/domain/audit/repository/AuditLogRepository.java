@@ -21,11 +21,11 @@ public interface AuditLogRepository {
     List<AuditLog> findByTraceId(String traceId);
 
     /** 按租户分页查询 */
-    List<AuditLog> findByTenant(String tenantId, int page, int size);
+    List<AuditLog> findByTenant(Long tenantId, int page, int size);
 
     /** 按会话分页查询 */
     List<AuditLog> findByConversation(String conversationId, int page, int size);
 
     /** 按租户统计总数 */
-    long countByTenant(String tenantId);
+    long countByTenant(Long tenantId);
 }

@@ -61,7 +61,7 @@ public class ApprovalWorkflowApplicationService {
      */
     @Transactional
     public ApprovalWorkflowResponse createApproval(CreateApprovalRequest request) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         String requesterId = TenantContext.getCurrentUserId();
 
         // 获取工具信息
@@ -195,7 +195,7 @@ public class ApprovalWorkflowApplicationService {
 
     /** 租户下所有工单 */
     public List<ApprovalWorkflowResponse> listByTenant(int page, int size) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         return approvalRepository.findByTenant(tenantId, page, size).stream()
                 .map(ApprovalWorkflowResponse::from)
                 .toList();
@@ -203,7 +203,7 @@ public class ApprovalWorkflowApplicationService {
 
     /** 租户下按状态筛选 */
     public List<ApprovalWorkflowResponse> listByStatus(String status, int page, int size) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         return approvalRepository.findByTenantAndStatus(tenantId, status, page, size).stream()
                 .map(ApprovalWorkflowResponse::from)
                 .toList();
@@ -218,7 +218,7 @@ public class ApprovalWorkflowApplicationService {
 
     /** 审批统计 */
     public Map<String, Object> stats() {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("pending", approvalRepository.countByStatus(tenantId, "PENDING"));
         stats.put("approved", approvalRepository.countByStatus(tenantId, "APPROVED"));
@@ -246,7 +246,7 @@ public class ApprovalWorkflowApplicationService {
     }
 
     /** 分配审批人（当前简化实现：推送给所有在线用户） */
-    private String assignApprover(String tenantId) {
+    private String assignApprover(Long tenantId) {
         // TODO: 实现轮询分配或角色查询
         // 当前返回 null 表示推送给所有审批人
         return null;

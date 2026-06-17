@@ -23,7 +23,7 @@ public interface LongTermMemoryRepository {
 
     void deleteBySource(String source);
 
-    List<LongTermMemory> findByUserId(String tenantId, String userId);
+    List<LongTermMemory> findByUserId(Long tenantId, String userId);
 
-    List<LongTermMemory> findByUserIdAndType(String tenantId, String userId, MemoryType type);
+    List<LongTermMemory> findByUserIdAndType(Long tenantId, String userId, MemoryType type);
 }

@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Builder
 public class KnowledgeBaseDTO {
     private String knowledgeId;
-    private String tenantId;
+    private Long tenantId;
     private String name;
     private String description;
     private String embeddingModel;

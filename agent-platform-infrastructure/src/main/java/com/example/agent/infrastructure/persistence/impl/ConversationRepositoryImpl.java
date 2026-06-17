@@ -38,14 +38,14 @@ public class ConversationRepositoryImpl implements ConversationRepository {
     }
 
     @Override
-    public List<Conversation> findByUserId(String tenantId, String userId, int page, int size) {
+    public List<Conversation> findByUserId(Long tenantId, String userId, int page, int size) {
         int offset = page * size;
         return conversationMapper.selectByUserId(tenantId, userId, offset, size)
                 .stream().map(this::toDomain).toList();
     }
 
     @Override
-    public long countByUserId(String tenantId, String userId) {
+    public long countByUserId(Long tenantId, String userId) {
         return conversationMapper.countByUserId(tenantId, userId);
     }
 

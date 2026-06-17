@@ -58,7 +58,7 @@ public class MessageController {
     public SseEmitter streamChat(@PathVariable String id,
                                   @Valid @RequestBody SendMessageRequest request) {
         // 在线程池线程执行前捕获 ThreadLocal 上下文
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         String userId = TenantContext.getCurrentUserId();
         SseEmitter emitter = SseEmitterFactory.create(300_000L);
         streamExecutor.submit(() -> streamService.executeStreamPipeline(
@@ -93,7 +93,7 @@ public class MessageController {
         messageService.updateFeedback(msgId, request.getFeedback());
 
         // 发布反馈事件（BadCase 自动工单监听）
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         eventPublisher.publishEvent(new MessageFeedbackEvent(
                 this, msgId, id, tenantId, request.getFeedback()));
 

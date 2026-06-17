@@ -25,7 +25,7 @@ public class ToolRegistryVersion {
     private Long id;
 
     /** 租户 ID */
-    private String tenantId;
+    private Long tenantId;
 
     /** 关联的工具业务 ID */
     private String toolId;

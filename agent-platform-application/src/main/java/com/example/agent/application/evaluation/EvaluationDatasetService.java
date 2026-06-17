@@ -23,7 +23,7 @@ public class EvaluationDatasetService {
 
     @Transactional
     public DatasetResponse create(CreateDatasetRequest request) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         String datasetId = IdGenerator.generate("ds");
 
         EvaluationDataset dataset = EvaluationDataset.builder()
@@ -44,7 +44,7 @@ public class EvaluationDatasetService {
     }
 
     public List<DatasetResponse> list(int page, int size) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         return datasetRepository.findByTenant(tenantId, page, size).stream()
                 .map(this::toResponse).collect(Collectors.toList());
     }

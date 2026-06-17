@@ -60,7 +60,7 @@ public class LdapAuthenticationProvider implements AuthenticationProvider {
 
         // STUB: 降级到本地认证
         log.warn("[LDAP] LDAP 服务器不可用，降级到本地认证: username={}", username);
-        UserView user = userService.authenticate("ldap", username, password);
+        UserView user = userService.authenticate(1L, username, password);
         if (user == null || !user.isActive()) {
             throw new AuthenticationException("LDAP/本地认证失败: " + username);
         }

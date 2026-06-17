@@ -24,10 +24,10 @@ public interface ApprovalWorkflowRepository {
     Optional<ApprovalWorkflow> findByApprovalId(String approvalId);
 
     /** 按租户分页查询 */
-    List<ApprovalWorkflow> findByTenant(String tenantId, int page, int size);
+    List<ApprovalWorkflow> findByTenant(Long tenantId, int page, int size);
 
     /** 统计租户下的工单数 */
-    long countByTenant(String tenantId);
+    long countByTenant(Long tenantId);
 
     /** 按请求人查询 */
     List<ApprovalWorkflow> findByRequester(String requesterId, int page, int size);
@@ -39,8 +39,8 @@ public interface ApprovalWorkflowRepository {
     List<ApprovalWorkflow> findTimeoutPending(LocalDateTime now);
 
     /** 按状态统计（租户维度） */
-    long countByStatus(String tenantId, String status);
+    long countByStatus(Long tenantId, String status);
 
     /** 按状态查询 */
-    List<ApprovalWorkflow> findByTenantAndStatus(String tenantId, String status, int page, int size);
+    List<ApprovalWorkflow> findByTenantAndStatus(Long tenantId, String status, int page, int size);
 }

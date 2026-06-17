@@ -28,16 +28,16 @@ public interface SensitiveWordRepository {
     Optional<SensitiveWord> findById(Long id);
 
     /** 按租户分页查询 */
-    List<SensitiveWord> findByTenant(String tenantId, int page, int size);
+    List<SensitiveWord> findByTenant(Long tenantId, int page, int size);
 
     /** 统计租户下的规则数 */
-    long countByTenant(String tenantId);
+    long countByTenant(Long tenantId);
 
     /** 查询所有启用的规则（全局 + 指定租户） */
-    List<SensitiveWord> findActiveByTenantAndGlobal(String tenantId);
+    List<SensitiveWord> findActiveByTenantAndGlobal(Long tenantId);
 
     /** 按分类查询启用的规则 */
-    List<SensitiveWord> findActiveByCategory(String tenantId, SensitiveCategory category);
+    List<SensitiveWord> findActiveByCategory(Long tenantId, SensitiveCategory category);
 
     /** 查询全局启用的规则 */
     List<SensitiveWord> findActiveGlobal();

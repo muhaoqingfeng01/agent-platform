@@ -60,24 +60,24 @@ public class IntentRepositoryImpl implements IntentRepository {
     }
 
     @Override
-    public List<Intent> findActiveByTenant(String tenantId) {
+    public List<Intent> findActiveByTenant(Long tenantId) {
         return intentMapper.selectActiveByTenant(tenantId)
                 .stream().map(this::toDomain).toList();
     }
 
     @Override
-    public List<Intent> findByTenant(String tenantId, int page, int size) {
+    public List<Intent> findByTenant(Long tenantId, int page, int size) {
         return intentMapper.selectByTenant(tenantId, page * size, size)
                 .stream().map(this::toDomain).toList();
     }
 
     @Override
-    public long countByTenant(String tenantId) {
+    public long countByTenant(Long tenantId) {
         return intentMapper.countByTenant(tenantId);
     }
 
     @Override
-    public boolean existsByTenantAndCode(String tenantId, String intentCode) {
+    public boolean existsByTenantAndCode(Long tenantId, String intentCode) {
         return intentMapper.existsByTenantAndCode(tenantId, intentCode);
     }
 

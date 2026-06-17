@@ -23,16 +23,16 @@ public interface PromptTemplateRepository {
     Optional<PromptTemplate> findByPromptId(String promptId);
 
     /** 分页查询租户下的模板列表 */
-    List<PromptTemplate> findByTenantId(String tenantId, int offset, int size);
+    List<PromptTemplate> findByTenantId(Long tenantId, int offset, int size);
 
     /** 统计租户下的模板数量 */
-    long countByTenantId(String tenantId);
+    long countByTenantId(Long tenantId);
 
     /** 按状态筛选 */
-    List<PromptTemplate> findByTenantIdAndStatus(String tenantId, PromptStatus status, int offset, int size);
+    List<PromptTemplate> findByTenantIdAndStatus(Long tenantId, PromptStatus status, int offset, int size);
 
     /** 根据名称查询（同一租户下名称唯一） */
-    Optional<PromptTemplate> findByTenantIdAndName(String tenantId, String name);
+    Optional<PromptTemplate> findByTenantIdAndName(Long tenantId, String name);
 
     /** 更新模板内容（草稿编辑） */
     void updateContent(String promptId, String name, String description,
@@ -48,8 +48,8 @@ public interface PromptTemplateRepository {
     void softDelete(String promptId);
 
     /** 查询指定名称的最新 PUBLISHED 版本（缓存热点） */
-    Optional<PromptTemplate> findLatestPublished(String tenantId, String name);
+    Optional<PromptTemplate> findLatestPublished(Long tenantId, String name);
 
     /** 按名称+版本号查询历史版本 */
-    Optional<PromptTemplate> findByVersion(String tenantId, String name, int version);
+    Optional<PromptTemplate> findByVersion(Long tenantId, String name, int version);
 }

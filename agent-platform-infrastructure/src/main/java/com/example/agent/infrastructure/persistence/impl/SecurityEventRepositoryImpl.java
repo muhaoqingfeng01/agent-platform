@@ -31,13 +31,13 @@ public class SecurityEventRepositoryImpl implements SecurityEventRepository {
     }
 
     @Override
-    public List<SecurityEvent> findByTenant(String tenantId, int page, int size) {
+    public List<SecurityEvent> findByTenant(Long tenantId, int page, int size) {
         return mapper.selectByTenant(tenantId, page * size, size).stream()
                 .map(this::toDomain).toList();
     }
 
     @Override
-    public long countByTenant(String tenantId) {
+    public long countByTenant(Long tenantId) {
         return mapper.countByTenant(tenantId);
     }
 
@@ -48,7 +48,7 @@ public class SecurityEventRepositoryImpl implements SecurityEventRepository {
     }
 
     @Override
-    public List<SecurityEvent> findByEventType(String tenantId, String eventType, int page, int size) {
+    public List<SecurityEvent> findByEventType(Long tenantId, String eventType, int page, int size) {
         return mapper.selectByEventType(tenantId, eventType, page * size, size).stream()
                 .map(this::toDomain).toList();
     }

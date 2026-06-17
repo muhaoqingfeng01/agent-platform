@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 public class AuditLogPO {
 
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String traceId;
     private String conversationId;
     private String actorType;

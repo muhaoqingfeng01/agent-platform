@@ -24,7 +24,7 @@ public class ToolInvocationLog {
     private String invocationId;
 
     /** 所属租户 ID — 多租户隔离 */
-    private String tenantId;
+    private Long tenantId;
 
     /** 关联工具 ID — 对应 t_tool_registry.tool_id */
     private String toolId;

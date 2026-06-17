@@ -9,7 +9,7 @@ import lombok.Data;
 public class CreateRoleRequest {
     @NotBlank
     @Schema(description = "所属租户标识", example = "tenant_acme")
-    private String tenantId;
+    private Long tenantId;
 
     @NotBlank @Size(min = 2, max = 64)
     @Schema(description = "角色编码", example = "DATA_ANALYST")

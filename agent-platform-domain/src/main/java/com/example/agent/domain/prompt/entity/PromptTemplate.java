@@ -24,7 +24,7 @@ import java.util.List;
 public class PromptTemplate {
 
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String promptId;        // 业务唯一标识
     private String name;            // 模板名称
     private String description;     // 描述

@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class KnowledgeHitRecordPO {
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String conversationId;
     private String messageId;
     private Long chunkId;

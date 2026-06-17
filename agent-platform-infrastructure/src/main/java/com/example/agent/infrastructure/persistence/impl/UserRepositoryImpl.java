@@ -34,7 +34,7 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
-    public Optional<User> findByTenantAndUsername(String tenantId, String username) {
+    public Optional<User> findByTenantAndUsername(Long tenantId, String username) {
         return userMapper.findByTenantAndUsername(tenantId, username).map(this::toDomain);
     }
 
@@ -44,13 +44,13 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
-    public List<User> findByTenant(String tenantId, int page, int size) {
+    public List<User> findByTenant(Long tenantId, int page, int size) {
         return userMapper.findByTenant(tenantId, page * size, size)
                 .stream().map(this::toDomain).toList();
     }
 
     @Override
-    public long countByTenant(String tenantId) {
+    public long countByTenant(Long tenantId) {
         return userMapper.countByTenant(tenantId);
     }
 

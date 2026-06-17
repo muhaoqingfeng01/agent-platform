@@ -38,7 +38,7 @@ public class IntentRecognitionChain {
      * <p>用于异步/线程池场景（如 SSE 流式），此时 ThreadLocal 中的租户上下文不可用.
      */
     @Auditable(action = "INTENT_RECOGNITION", resourceType = "INTENT", recordResponse = false)
-    public IntentResult recognize(String tenantId, String userInput) {
+    public IntentResult recognize(Long tenantId, String userInput) {
         long startTime = System.currentTimeMillis();
 
         try {

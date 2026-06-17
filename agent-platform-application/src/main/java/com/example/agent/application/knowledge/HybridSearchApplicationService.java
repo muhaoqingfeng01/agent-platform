@@ -48,7 +48,7 @@ public class HybridSearchApplicationService {
     private static final int RRF_K = 60;
 
     public SearchResultDTO search(String query, String knowledgeId, Map<String, Object> searchConfig) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         String collectionName = "kb_" + tenantId;
 
         PrecisionConfigDomainService.MergedPrecisionConfig config =
@@ -146,7 +146,7 @@ public class HybridSearchApplicationService {
             return "knowledge_id == \"" + knowledgeId + "\"";
         }
         // 未指定 KB → 检索所有 ENABLED KB
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         Set<String> enabledIds = kbRepository.findEnabledKnowledgeIds(tenantId);
         if (enabledIds.isEmpty()) return null;
         StringBuilder sb = new StringBuilder("knowledge_id in [");
@@ -226,7 +226,7 @@ public class HybridSearchApplicationService {
     }
 
     private void recordHits(String query, List<FusedHit> topN) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         String conversationId = "unknown";
         for (int i = 0; i < topN.size(); i++) {
             FusedHit fh = topN.get(i);

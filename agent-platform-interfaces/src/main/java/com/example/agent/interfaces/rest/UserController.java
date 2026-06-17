@@ -50,7 +50,7 @@ public class UserController {
     public Result<List<UserResponse>> list(
             @Parameter(description = "页码（从 0 开始）") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "20") int size) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         return Result.ok(userService.listUsers(tenantId, page, size));
     }
 

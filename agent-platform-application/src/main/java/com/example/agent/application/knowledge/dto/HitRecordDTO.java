@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Builder
 public class HitRecordDTO {
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String conversationId;
     private String messageId;
     private Long chunkId;

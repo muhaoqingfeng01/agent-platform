@@ -24,7 +24,7 @@ public class UserView implements Serializable {
     private String passwordHash;
 
     /** 所属租户 */
-    private String tenantId;
+    private Long tenantId;
 
     /** 状态: ACTIVE / DISABLED */
     private String status;

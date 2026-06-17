@@ -54,7 +54,7 @@ public interface ToolInvocationLogMapper {
      * @param size     每页数量
      * @return 调用日志列表
      */
-    List<ToolInvocationLogPO> selectByTenant(@Param("tenantId") String tenantId,
+    List<ToolInvocationLogPO> selectByTenant(@Param("tenantId") Long tenantId,
                                               @Param("offset") int offset,
                                               @Param("size") int size);
 
@@ -64,5 +64,5 @@ public interface ToolInvocationLogMapper {
      * @param tenantId 租户 ID
      * @return 调用总次数
      */
-    long countByTenant(@Param("tenantId") String tenantId);
+    long countByTenant(@Param("tenantId") Long tenantId);
 }

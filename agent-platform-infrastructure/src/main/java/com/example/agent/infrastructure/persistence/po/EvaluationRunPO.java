@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class EvaluationRunPO {
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String evaluationId;
     private String agentId;
     private String datasetId;

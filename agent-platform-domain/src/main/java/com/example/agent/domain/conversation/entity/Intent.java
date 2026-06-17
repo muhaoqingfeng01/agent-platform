@@ -19,7 +19,7 @@ import java.util.Map;
 public class Intent {
 
     private String intentId;
-    private String tenantId;
+    private Long tenantId;
     private String intentCode;
     private String intentName;
     private String category;

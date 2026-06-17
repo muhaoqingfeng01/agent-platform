@@ -53,24 +53,24 @@ public class SensitiveWordRepositoryImpl implements SensitiveWordRepository {
     }
 
     @Override
-    public List<SensitiveWord> findByTenant(String tenantId, int page, int size) {
+    public List<SensitiveWord> findByTenant(Long tenantId, int page, int size) {
         return mapper.selectByTenant(tenantId, page * size, size).stream()
                 .map(this::toDomain).toList();
     }
 
     @Override
-    public long countByTenant(String tenantId) {
+    public long countByTenant(Long tenantId) {
         return mapper.countByTenant(tenantId);
     }
 
     @Override
-    public List<SensitiveWord> findActiveByTenantAndGlobal(String tenantId) {
+    public List<SensitiveWord> findActiveByTenantAndGlobal(Long tenantId) {
         return mapper.selectActiveByTenantAndGlobal(tenantId).stream()
                 .map(this::toDomain).toList();
     }
 
     @Override
-    public List<SensitiveWord> findActiveByCategory(String tenantId, SensitiveCategory category) {
+    public List<SensitiveWord> findActiveByCategory(Long tenantId, SensitiveCategory category) {
         return mapper.selectActiveByCategory(tenantId, category.name()).stream()
                 .map(this::toDomain).toList();
     }

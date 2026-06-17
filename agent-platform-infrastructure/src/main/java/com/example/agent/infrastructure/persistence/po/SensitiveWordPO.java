@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 public class SensitiveWordPO {
 
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String word;
     private String matchType;
     private String category;

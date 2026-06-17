@@ -22,7 +22,7 @@ public class SensitiveWordResponse {
     private Long id;
 
     @Schema(description = "所属租户 ID")
-    private String tenantId;
+    private Long tenantId;
 
     @Schema(description = "敏感词或正则表达式")
     private String word;

@@ -21,7 +21,7 @@ public class IntentPO {
 
     private Long id;
     private String intentId;
-    private String tenantId;
+    private Long tenantId;
     private String intentCode;
     private String intentName;
     private String category;

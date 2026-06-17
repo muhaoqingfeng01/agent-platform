@@ -15,7 +15,7 @@ public interface EvaluationRunMapper {
 
     EvaluationRunPO selectByEvaluationId(@Param("evaluationId") String evaluationId);
 
-    List<EvaluationRunPO> selectByTenant(@Param("tenantId") String tenantId,
+    List<EvaluationRunPO> selectByTenant(@Param("tenantId") Long tenantId,
                                           @Param("offset") int offset,
                                           @Param("size") int size);
 

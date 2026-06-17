@@ -25,10 +25,10 @@ public interface LongTermMemoryMapper {
 
     int deleteBySource(@Param("source") String source);
 
-    List<LongTermMemoryPO> selectByUserId(@Param("tenantId") String tenantId,
+    List<LongTermMemoryPO> selectByUserId(@Param("tenantId") Long tenantId,
                                            @Param("userId") String userId);
 
-    List<LongTermMemoryPO> selectByUserIdAndType(@Param("tenantId") String tenantId,
+    List<LongTermMemoryPO> selectByUserIdAndType(@Param("tenantId") Long tenantId,
                                                   @Param("userId") String userId,
                                                   @Param("memoryType") String memoryType);
 }

@@ -51,7 +51,7 @@ public class TenantSqlInterceptor implements Interceptor {
         }
 
         // 获取当前租户 ID
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         if (tenantId == null) {
             log.trace("[TenantSQL] 当前无租户上下文，跳过 SQL 注入");
             return invocation.proceed();
@@ -94,8 +94,8 @@ public class TenantSqlInterceptor implements Interceptor {
      * 简单实现：在 WHERE 子句后追加 {@code AND tenant_id = 'xxx'}。
      * 生产环境建议使用 MyBatis-Plus 多租户插件替代此实现。
      */
-    private String injectTenantCondition(String sql, String tenantId) {
-        String condition = "tenant_id = '" + tenantId + "'";
+    private String injectTenantCondition(String sql, Long tenantId) {
+        String condition = "tenant_id = " + tenantId;
 
         // 如果已有 WHERE 子句，追加 AND
         if (sql.toLowerCase().contains("where")) {

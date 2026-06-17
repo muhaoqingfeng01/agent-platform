@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 public class EvaluationRun {
 
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String evaluationId;
     private String agentId;
     private String datasetId;

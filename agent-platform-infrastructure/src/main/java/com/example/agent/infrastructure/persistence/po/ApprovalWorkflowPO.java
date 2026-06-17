@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 public class ApprovalWorkflowPO {
 
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String approvalId;
     private String toolId;
     private String conversationId;

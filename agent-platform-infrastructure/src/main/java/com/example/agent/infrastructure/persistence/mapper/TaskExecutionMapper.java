@@ -39,5 +39,5 @@ public interface TaskExecutionMapper {
 
     long countByAgentId(@Param("agentId") String agentId);
 
-    List<TaskExecutionPO> selectActiveByTenant(@Param("tenantId") String tenantId);
+    List<TaskExecutionPO> selectActiveByTenant(@Param("tenantId") Long tenantId);
 }

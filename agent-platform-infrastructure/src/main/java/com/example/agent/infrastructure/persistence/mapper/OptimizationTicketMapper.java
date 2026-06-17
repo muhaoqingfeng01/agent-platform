@@ -16,24 +16,24 @@ public interface OptimizationTicketMapper {
 
     OptimizationTicketPO selectByTicketId(@Param("ticketId") String ticketId);
 
-    List<OptimizationTicketPO> selectByTenant(@Param("tenantId") String tenantId,
+    List<OptimizationTicketPO> selectByTenant(@Param("tenantId") Long tenantId,
                                                @Param("offset") int offset,
                                                @Param("size") int size);
 
-    List<OptimizationTicketPO> selectByAssignee(@Param("tenantId") String tenantId,
+    List<OptimizationTicketPO> selectByAssignee(@Param("tenantId") Long tenantId,
                                                  @Param("assignee") String assignee,
                                                  @Param("offset") int offset,
                                                  @Param("size") int size);
 
-    List<OptimizationTicketPO> selectByStatus(@Param("tenantId") String tenantId,
+    List<OptimizationTicketPO> selectByStatus(@Param("tenantId") Long tenantId,
                                                @Param("status") String status,
                                                @Param("offset") int offset,
                                                @Param("size") int size);
 
-    long countByStatusAndResolvedSince(@Param("tenantId") String tenantId,
+    long countByStatusAndResolvedSince(@Param("tenantId") Long tenantId,
                                         @Param("status") String status,
                                         @Param("since") LocalDateTime since);
 
-    long countCreatedSince(@Param("tenantId") String tenantId,
+    long countCreatedSince(@Param("tenantId") Long tenantId,
                             @Param("since") LocalDateTime since);
 }

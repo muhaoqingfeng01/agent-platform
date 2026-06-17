@@ -19,9 +19,9 @@ public interface EvaluationDatasetRepository {
 
     EvaluationDataset findByDatasetId(String datasetId);
 
-    List<EvaluationDataset> findByTenant(String tenantId, int page, int size);
+    List<EvaluationDataset> findByTenant(Long tenantId, int page, int size);
 
-    long countByTenant(String tenantId);
+    long countByTenant(Long tenantId);
 
     void softDelete(String datasetId);
 

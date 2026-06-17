@@ -16,14 +16,14 @@ public interface SecurityEventRepository {
     void save(SecurityEvent event);
 
     /** 按租户分页查询 */
-    List<SecurityEvent> findByTenant(String tenantId, int page, int size);
+    List<SecurityEvent> findByTenant(Long tenantId, int page, int size);
 
     /** 统计租户下的事件数 */
-    long countByTenant(String tenantId);
+    long countByTenant(Long tenantId);
 
     /** 按会话查询 */
     List<SecurityEvent> findByConversation(String conversationId, int page, int size);
 
     /** 按事件类型查询 */
-    List<SecurityEvent> findByEventType(String tenantId, String eventType, int page, int size);
+    List<SecurityEvent> findByEventType(Long tenantId, String eventType, int page, int size);
 }

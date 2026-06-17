@@ -24,7 +24,7 @@ public interface KnowledgeHitRecordRepository {
 
     void updateFeedback(Long id, String feedback, String note);
 
-    List<KnowledgeHitRecord> findPositiveFeedbackByTenant(String tenantId, int limit);
+    List<KnowledgeHitRecord> findPositiveFeedbackByTenant(Long tenantId, int limit);
 
-    long countByTenantAndDateRange(String tenantId, String startDate, String endDate);
+    long countByTenantAndDateRange(Long tenantId, String startDate, String endDate);
 }

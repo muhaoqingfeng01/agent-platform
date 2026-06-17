@@ -136,7 +136,7 @@ public class AgentMetrics {
     // ==================== 对话 API ====================
 
     /** 记录一次对话创建 */
-    public void recordConversation(String tenantId, String status) {
+    public void recordConversation(Long tenantId, String status) {
         conversationCounter.increment();
     }
 
@@ -146,7 +146,7 @@ public class AgentMetrics {
     }
 
     /** 记录 Token 消耗 */
-    public void recordTokenConsumption(String tenantId, String model, long tokens) {
+    public void recordTokenConsumption(Long tenantId, String model, long tokens) {
         tokenConsumptionCounter.increment(tokens);
     }
 
@@ -158,19 +158,19 @@ public class AgentMetrics {
     }
 
     /** 记录 LLM 调用错误 */
-    public void recordLlmError(String tenantId, String model, String errorType) {
+    public void recordLlmError(Long tenantId, String model, String errorType) {
         llmErrorCounter.increment();
     }
 
     // ==================== 工具 API ====================
 
     /** 记录工具调用 */
-    public void recordToolInvocation(String tenantId, String toolName) {
+    public void recordToolInvocation(Long tenantId, String toolName) {
         toolInvocationCounter.increment();
     }
 
     /** 记录工具调用失败 */
-    public void recordToolFailure(String tenantId, String toolName) {
+    public void recordToolFailure(Long tenantId, String toolName) {
         toolFailureCounter.increment();
     }
 
@@ -182,14 +182,14 @@ public class AgentMetrics {
     }
 
     /** 记录 RAG 检索命中数 */
-    public void recordRagHits(String tenantId, String kbName, int hitCount) {
+    public void recordRagHits(Long tenantId, String kbName, int hitCount) {
         ragHitSummary.record(hitCount);
     }
 
     // ==================== 安全 API ====================
 
     /** 记录安全拦截 */
-    public void recordSecurityBlock(String tenantId, String filterType) {
+    public void recordSecurityBlock(Long tenantId, String filterType) {
         securityBlockCounter.increment();
     }
 }

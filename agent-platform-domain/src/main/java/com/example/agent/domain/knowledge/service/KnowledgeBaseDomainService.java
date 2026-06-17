@@ -21,11 +21,11 @@ public class KnowledgeBaseDomainService {
     public void validateNewKnowledgeBase(KnowledgeBase kb) {
         if (kb == null) throw new IllegalArgumentException("知识库不能为空");
         if (kb.getName() == null || kb.getName().isBlank()) throw new IllegalArgumentException("知识库名称不能为空");
-        if (kb.getTenantId() == null || kb.getTenantId().isBlank()) throw new IllegalArgumentException("租户ID不能为空");
+        if (kb.getTenantId() == null) throw new IllegalArgumentException("租户ID不能为空");
     }
 
     /** 校验租户隔离 */
-    public void assertTenantAccess(KnowledgeBase kb, String currentTenantId) {
+    public void assertTenantAccess(KnowledgeBase kb, Long currentTenantId) {
         if (!kb.getTenantId().equals(currentTenantId)) {
             throw new SecurityException("无权访问其他租户的知识库");
         }

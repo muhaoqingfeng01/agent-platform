@@ -59,7 +59,7 @@ public class LangfuseTraceService {
         if (langfuseRestTemplate == null || langfuseConfig == null) return;
 
         try {
-            String tenantId = TenantContext.getCurrentTenantId();
+            Long tenantId = TenantContext.getCurrentTenantId();
             String userId = TenantContext.getCurrentUserId();
             Instant now = Instant.now();
             Instant startTime = now.minusMillis(durationMs);
@@ -75,7 +75,7 @@ public class LangfuseTraceService {
             traceBody.put("name", "conversation:" + conversationId);
             traceBody.put("userId", userId != null ? userId : "anonymous");
             Map<String, Object> metadata = new LinkedHashMap<>();
-            metadata.put("tenantId", tenantId != null ? tenantId : "unknown");
+            metadata.put("tenantId", tenantId != null ? String.valueOf(tenantId): "unknown");
             metadata.put("conversationId", conversationId);
             traceBody.put("metadata", metadata);
             traceEvent.put("body", traceBody);

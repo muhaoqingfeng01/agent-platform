@@ -41,7 +41,7 @@ public class EvaluationRunService {
      * 执行评测 — 遍历数据集样本，LLM-as-Judge 评分.
      */
     public EvaluationRunResponse execute(String datasetId) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         String evaluationId = IdGenerator.generate("eval");
         String agentId = "default";
 
@@ -180,7 +180,7 @@ public class EvaluationRunService {
     }
 
     public List<EvaluationRunResponse> list(int page, int size) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         return runRepository.findByTenant(tenantId, page, size).stream()
                 .map(this::toResponse).collect(java.util.stream.Collectors.toList());
     }

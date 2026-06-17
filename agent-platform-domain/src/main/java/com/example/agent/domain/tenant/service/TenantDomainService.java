@@ -30,7 +30,7 @@ public class TenantDomainService {
      * @return 可用的租户实体
      * @throws IllegalStateException 如果租户不存在或已停用
      */
-    public Tenant ensureActive(String tenantId) {
+    public Tenant ensureActive(Long tenantId) {
         Tenant tenant = tenantRepository.findByTenantId(tenantId)
                 .orElseThrow(() -> new IllegalStateException("租户不存在: " + tenantId));
         if (!tenant.isActive()) {
@@ -42,7 +42,7 @@ public class TenantDomainService {
     /**
      * 验证租户标识唯一性.
      */
-    public boolean isTenantIdUnique(String tenantId) {
+    public boolean isTenantIdUnique(Long tenantId) {
         return tenantRepository.findByTenantId(tenantId).isEmpty();
     }
 }

@@ -29,7 +29,7 @@ public class ApprovalWorkflow {
     private Long id;
 
     /** 所属租户 ID */
-    private String tenantId;
+    private Long tenantId;
 
     /** 审批业务唯一标识 — 格式: appr_{snowflake_id} */
     private String approvalId;

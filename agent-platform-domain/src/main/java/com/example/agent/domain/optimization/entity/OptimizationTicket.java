@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 public class OptimizationTicket {
 
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String ticketId;
     private String conversationId;
     private String messageId;

@@ -43,17 +43,17 @@ public interface KnowledgeBaseMapper {
 
     int updateStatus(@Param("knowledgeId") String knowledgeId, @Param("status") String status);
 
-    Set<String> findEnabledKnowledgeIds(@Param("tenantId") String tenantId);
+    Set<String> findEnabledKnowledgeIds(@Param("tenantId") Long tenantId);
 
-    List<KnowledgeBasePO> selectByTenantAndStatus(@Param("tenantId") String tenantId, @Param("status") String status);
+    List<KnowledgeBasePO> selectByTenantAndStatus(@Param("tenantId") Long tenantId, @Param("status") String status);
 
     int softDelete(@Param("knowledgeId") String knowledgeId);
 
     Optional<KnowledgeBasePO> selectByKnowledgeId(@Param("knowledgeId") String knowledgeId);
 
-    List<KnowledgeBasePO> selectByTenant(@Param("tenantId") String tenantId,
+    List<KnowledgeBasePO> selectByTenant(@Param("tenantId") Long tenantId,
                                           @Param("offset") int offset,
                                           @Param("size") int size);
 
-    long countByTenant(@Param("tenantId") String tenantId);
+    long countByTenant(@Param("tenantId") Long tenantId);
 }

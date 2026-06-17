@@ -81,7 +81,7 @@ public class SecurityEventRecorder {
      * @param desensitizedContent 脱敏后内容
      * @param piiTypes        检测到的 PII 类型列表
      */
-    public void recordDesensitize(String tenantId, String conversationId, String messageId,
+    public void recordDesensitize(Long tenantId, String conversationId, String messageId,
                                    String originalContent, String desensitizedContent,
                                    java.util.List<String> piiTypes) {
         try {

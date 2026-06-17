@@ -37,7 +37,7 @@ public class ToolRegistry {
     private String toolId;
 
     /** 所属租户 ID — 多租户隔离，每个租户拥有独立的工具注册表 */
-    private String tenantId;
+    private Long tenantId;
 
     /** 工具名称 — 简洁描述工具功能，如 "订单查询"、"发送邮件" */
     private String name;

@@ -209,7 +209,7 @@ public class PromptDomainService {
     /**
      * 校验租户隔离.
      */
-    public void assertTenantAccess(PromptTemplate template, String currentTenantId) {
+    public void assertTenantAccess(PromptTemplate template, Long currentTenantId) {
         if (!template.getTenantId().equals(currentTenantId)) {
             throw new SecurityException("无权访问其他租户的提示词模板");
         }

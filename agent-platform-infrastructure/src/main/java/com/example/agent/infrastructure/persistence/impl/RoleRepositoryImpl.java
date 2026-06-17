@@ -29,7 +29,7 @@ public class RoleRepositoryImpl implements RoleRepository {
     }
 
     @Override
-    public List<Role> findByTenant(String tenantId) {
+    public List<Role> findByTenant(Long tenantId) {
         return roleMapper.findByTenant(tenantId)
                 .stream().map(this::toDomain).toList();
     }

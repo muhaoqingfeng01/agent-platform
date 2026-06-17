@@ -8,13 +8,13 @@ package com.example.agent.infrastructure.context;
  * <p>
  * 使用示例：
  * <pre>{@code
- *   String tenantId = TenantContext.getCurrentTenantId();
+ *   Long tenantId = TenantContext.getCurrentTenantId();
  *   String userId = TenantContext.getCurrentUserId();
  * }</pre>
  */
 public final class TenantContext {
 
-    private static final ThreadLocal<String> CURRENT_TENANT = new ThreadLocal<>();
+    private static final ThreadLocal<Long> CURRENT_TENANT = new ThreadLocal<>();
     private static final ThreadLocal<String> CURRENT_USER = new ThreadLocal<>();
 
     private TenantContext() {
@@ -22,12 +22,12 @@ public final class TenantContext {
     }
 
     /** 设置当前租户 ID */
-    public static void setTenantId(String tenantId) {
+    public static void setTenantId(Long tenantId) {
         CURRENT_TENANT.set(tenantId);
     }
 
     /** 获取当前租户 ID */
-    public static String getCurrentTenantId() {
+    public static Long getCurrentTenantId() {
         return CURRENT_TENANT.get();
     }
 

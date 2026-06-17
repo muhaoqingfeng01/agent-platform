@@ -229,7 +229,7 @@ public class DocumentApplicationService {
                 .orElseThrow(() -> new ResourceNotFoundException("文档", documentId));
         lifecycleService.assertCanDeprecate(doc);
 
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         String collectionName = "kb_" + tenantId;
 
         // 删除 Milvus 向量
@@ -266,7 +266,7 @@ public class DocumentApplicationService {
         // PARSED 必须先弃用
         lifecycleService.assertCanDelete(doc);
 
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         String collectionName = "kb_" + tenantId;
 
         // 若已弃用，向量已删除；若 PARSED 则需删除（正常流程不应到此处）

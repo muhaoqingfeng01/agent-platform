@@ -119,7 +119,7 @@ public class SecurityFenceApplicationService {
         String desensitized = piiDesensitizer.desensitize(content);
 
         // 记录事件
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         eventRecorder.recordDesensitize(tenantId, conversationId, messageId,
                 content, desensitized, piiTypes);
 
@@ -197,7 +197,7 @@ public class SecurityFenceApplicationService {
     }
 
     public List<SensitiveWordResponse> listSensitiveWords(int page, int size) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         return sensitiveWordRepository.findByTenant(tenantId, page, size).stream()
                 .map(SensitiveWordResponse::from)
                 .toList();
@@ -210,7 +210,7 @@ public class SecurityFenceApplicationService {
     // ==================== 安全事件查询 ====================
 
     public List<SecurityEventResponse> listSecurityEvents(int page, int size) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         return securityEventRepository.findByTenant(tenantId, page, size).stream()
                 .map(SecurityEventResponse::from)
                 .toList();

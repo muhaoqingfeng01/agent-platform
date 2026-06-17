@@ -40,7 +40,7 @@ public interface ToolInvocationLogRepository {
      * @param size     每页数量
      * @return 调用日志列表（按创建时间倒序）
      */
-    List<ToolInvocationLog> findByTenant(String tenantId, int page, int size);
+    List<ToolInvocationLog> findByTenant(Long tenantId, int page, int size);
 
     /**
      * 统计指定工具的调用次数.
@@ -56,5 +56,5 @@ public interface ToolInvocationLogRepository {
      * @param tenantId 租户 ID
      * @return 调用总次数
      */
-    long countByTenant(String tenantId);
+    long countByTenant(Long tenantId);
 }

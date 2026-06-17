@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 public class TenantPO {
 
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String name;
     private String status;
     private String tier;

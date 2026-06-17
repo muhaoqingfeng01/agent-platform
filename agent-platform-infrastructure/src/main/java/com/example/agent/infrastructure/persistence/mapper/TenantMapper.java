@@ -15,7 +15,7 @@ public interface TenantMapper {
 
     Optional<TenantPO> findById(@Param("id") Long id);
 
-    Optional<TenantPO> findByTenantId(@Param("tenantId") String tenantId);
+    Optional<TenantPO> findByTenantId(@Param("tenantId") Long tenantId);
 
     List<TenantPO> findAll(@Param("offset") int offset,
                            @Param("size") int size);

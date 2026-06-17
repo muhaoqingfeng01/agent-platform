@@ -20,7 +20,7 @@ public class FilterContext {
     private String messageId;
 
     /** 租户 ID */
-    private String tenantId;
+    private Long tenantId;
 
     /** 用户 ID */
     private String userId;

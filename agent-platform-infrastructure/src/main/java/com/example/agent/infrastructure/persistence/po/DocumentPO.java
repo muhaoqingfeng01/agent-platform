@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class DocumentPO {
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String knowledgeId;
     private String documentId;
     private String filename;

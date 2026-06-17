@@ -38,33 +38,33 @@ public class OptimizationTicketRepositoryImpl implements OptimizationTicketRepos
     }
 
     @Override
-    public List<OptimizationTicket> findByTenant(String tenantId, int page, int size) {
+    public List<OptimizationTicket> findByTenant(Long tenantId, int page, int size) {
         int offset = (page - 1) * size;
         return mapper.selectByTenant(tenantId, offset, size).stream()
                 .map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
-    public List<OptimizationTicket> findByAssignee(String tenantId, String assignee, int page, int size) {
+    public List<OptimizationTicket> findByAssignee(Long tenantId, String assignee, int page, int size) {
         int offset = (page - 1) * size;
         return mapper.selectByAssignee(tenantId, assignee, offset, size).stream()
                 .map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
-    public List<OptimizationTicket> findByStatus(String tenantId, String status, int page, int size) {
+    public List<OptimizationTicket> findByStatus(Long tenantId, String status, int page, int size) {
         int offset = (page - 1) * size;
         return mapper.selectByStatus(tenantId, status, offset, size).stream()
                 .map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
-    public long countByStatusAndSince(String tenantId, String status, LocalDateTime since) {
+    public long countByStatusAndSince(Long tenantId, String status, LocalDateTime since) {
         return mapper.countByStatusAndResolvedSince(tenantId, status, since);
     }
 
     @Override
-    public long countCreatedSince(String tenantId, LocalDateTime since) {
+    public long countCreatedSince(Long tenantId, LocalDateTime since) {
         return mapper.countCreatedSince(tenantId, since);
     }
 

@@ -27,7 +27,7 @@ public class ConversationDomainService {
     /**
      * 校验租户隔离 + 用户所有权.
      */
-    public void assertAccess(Conversation conversation, String currentTenantId, String currentUserId) {
+    public void assertAccess(Conversation conversation, Long currentTenantId, String currentUserId) {
         if (!conversation.getTenantId().equals(currentTenantId)) {
             throw new SecurityException("无权访问其他租户的会话");
         }

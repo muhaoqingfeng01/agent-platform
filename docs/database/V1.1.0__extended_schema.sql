@@ -14,7 +14,7 @@
 -- 意图定义表（规则优先 + LLM 兜底策略）
 CREATE TABLE IF NOT EXISTS t_intent (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id       VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id       BIGINT  NOT NULL COMMENT '所属租户',
     intent_code     VARCHAR(64)  NOT NULL COMMENT '意图编码（如 ORDER_QUERY、LEAVE_APPLY）',
     intent_name     VARCHAR(128) NOT NULL COMMENT '意图名称',
     category        VARCHAR(64)  NOT NULL DEFAULT 'FAQ' COMMENT '意图分类: FAQ, TASK, CHITCHAT, MULTI_STEP',
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS t_intent (
 -- 长期记忆表（用户画像 & 重要事实）
 CREATE TABLE IF NOT EXISTS t_long_term_memory (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id       VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id       BIGINT  NOT NULL COMMENT '所属租户',
     user_id         VARCHAR(64)  NOT NULL COMMENT '关联用户',
     memory_type     VARCHAR(64)  NOT NULL COMMENT '记忆类型: FACT, PREFERENCE, CONTEXT, SUMMARY',
     memory_key      VARCHAR(256) NOT NULL COMMENT '记忆键（如 user_role、preferred_language）',
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS t_prompt_template_version (
 -- 任务执行记录表（每次 DAG 复杂任务）
 CREATE TABLE IF NOT EXISTS t_task_execution (
     id                BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id         VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id         BIGINT  NOT NULL COMMENT '所属租户',
     execution_id      VARCHAR(64)  NOT NULL UNIQUE COMMENT '执行唯一标识',
     conversation_id   VARCHAR(64)  COMMENT '关联会话',
     agent_id          VARCHAR(64)  NOT NULL COMMENT '关联 Agent',
@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS t_task_step_execution (
 -- 文档表（上传 → MinIO → Tika 解析 → 切分）
 CREATE TABLE IF NOT EXISTS t_document (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id       VARCHAR(64)   NOT NULL COMMENT '所属租户',
+    tenant_id       BIGINT   NOT NULL COMMENT '所属租户',
     knowledge_id    VARCHAR(64)   NOT NULL COMMENT '所属知识库',
     document_id     VARCHAR(64)   NOT NULL UNIQUE COMMENT '文档唯一标识',
     filename        VARCHAR(512)  NOT NULL COMMENT '原始文件名',
@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS t_document_chunk (
 -- 知识命中记录表（检索追溯 + 人工标注）
 CREATE TABLE IF NOT EXISTS t_knowledge_hit_record (
     id                BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id         VARCHAR(64)   NOT NULL COMMENT '所属租户',
+    tenant_id         BIGINT   NOT NULL COMMENT '所属租户',
     conversation_id   VARCHAR(64)   NOT NULL COMMENT '关联会话',
     message_id        VARCHAR(64)   COMMENT '关联消息',
     chunk_id          BIGINT        COMMENT '命中的切片 ID（关联 document_chunk.id）',
@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS t_knowledge_hit_record (
 
 CREATE TABLE IF NOT EXISTS t_tool_invocation_log (
     id                BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id         VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id         BIGINT  NOT NULL COMMENT '所属租户',
     tool_id           VARCHAR(64)  NOT NULL COMMENT '关联工具',
     conversation_id   VARCHAR(64)  COMMENT '关联会话',
     message_id        VARCHAR(64)  COMMENT '关联消息',
@@ -217,7 +217,7 @@ CREATE TABLE IF NOT EXISTS t_tool_invocation_log (
 -- 敏感词库表（输入过滤规则）
 CREATE TABLE IF NOT EXISTS t_sensitive_word (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id       VARCHAR(64)  COMMENT '所属租户（NULL=全局规则）',
+    tenant_id       BIGINT  COMMENT '所属租户（NULL=全局规则）',
     word            VARCHAR(256) NOT NULL COMMENT '敏感词或正则表达式',
     match_type      VARCHAR(32)  NOT NULL DEFAULT 'EXACT' COMMENT '匹配方式: EXACT, REGEX, SEMANTIC',
     category        VARCHAR(64)  NOT NULL DEFAULT 'CUSTOM' COMMENT '分类: INJECTION, JAILBREAK, PII, CUSTOM',
@@ -234,7 +234,7 @@ CREATE TABLE IF NOT EXISTS t_sensitive_word (
 -- 安全事件表（拦截追溯 & 合规审计）
 CREATE TABLE IF NOT EXISTS t_security_event (
     id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id           VARCHAR(64)  COMMENT '所属租户',
+    tenant_id           BIGINT  COMMENT '所属租户',
     event_type          VARCHAR(64)  NOT NULL COMMENT '事件类型: INPUT_FILTER, OUTPUT_DESENSITIZE, INJECTION_DETECTED',
     rule_id             BIGINT       COMMENT '触发的规则 ID（关联 sensitive_word.id）',
     conversation_id     VARCHAR(64)  COMMENT '关联会话',
@@ -258,7 +258,7 @@ CREATE TABLE IF NOT EXISTS t_security_event (
 -- ⚠️ 注意：大规模部署建议将数据写入 Elasticsearch，MySQL 仅保留近期热数据（30天）
 CREATE TABLE IF NOT EXISTS t_audit_log (
     id                BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id         VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id         BIGINT  NOT NULL COMMENT '所属租户',
     trace_id          VARCHAR(64)  NOT NULL COMMENT '全链路追踪 ID（串联 T9）',
     conversation_id   VARCHAR(64)  COMMENT '关联会话',
     actor_type        VARCHAR(32)  NOT NULL COMMENT '操作者类型: USER, ASSISTANT, TOOL, SYSTEM',
@@ -287,7 +287,7 @@ CREATE TABLE IF NOT EXISTS t_audit_log (
 
 CREATE TABLE IF NOT EXISTS t_approval_workflow (
     id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id           VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id           BIGINT  NOT NULL COMMENT '所属租户',
     approval_id         VARCHAR(64)  NOT NULL UNIQUE COMMENT '审批唯一标识',
     tool_id             VARCHAR(64)  NOT NULL COMMENT '关联工具',
     conversation_id     VARCHAR(64)  COMMENT '关联会话',
@@ -317,7 +317,7 @@ CREATE TABLE IF NOT EXISTS t_approval_workflow (
 -- 评测数据集表
 CREATE TABLE IF NOT EXISTS t_evaluation_dataset (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id       VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id       BIGINT  NOT NULL COMMENT '所属租户',
     dataset_id      VARCHAR(64)  NOT NULL UNIQUE COMMENT '数据集唯一标识',
     name            VARCHAR(256) NOT NULL COMMENT '数据集名称',
     description     TEXT         COMMENT '描述',
@@ -345,7 +345,7 @@ CREATE TABLE IF NOT EXISTS t_evaluation_dataset_item (
 -- 优化工单表（BadCase 闭环）
 CREATE TABLE IF NOT EXISTS t_optimization_ticket (
     id                BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id         VARCHAR(64)  NOT NULL COMMENT '所属租户',
+    tenant_id         BIGINT  NOT NULL COMMENT '所属租户',
     ticket_id         VARCHAR(64)  NOT NULL UNIQUE COMMENT '工单唯一标识',
     conversation_id   VARCHAR(64)  NOT NULL COMMENT '关联点踩会话',
     message_id        VARCHAR(64)  NOT NULL COMMENT '关联点踩消息',

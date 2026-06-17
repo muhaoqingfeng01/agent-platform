@@ -13,11 +13,11 @@ public class MessageFeedbackEvent extends ApplicationEvent {
 
     private final String messageId;
     private final String conversationId;
-    private final String tenantId;
+    private final Long tenantId;
     private final FeedbackType feedback;
 
     public MessageFeedbackEvent(Object source, String messageId, String conversationId,
-                                 String tenantId, FeedbackType feedback) {
+                                 Long tenantId, FeedbackType feedback) {
         super(source);
         this.messageId = messageId;
         this.conversationId = conversationId;
@@ -27,6 +27,6 @@ public class MessageFeedbackEvent extends ApplicationEvent {
 
     public String getMessageId() { return messageId; }
     public String getConversationId() { return conversationId; }
-    public String getTenantId() { return tenantId; }
+    public Long getTenantId() { return tenantId; }
     public FeedbackType getFeedback() { return feedback; }
 }

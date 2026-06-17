@@ -32,11 +32,11 @@ public class UserServiceImpl implements UserService {
      * <p>跨租户匹配时取第一条记录，生产环境建议要求用户必须提供 tenantId.
      */
     @Override
-    public UserView authenticate(String tenantId, String username, String password) {
+    public UserView authenticate(Long tenantId, String username, String password) {
         log.info("[UserService] 认证请求: tenantId={}, username={}", tenantId, username);
 
         User user;
-        if (tenantId != null && !tenantId.isBlank()) {
+        if (tenantId != null) {
             user = userRepository.findByTenantAndUsername(tenantId, username).orElse(null);
         } else {
             user = userRepository.findByUsername(username).orElse(null);

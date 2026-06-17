@@ -20,12 +20,12 @@ public interface ConversationMapper {
 
     Optional<ConversationPO> selectByConversationId(@Param("conversationId") String conversationId);
 
-    List<ConversationPO> selectByUserId(@Param("tenantId") String tenantId,
+    List<ConversationPO> selectByUserId(@Param("tenantId") Long tenantId,
                                          @Param("userId") String userId,
                                          @Param("offset") int offset,
                                          @Param("size") int size);
 
-    long countByUserId(@Param("tenantId") String tenantId,
+    long countByUserId(@Param("tenantId") Long tenantId,
                        @Param("userId") String userId);
 
     int updateTitle(@Param("conversationId") String conversationId,

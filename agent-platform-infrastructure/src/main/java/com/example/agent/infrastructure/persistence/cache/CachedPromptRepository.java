@@ -33,7 +33,7 @@ public class CachedPromptRepository {
     @Cacheable(value = "prompt:template:latest",
                key = "#tenantId + ':' + #name",
                unless = "#result == null || #result.isEmpty()")
-    public Optional<PromptTemplate> findLatestPublished(String tenantId, String name) {
+    public Optional<PromptTemplate> findLatestPublished(Long tenantId, String name) {
         log.debug("Cache MISS for prompt template: {}:{}", tenantId, name);
         return delegate.findLatestPublished(tenantId, name);
     }
@@ -44,7 +44,7 @@ public class CachedPromptRepository {
     @Cacheable(value = "prompt:template:version",
                key = "#tenantId + ':' + #name + ':' + #version",
                unless = "#result == null || #result.isEmpty()")
-    public Optional<PromptTemplate> findByVersion(String tenantId, String name, int version) {
+    public Optional<PromptTemplate> findByVersion(Long tenantId, String name, int version) {
         return delegate.findByVersion(tenantId, name, version);
     }
 
@@ -64,7 +64,7 @@ public class CachedPromptRepository {
      */
     @CacheEvict(value = {"prompt:template:latest", "prompt:template:version"},
                 key = "#tenantId + ':' + #name")
-    public void evictCache(String tenantId, String name) {
+    public void evictCache(Long tenantId, String name) {
         log.info("Cache EVICT for prompt template: {}:{}", tenantId, name);
     }
 }

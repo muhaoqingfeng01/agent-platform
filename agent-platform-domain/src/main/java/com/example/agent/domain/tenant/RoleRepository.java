@@ -10,7 +10,7 @@ public interface RoleRepository {
 
     Optional<Role> findById(Long id);
 
-    List<Role> findByTenant(String tenantId);
+    List<Role> findByTenant(Long tenantId);
 
     List<Role> findByUserId(String userId);
 

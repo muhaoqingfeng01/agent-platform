@@ -29,7 +29,7 @@ public class CacheRecognizer {
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public Optional<IntentResult> recognize(String tenantId, String userInput) {
+    public Optional<IntentResult> recognize(Long tenantId, String userInput) {
         String cacheKey = buildCacheKey(tenantId, userInput);
         String cached = redisTemplate.opsForValue().get(cacheKey);
         if (cached != null) {
@@ -44,7 +44,7 @@ public class CacheRecognizer {
         return Optional.empty();
     }
 
-    public void cacheResult(String tenantId, String userInput, IntentResult result) {
+    public void cacheResult(Long tenantId, String userInput, IntentResult result) {
         try {
             String cacheKey = buildCacheKey(tenantId, userInput);
             String json = objectMapper.writeValueAsString(result);
@@ -55,7 +55,7 @@ public class CacheRecognizer {
         }
     }
 
-    public void evictCache(String tenantId) {
+    public void evictCache(Long tenantId) {
         String pattern = CACHE_NAMESPACE + ":" + tenantId + ":*";
         Set<String> keys = redisTemplate.keys(pattern);
         if (keys != null && !keys.isEmpty()) {
@@ -64,7 +64,7 @@ public class CacheRecognizer {
         }
     }
 
-    private String buildCacheKey(String tenantId, String userInput) {
+    private String buildCacheKey(Long tenantId, String userInput) {
         String inputHash = Integer.toHexString(userInput.trim().toLowerCase().hashCode());
         return CACHE_NAMESPACE + ":" + tenantId + ":" + inputHash;
     }

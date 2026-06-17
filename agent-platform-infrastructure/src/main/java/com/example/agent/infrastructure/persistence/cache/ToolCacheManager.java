@@ -40,7 +40,7 @@ public class ToolCacheManager {
      * @param toolId   工具业务 ID
      * @return 工具定义（缓存命中）或 empty（缓存未命中）
      */
-    public Optional<ToolRegistry> get(String tenantId, String toolId) {
+    public Optional<ToolRegistry> get(Long tenantId, String toolId) {
         String key = KEY_PREFIX + tenantId + ":" + toolId;
         ToolRegistry tool = redisTemplate.opsForValue().get(key);
         if (tool != null) {
@@ -68,7 +68,7 @@ public class ToolCacheManager {
      * @param tenantId 租户 ID
      * @param toolId   工具业务 ID
      */
-    public void evict(String tenantId, String toolId) {
+    public void evict(Long tenantId, String toolId) {
         String key = KEY_PREFIX + tenantId + ":" + toolId;
         redisTemplate.delete(key);
         log.info("Redis cache EVICT for tool: {}", toolId);
@@ -81,7 +81,7 @@ public class ToolCacheManager {
      * @param tenantId 租户 ID
      * @param toolId   工具业务 ID
      */
-    public void refresh(String tenantId, String toolId) {
+    public void refresh(Long tenantId, String toolId) {
         evict(tenantId, toolId);
         log.info("Cache REFRESH triggered for tool: {}", toolId);
     }

@@ -42,5 +42,5 @@ public interface TaskExecutionRepository {
     long countByAgentId(String agentId);
 
     /** 查询租户下活跃（未完结）的执行 */
-    List<TaskExecution> findActiveByTenant(String tenantId);
+    List<TaskExecution> findActiveByTenant(Long tenantId);
 }

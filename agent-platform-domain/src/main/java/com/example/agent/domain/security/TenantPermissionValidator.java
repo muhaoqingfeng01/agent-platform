@@ -31,14 +31,14 @@ public class TenantPermissionValidator {
      * @param targetTenantId 目标租户 ID
      * @return true=属于该租户，false=不属于
      */
-    public boolean isSameTenant(String targetTenantId) {
+    public boolean isSameTenant(Long targetTenantId) {
         if (targetTenantId == null) {
             log.warn("[TenantValidator] 目标租户 ID 为 null");
             return false;
         }
 
         SaSession session = StpUtil.getSession();
-        String currentTenantId = session.getString("tenantId");
+        Long currentTenantId = session.getLong("tenantId");
 
         if (currentTenantId == null) {
             log.warn("[TenantValidator] 当前用户 Session 中无 tenantId，拒绝跨租户操作");
@@ -58,9 +58,9 @@ public class TenantPermissionValidator {
      *
      * @return 当前租户 ID，未登录返回 null
      */
-    public String getCurrentTenantId() {
+    public Long getCurrentTenantId() {
         try {
-            return StpUtil.getSession().getString("tenantId");
+            return StpUtil.getSession().getLong("tenantId");
         } catch (Exception e) {
             log.debug("[TenantValidator] 获取当前租户 ID 失败（可能未登录）: {}", e.getMessage());
             return null;

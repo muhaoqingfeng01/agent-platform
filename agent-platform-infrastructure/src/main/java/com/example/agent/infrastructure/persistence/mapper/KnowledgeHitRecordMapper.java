@@ -33,10 +33,10 @@ public interface KnowledgeHitRecordMapper {
                        @Param("humanFeedback") String humanFeedback,
                        @Param("feedbackNote") String feedbackNote);
 
-    List<KnowledgeHitRecordPO> selectPositiveFeedbackByTenant(@Param("tenantId") String tenantId,
+    List<KnowledgeHitRecordPO> selectPositiveFeedbackByTenant(@Param("tenantId") Long tenantId,
                                                                @Param("limit") int limit);
 
-    long countByTenantAndDateRange(@Param("tenantId") String tenantId,
+    long countByTenantAndDateRange(@Param("tenantId") Long tenantId,
                                    @Param("startDate") String startDate,
                                    @Param("endDate") String endDate);
 }

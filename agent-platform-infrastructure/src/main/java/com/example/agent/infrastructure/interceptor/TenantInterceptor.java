@@ -38,13 +38,13 @@ public class TenantInterceptor implements HandlerInterceptor {
             // 尝试从 Sa-Token 获取登录用户信息
             if (StpUtil.isLogin()) {
                 String userId = (String) StpUtil.getLoginId();
-                String tenantId = StpUtil.getSession().getString("tenantId");
+                Long tenantId = StpUtil.getSession().getLong("tenantId");
 
                 if (tenantId != null) {
                     TenantContext.setTenantId(tenantId);
                     TenantContext.setUserId(userId);
                     // 注入 MDC（使后续日志自动携带租户/用户信息）
-                    MDC.put(MDC_TENANT_ID, tenantId);
+                    MDC.put(MDC_TENANT_ID, String.valueOf(tenantId));
                     MDC.put(MDC_USER_ID, userId);
                     log.trace("[TenantInterceptor] 上下文设置: tenantId={}, userId={}", tenantId, userId);
                 } else {

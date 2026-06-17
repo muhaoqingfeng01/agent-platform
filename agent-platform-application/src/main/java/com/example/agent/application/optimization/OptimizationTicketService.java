@@ -28,12 +28,12 @@ public class OptimizationTicketService {
         return toResponse(ticket);
     }
 
-    public List<OptimizationTicketResponse> list(String tenantId, int page, int size) {
+    public List<OptimizationTicketResponse> list(Long tenantId, int page, int size) {
         return ticketRepository.findByTenant(tenantId, page, size).stream()
                 .map(this::toResponse).collect(Collectors.toList());
     }
 
-    public List<OptimizationTicketResponse> listByStatus(String tenantId, String status, int page, int size) {
+    public List<OptimizationTicketResponse> listByStatus(Long tenantId, String status, int page, int size) {
         return ticketRepository.findByStatus(tenantId, status, page, size).stream()
                 .map(this::toResponse).collect(Collectors.toList());
     }
@@ -77,7 +77,7 @@ public class OptimizationTicketService {
     }
 
     public FeedbackStatsResponse getFeedbackStats(int days) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         LocalDateTime since = LocalDateTime.now().minusDays(days);
 
         long total = ticketRepository.countCreatedSince(tenantId, since);

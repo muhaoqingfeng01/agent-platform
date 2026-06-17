@@ -38,7 +38,7 @@ public class IntentApplicationService {
 
     @Transactional
     public IntentResponse createIntent(CreateIntentRequest request) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         if (intentRepository.existsByTenantAndCode(tenantId, request.getIntentCode())) {
             throw new BusinessException(400, "意图编码已存在: " + request.getIntentCode());
         }
@@ -85,7 +85,7 @@ public class IntentApplicationService {
     }
 
     public PageResponse<IntentResponse> listIntents(int page, int size) {
-        String tenantId = TenantContext.getCurrentTenantId();
+        Long tenantId = TenantContext.getCurrentTenantId();
         List<Intent> intents = intentRepository.findByTenant(tenantId, page, size);
         long total = intentRepository.countByTenant(tenantId);
         return PageResponse.of(intents.stream().map(IntentResponse::from).toList(), total, page, size);

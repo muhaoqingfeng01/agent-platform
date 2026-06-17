@@ -24,11 +24,11 @@ public interface IntentRepository {
 
     Optional<Intent> findByIntentId(String intentId);
 
-    List<Intent> findActiveByTenant(String tenantId);
+    List<Intent> findActiveByTenant(Long tenantId);
 
-    List<Intent> findByTenant(String tenantId, int page, int size);
+    List<Intent> findByTenant(Long tenantId, int page, int size);
 
-    long countByTenant(String tenantId);
+    long countByTenant(Long tenantId);
 
-    boolean existsByTenantAndCode(String tenantId, String intentCode);
+    boolean existsByTenantAndCode(Long tenantId, String intentCode);
 }

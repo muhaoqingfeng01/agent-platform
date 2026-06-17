@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 public class Role {
 
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String roleCode;
     private String roleName;
     private String description;

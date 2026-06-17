@@ -15,7 +15,7 @@ public interface RoleMapper {
 
     Optional<RolePO> findById(@Param("id") Long id);
 
-    List<RolePO> findByTenant(@Param("tenantId") String tenantId);
+    List<RolePO> findByTenant(@Param("tenantId") Long tenantId);
 
     List<RolePO> findByUserId(@Param("userId") String userId);
 

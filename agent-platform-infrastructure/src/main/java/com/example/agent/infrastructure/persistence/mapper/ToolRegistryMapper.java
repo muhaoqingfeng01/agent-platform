@@ -73,7 +73,7 @@ public interface ToolRegistryMapper {
      * @param size     每页数量
      * @return 工具列表
      */
-    List<ToolRegistryPO> selectByTenant(@Param("tenantId") String tenantId,
+    List<ToolRegistryPO> selectByTenant(@Param("tenantId") Long tenantId,
                                          @Param("offset") int offset,
                                          @Param("size") int size);
 
@@ -83,7 +83,7 @@ public interface ToolRegistryMapper {
      * @param tenantId 租户 ID
      * @return 工具数量（不含已删除）
      */
-    long countByTenant(@Param("tenantId") String tenantId);
+    long countByTenant(@Param("tenantId") Long tenantId);
 
     /**
      * 按工具类型筛选分页查询.
@@ -94,7 +94,7 @@ public interface ToolRegistryMapper {
      * @param size     每页数量
      * @return 符合条件的工具列表
      */
-    List<ToolRegistryPO> selectByTenantAndType(@Param("tenantId") String tenantId,
+    List<ToolRegistryPO> selectByTenantAndType(@Param("tenantId") Long tenantId,
                                                 @Param("toolType") String toolType,
                                                 @Param("offset") int offset,
                                                 @Param("size") int size);
@@ -106,7 +106,7 @@ public interface ToolRegistryMapper {
      * @param toolType 工具类型
      * @return 符合条件的工具数量
      */
-    long countByTenantAndType(@Param("tenantId") String tenantId,
+    long countByTenantAndType(@Param("tenantId") Long tenantId,
                               @Param("toolType") String toolType);
 
     /**

@@ -40,7 +40,7 @@ public class RoleDomainService {
     /**
      * 获取租户下指定编码的角色.
      */
-    public Role getByCode(String tenantId, String roleCode) {
+    public Role getByCode(Long tenantId, String roleCode) {
         return roleRepository.findByTenant(tenantId).stream()
                 .filter(r -> r.getRoleCode().equals(roleCode))
                 .findFirst()

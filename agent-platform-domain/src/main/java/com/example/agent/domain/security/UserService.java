@@ -17,7 +17,7 @@ public interface UserService {
      * @param password 明文密码
      * @return 用户视图对象，认证失败返回 null
      */
-    UserView authenticate(String tenantId, String username, String password);
+    UserView authenticate(Long tenantId, String username, String password);
 
     /**
      * 获取用户角色编码列表

@@ -62,7 +62,7 @@ public class ToolDomainService {
      * @param currentTenantId  当前请求的租户 ID
      * @throws SecurityException 如果租户不匹配
      */
-    public void assertTenantAccess(ToolRegistry tool, String currentTenantId) {
+    public void assertTenantAccess(ToolRegistry tool, Long currentTenantId) {
         if (currentTenantId == null || !currentTenantId.equals(tool.getTenantId())) {
             throw new SecurityException(
                     "无权访问该工具: toolId=" + tool.getToolId()

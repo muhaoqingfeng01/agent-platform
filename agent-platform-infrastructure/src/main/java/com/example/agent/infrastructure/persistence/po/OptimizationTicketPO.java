@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class OptimizationTicketPO {
     private Long id;
-    private String tenantId;
+    private Long tenantId;
     private String ticketId;
     private String conversationId;
     private String messageId;

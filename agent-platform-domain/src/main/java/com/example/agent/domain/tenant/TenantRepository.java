@@ -12,7 +12,7 @@ public interface TenantRepository {
 
     Optional<Tenant> findById(Long id);
 
-    Optional<Tenant> findByTenantId(String tenantId);
+    Optional<Tenant> findByTenantId(Long tenantId);
 
     List<Tenant> findAll(int page, int size);
 

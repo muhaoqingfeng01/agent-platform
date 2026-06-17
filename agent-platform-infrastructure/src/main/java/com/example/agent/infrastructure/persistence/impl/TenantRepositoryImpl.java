@@ -29,7 +29,7 @@ public class TenantRepositoryImpl implements TenantRepository {
     }
 
     @Override
-    public Optional<Tenant> findByTenantId(String tenantId) {
+    public Optional<Tenant> findByTenantId(Long tenantId) {
         return tenantMapper.findByTenantId(tenantId).map(this::toDomain);
     }
 
