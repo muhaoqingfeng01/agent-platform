@@ -66,7 +66,6 @@
 
         <!-- Observability -->
         <micrometer.version>1.13.8</micrometer.version>
-        <langfuse.version>0.2.0</langfuse.version>
 
         <!-- Sa-Token (Auth + Permission) -->
         <sa-token.version>1.39.0</sa-token.version>
@@ -188,13 +187,6 @@
                 <groupId>io.minio</groupId>
                 <artifactId>minio</artifactId>
                 <version>${minio.version}</version>
-            </dependency>
-
-            <!-- Langfuse (Observability) -->
-            <dependency>
-                <groupId>com.langfuse</groupId>
-                <artifactId>langfuse-java</artifactId>
-                <version>${langfuse.version}</version>
             </dependency>
 
             <!-- MapStruct -->

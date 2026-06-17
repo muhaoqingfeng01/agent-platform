@@ -34,6 +34,7 @@
 | 20 | 2026-06-17 | [17-会话总结-2026-06-17.md](17-会话总结-2026-06-17.md) | T7 实现总结、项目进度同步、长期记忆更新 |
 | 21 | 2026-06-17 | [18-P3-安全治理实现.md](18-P3-安全治理实现.md) | 🆕 P3-T10+T11 完整实现：42 文件、安全围栏 4 层过滤链 + 人机协同审批状态机 |
 | 22 | 2026-06-17 | [18-会话总结-2026-06-17.md](18-会话总结-2026-06-17.md) | P3 实现总结、开发进度同步 ⚪→🟢
+| 23 | 2026-06-18 | [XX-T9-全链路可观测性实现.md](XX-T9-全链路可观测性实现.md) | 🆕 P4-T9 完整实现：17 文件、Trace/MDC 增强、AgentMetrics、AuditLog DDD、Langfuse HTTP 直连、编译通过
 
 ## 当前项目状态快照
 
@@ -41,17 +42,19 @@
 - **Spring Boot**: 3.3.7
 - **构建**: ✅ BUILD SUCCESS（7/7 模块）
 - **启动**: ⚠️ 需要 MySQL + Redis + Milvus 外部服务
-- **代码**: ~343 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO/Handler/Adapter/SecurityFilter）
+- **代码**: ~357 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO/Handler/Adapter/SecurityFilter/Aspect/Observability/Metrics）
 - **Swagger**: 已集成，`/swagger-ui.html`
 - **数据库**: V1.0.0(13张) + V1.1.0(15张) + V1.2.0(种子) + V1.2.1(业务ID) + V1.2.2(T7调用日志ID) + V1.3.0(T6精度) + V1.4.0(KB创建者+状态迁移)
-- **日志**: traceId + spanId 全链路追踪（MDC），logback-spring.xml 按天分目录
+- **日志**: traceId + spanId + tenantId + userId 全链路追踪（MDC），logback-spring.xml 按天分目录
 - **LLM**: DeepSeek（`spring.ai.deepseek`），ChatClient Bean 已配置（`AiConfig.java`）
 - **DDD 分层**: Controller → ApplicationService → DomainService → Repository，无越层调用
-- **DTO 规范**: Request/Response 独立分包，Application 层 DTO 独立分包 + Interfaces 层 25 个 Request DTO
+- **DTO 规范**: Request/Response 独立分包，Application 层 DTO 独立分包 + Interfaces 层 28 个 Request DTO
 - **会话记录**: `sessions/` — 按日期分目录管理
 - **P0 进度**: 🟢 ~100%（全部完成）
 - **P1 进度**: 🟢 ~100%（T3+T4+T5 全部完成）
 - **P2 进度**: 🟡 ~90%（T6 V1.4.0 ✅ + T7 V1.0.0 ✅）
+- **P3 进度**: 🟢 ~100%（T10+T11 安全围栏+审批状态机全部完成）
+- **P4 进度**: 🟡 ~50%（T9 全链路可观测性 ✅ + T12 效果评估 ⬜）
 
 ## 会话记录目录结构
 

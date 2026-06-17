@@ -124,7 +124,7 @@ interfaces → application → domain ← infrastructure
 2. **`spring-ai-alibaba-starter` 已废弃** → 用 `spring-ai-alibaba-agent-framework`
 3. **`spring-ai-mcp-client-spring-boot-starter`** → 正确名称是 `spring-ai-starter-mcp-client`
 4. **`spring-ai-rag-core` 不存在** → 正确名称是 `spring-ai-rag`
-5. **langfuse-java 最新是 0.2.0**（不是 2.0.4）
+5. **Langfuse 用 HTTP Ingestion API 直连**（不依赖 langfuse-java SDK，其 0.2.0 版本是 auto-generated OpenAPI 客户端，无高层 API）
 6. **Swagger 配置在 interfaces 模块**，不在 infrastructure（会缺依赖）
 7. **MySQL 用 8.0.33** 不是 3.0.33（那个版本不存在）
 8. **Spring AI 只自动配置 `ChatClient.Builder`**，`ChatClient` 需手动 `@Bean` 包装（见 `AiConfig.java`）
@@ -135,21 +135,21 @@ interfaces → application → domain ← infrastructure
 
 ---
 
-## 当前 Java 代码（~343 个文件，P0 + P1 + P2 + P3 已实现）
+## 当前 Java 代码（~357 个文件，P0 + P1 + P2 + P3 + P4-T9 已实现）
 
 ```
 agent-platform-bootstrap/    1 文件  ← @SpringBootApplication + @EnableAsync
 agent-platform-common/       9 文件  ← Result、6 异常、PageResponse、IdGenerator
-agent-platform-domain/      96 文件  ← 19 实体 + 19 仓储接口 + 31 值对象 + 5 安全接口 + 19 DomainService/端口
-agent-platform-application/ 94 文件  ← 17 AppService + 3 识别器 + 5 提取器 + 4 Resolver + 5 Handler + 7 切片策略 + 1 管线 + 10 Security DTO + ...
-agent-platform-infrastructure/ 91 文件 ← 19 PO + 19 Mapper + 19 Impl + 3 ServiceImpl + 11 Config + 4 Rag + McpClientManager + HttpToolAdapter + ...
+agent-platform-domain/      98 文件  ← 20 实体 + 20 仓储接口 + 31 值对象 + 5 安全接口 + 19 DomainService/端口
+agent-platform-application/ 95 文件  ← 17 AppService + 3 识别器 + 5 提取器 + 4 Resolver + 5 Handler + 7 切片策略 + 1 管线 + 10 Security DTO + ...
+agent-platform-infrastructure/ 103 文件 ← 20 PO + 20 Mapper + 20 Impl + 3 ServiceImpl + 13 Config + 4 Rag + 2 Observability + AgentMetrics + McpClientManager + HttpToolAdapter + 2 Annotation + 2 Aspect + ...
 agent-platform-interfaces/   52 文件  ← 17 Controller + 28 Request DTO + ExceptionHandler + SwaggerConfig + 4 认证 DTO
 ```
 
-> ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、T4 提示词管理、T5 任务规划引擎、T6 RAG 知识库、T7 MCP 工具平台、T10 安全围栏、T11 人机协同审批
+> ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、T4 提示词管理、T5 任务规划引擎、T6 RAG 知识库、T7 MCP 工具平台、T10 安全围栏、T11 人机协同审批、**T9 全链路可观测性**
 > 📐 DDD 架构：Controller → ApplicationService → DomainService → Repository，禁止越层调用
 > 📦 DTO 分离：Application 层 DTO 独立分包 + Interfaces 层 Request DTO 独立分包
-> 🔜 待完成：全链路观测(P4-T9)、效果评估(P4-T12)
+> 🔜 待完成：效果评估(P4-T12)
 
 ---
 
@@ -169,10 +169,8 @@ agent-platform-interfaces/   52 文件  ← 17 Controller + 28 Request DTO + Exc
 
 ```
 P0(收尾) → P1(T3-T5) → P2(T6-T7) → P3(安全) → P4(观测) → P5(前端独立)
-统一网关     意图识别✅   RAG引擎✅   安全围栏✅   全链路      交互端
-多租户       对话管理✅   MCP平台✅   人机协同✅   效果评估
-            提示词管理✅
-            任务规划引擎✅
+统一网关     意图识别✅   RAG引擎✅   安全围栏✅   全链路✅ T9   交互端
+多租户       对话管理✅   MCP平台✅   人机协同✅   效果评估⬜ T12
 ```
 
 **P5**: 前端交互层（Web聊天/审批卡片/反馈/IM），与后端并行开发

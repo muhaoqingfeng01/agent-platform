@@ -1,6 +1,7 @@
 package com.example.agent.application.tool;
 
 import com.example.agent.application.tool.dto.*;
+import com.example.agent.infrastructure.annotation.Auditable;
 import com.example.agent.infrastructure.context.TenantContext;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.exception.BusinessException;
@@ -285,6 +286,7 @@ public class ToolApplicationService {
      * @param params 调用参数
      * @return 测试结果（成功/失败 + 返回值 + 耗时）
      */
+    @Auditable(action = "TOOL_TEST", resourceType = "TOOL", resourceId = "#toolId", recordResponse = true)
     @Transactional
     public ToolTestResponse test(String toolId, Map<String, Object> params) {
         String tenantId = TenantContext.getCurrentTenantId();

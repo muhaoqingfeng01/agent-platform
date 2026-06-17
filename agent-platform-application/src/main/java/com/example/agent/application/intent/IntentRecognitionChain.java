@@ -4,6 +4,7 @@ import com.example.agent.application.intent.model.IntentResult;
 import com.example.agent.application.intent.recognizer.CacheRecognizer;
 import com.example.agent.application.intent.recognizer.LLMRecognizer;
 import com.example.agent.application.intent.recognizer.RuleRecognizer;
+import com.example.agent.infrastructure.annotation.Auditable;
 import com.example.agent.infrastructure.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,7 @@ public class IntentRecognitionChain {
      * 意图识别（显式传入 tenantId）.
      * <p>用于异步/线程池场景（如 SSE 流式），此时 ThreadLocal 中的租户上下文不可用.
      */
+    @Auditable(action = "INTENT_RECOGNITION", resourceType = "INTENT", recordResponse = false)
     public IntentResult recognize(String tenantId, String userInput) {
         long startTime = System.currentTimeMillis();
 

@@ -138,12 +138,6 @@
             <artifactId>spring-ai-autoconfigure-model-deepseek</artifactId>
         </dependency>
 
-        <!-- Langfuse -->
-        <dependency>
-            <groupId>com.langfuse</groupId>
-            <artifactId>langfuse-java</artifactId>
-        </dependency>
-
         <!-- Micrometer + Prometheus -->
         <dependency>
             <groupId>io.micrometer</groupId>
