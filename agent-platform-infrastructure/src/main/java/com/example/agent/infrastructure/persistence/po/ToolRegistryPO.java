@@ -55,6 +55,9 @@ public class ToolRegistryPO {
     /** 工具状态 — ACTIVE（启用）/ DISABLED（禁用） */
     private String status;
 
+    /** 当前版本号 — 每次配置变更自动+1 */
+    private Integer version;
+
     /** 创建时间 */
     private LocalDateTime createdAt;
 

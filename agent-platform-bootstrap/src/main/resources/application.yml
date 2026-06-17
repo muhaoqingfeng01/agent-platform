@@ -21,6 +21,8 @@ spring:
       connection-timeout: 30000
 
   # --- Redis ---
+  cache:
+    type: redis
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -62,6 +64,13 @@ spring:
       # ⚠️ 禁用 OpenAI ChatModel，仅保留 Embedding 功能
       chat:
         enabled: false
+
+  # --- LDAP 企业认证（默认禁用） ---
+  ldap:
+    enabled: false
+    urls: ldap://ldap.company.com:389
+    base: dc=company,dc=com
+    user-dn-pattern: uid={0},ou=users
 
 # ============================================================
 # Sa-Token (Authentication & Authorization)
@@ -215,6 +224,18 @@ langfuse:
 # ============================================================
 # 以下属性仅供 logback-spring.xml 通过 <springProperty> 读取，
 # 各环境可通过 application-{profile}.yml 覆盖
+
+# ============================================================
+# Security PII (Presidio 增强脱敏)
+# ============================================================
+security:
+  pii:
+    presidio:
+      enabled: false               # 默认禁用，生产环境启用
+      analyzer-url: http://localhost:3000
+      timeout: 5000                # 超时 5 秒
+      fallback-to-regex: true      # 超时时降级到正则
+
 app:
   logging:
     base-path: ${LOG_BASE_PATH:D:/log}       # 日志根目录

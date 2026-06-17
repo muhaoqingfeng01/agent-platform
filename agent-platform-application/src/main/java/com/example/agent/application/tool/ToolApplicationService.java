@@ -9,12 +9,15 @@ import com.example.agent.common.exception.ResourceNotFoundException;
 import com.example.agent.common.util.IdGenerator;
 import com.example.agent.domain.tool.entity.ToolInvocationLog;
 import com.example.agent.domain.tool.entity.ToolRegistry;
+import com.example.agent.domain.tool.entity.ToolRegistryVersion;
 import com.example.agent.domain.tool.repository.ToolInvocationLogRepository;
 import com.example.agent.domain.tool.repository.ToolRegistryRepository;
+import com.example.agent.domain.tool.repository.ToolRegistryVersionRepository;
 import com.example.agent.domain.tool.service.ToolDomainService;
 import com.example.agent.domain.tool.valueobject.*;
 import com.example.agent.infrastructure.mcp.HttpToolAdapter;
 import com.example.agent.infrastructure.mcp.McpClientManager;
+import com.example.agent.infrastructure.persistence.cache.ToolCacheManager;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +63,12 @@ public class ToolApplicationService {
 
     /** HTTP 工具适配器 */
     private final HttpToolAdapter httpToolAdapter;
+
+    /** 工具 Redis 二级缓存管理器 */
+    private final ToolCacheManager toolCacheManager;
+
+    /** 工具版本历史仓储 */
+    private final ToolRegistryVersionRepository versionRepository;
 
     // ==================== 工具 CRUD ====================
 
@@ -128,8 +137,14 @@ public class ToolApplicationService {
         String tenantId = TenantContext.getCurrentTenantId();
         log.debug("[Tool] 查询工具详情: toolId={}", toolId);
 
-        ToolRegistry tool = toolRepository.findByToolId(toolId)
-                .orElseThrow(() -> new ResourceNotFoundException("工具", toolId));
+        // L2 缓存（Redis）→ 回源 MySQL
+        ToolRegistry tool = toolCacheManager.get(tenantId, toolId)
+                .orElseGet(() -> {
+                    ToolRegistry t = toolRepository.findByToolId(toolId)
+                            .orElseThrow(() -> new ResourceNotFoundException("工具", toolId));
+                    toolCacheManager.put(t);  // 回填 Redis
+                    return t;
+                });
 
         domainService.assertTenantAccess(tool, tenantId);
 
@@ -230,6 +245,9 @@ public class ToolApplicationService {
 
         toolRepository.update(updated);
 
+        // 清除缓存
+        toolCacheManager.refresh(tenantId, toolId);
+
         log.info("[Tool] 工具更新成功: toolId={}", toolId);
         return ToolResponse.from(updated);
     }
@@ -263,7 +281,62 @@ public class ToolApplicationService {
 
         toolRepository.updateStatus(toolId, targetStatus);
 
+        // 清除缓存
+        toolCacheManager.refresh(tenantId, toolId);
+
         log.info("[Tool] 工具状态切换成功: toolId={}, status={}", toolId, targetStatus.toChinese());
+        return ToolResponse.from(tool);
+    }
+
+    // ==================== 版本历史 ====================
+
+    /**
+     * 版本历史列表.
+     */
+    public List<VersionResponse> getVersionHistory(String toolId) {
+        String tenantId = TenantContext.getCurrentTenantId();
+        // 校验存在 + 租户隔离
+        ToolRegistry tool = toolRepository.findByToolId(toolId)
+                .orElseThrow(() -> new ResourceNotFoundException("工具", toolId));
+        domainService.assertTenantAccess(tool, tenantId);
+
+        return versionRepository.findByToolId(toolId).stream()
+                .map(VersionResponse::from)
+                .toList();
+    }
+
+    /**
+     * 版本详情.
+     */
+    public VersionResponse getVersionDetail(String toolId, int version) {
+        String tenantId = TenantContext.getCurrentTenantId();
+        ToolRegistry tool = toolRepository.findByToolId(toolId)
+                .orElseThrow(() -> new ResourceNotFoundException("工具", toolId));
+        domainService.assertTenantAccess(tool, tenantId);
+
+        ToolRegistryVersion v = versionRepository.findByToolIdAndVersion(toolId, version)
+                .orElseThrow(() -> new ResourceNotFoundException("工具版本", toolId + " v" + version));
+        return VersionResponse.from(v);
+    }
+
+    /**
+     * 回滚到指定版本.
+     */
+    @Transactional
+    public ToolResponse rollback(String toolId, int targetVersion) {
+        String tenantId = TenantContext.getCurrentTenantId();
+        String operator = TenantContext.getCurrentUserId();
+
+        ToolRegistry tool = toolRepository.findByToolId(toolId)
+                .orElseThrow(() -> new ResourceNotFoundException("工具", toolId));
+        domainService.assertTenantAccess(tool, tenantId);
+
+        domainService.rollback(tool, targetVersion, operator);
+
+        // 清除缓存
+        toolCacheManager.refresh(tenantId, toolId);
+
+        log.info("[Tool] 回滚成功: toolId={}, targetVersion={}", toolId, targetVersion);
         return ToolResponse.from(tool);
     }
 

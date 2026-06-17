@@ -46,4 +46,10 @@ public interface PromptTemplateRepository {
 
     /** 软删除 */
     void softDelete(String promptId);
+
+    /** 查询指定名称的最新 PUBLISHED 版本（缓存热点） */
+    Optional<PromptTemplate> findLatestPublished(String tenantId, String name);
+
+    /** 按名称+版本号查询历史版本 */
+    Optional<PromptTemplate> findByVersion(String tenantId, String name, int version);
 }

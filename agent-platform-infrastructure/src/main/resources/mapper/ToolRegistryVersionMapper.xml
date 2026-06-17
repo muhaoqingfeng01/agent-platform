@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.ToolRegistryVersionMapper">
+
+    <resultMap id="ToolRegistryVersionPOMap" type="com.example.agent.infrastructure.persistence.po.ToolRegistryVersionPO">
+        <id     column="id"              property="id"/>
+        <result column="tenant_id"       property="tenantId"/>
+        <result column="tool_id"         property="toolId"/>
+        <result column="version"         property="version"/>
+        <result column="tool_name"       property="toolName"/>
+        <result column="tool_type"       property="toolType"/>
+        <result column="endpoint_url"    property="endpointUrl"/>
+        <result column="input_schema"    property="inputSchema"/>
+        <result column="output_schema"   property="outputSchema"/>
+        <result column="auth_config"     property="authConfigJson"/>
+        <result column="require_approval" property="requireApproval"/>
+        <result column="description"     property="description"/>
+        <result column="change_reason"   property="changeReason"/>
+        <result column="created_at"      property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_tool_registry_version (
+            tenant_id, tool_id, version, tool_name, tool_type,
+            endpoint_url, input_schema, output_schema, auth_config,
+            require_approval, description, change_reason, created_at
+        ) VALUES (
+            #{tenantId}, #{toolId}, #{version}, #{toolName}, #{toolType},
+            #{endpointUrl}, #{inputSchema}, #{outputSchema}, #{authConfigJson},
+            #{requireApproval}, #{description}, #{changeReason}, #{createdAt}
+        )
+    </insert>
+
+    <select id="selectByToolIdAndVersion" resultMap="ToolRegistryVersionPOMap">
+        SELECT id, tenant_id, tool_id, version, tool_name, tool_type,
+               endpoint_url, input_schema, output_schema, auth_config,
+               require_approval, description, change_reason, created_at
+        FROM t_tool_registry_version
+        WHERE tool_id = #{toolId} AND version = #{version}
+    </select>
+
+    <select id="selectByToolId" resultMap="ToolRegistryVersionPOMap">
+        SELECT id, tenant_id, tool_id, version, tool_name, tool_type,
+               endpoint_url, input_schema, output_schema, auth_config,
+               require_approval, description, change_reason, created_at
+        FROM t_tool_registry_version
+        WHERE tool_id = #{toolId}
+        ORDER BY version DESC
+    </select>
+
+    <select id="selectMaxVersionByToolId" resultType="java.lang.Integer">
+        SELECT MAX(version) FROM t_tool_registry_version
+        WHERE tool_id = #{toolId}
+    </select>
+
+    <select id="countByToolId" resultType="int">
+        SELECT COUNT(1) FROM t_tool_registry_version
+        WHERE tool_id = #{toolId}
+    </select>
+
+</mapper>

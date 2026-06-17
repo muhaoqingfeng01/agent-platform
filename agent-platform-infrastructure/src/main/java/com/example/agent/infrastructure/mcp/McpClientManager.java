@@ -137,6 +137,48 @@ public class McpClientManager implements InitializingBean {
         return clients.containsKey(toolId);
     }
 
+    /**
+     * 探测 MCP 工具连接是否存活 — 发送 list_tools 轻量请求.
+     *
+     * <p>通过 MCP 协议的 listTools 方法验证连接是否仍可用.
+     * 用于心跳检测，不修改任何状态.
+     *
+     * @param toolId 工具业务 ID
+     * @return true 表示连接存活
+     */
+    public boolean ping(String toolId) {
+        Object client = clients.get(toolId);
+        if (client == null) {
+            return false;
+        }
+        try {
+            // 调用 McpSyncClient.listTools() 轻量探测
+            client.getClass().getMethod("listTools").invoke(client);
+            return true;
+        } catch (Exception e) {
+            log.debug("[MCP] Ping 失败: toolId={}, error={}", toolId, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 从缓存中移除并关闭指定 MCP 客户端连接.
+     *
+     * @param toolId 工具业务 ID
+     */
+    public void removeClient(String toolId) {
+        Object client = clients.remove(toolId);
+        if (client != null) {
+            try {
+                // 尝试优雅关闭
+                client.getClass().getMethod("close").invoke(client);
+            } catch (Exception e) {
+                log.debug("[MCP] 关闭 MCP 客户端连接异常: toolId={}, error={}", toolId, e.getMessage());
+            }
+            log.info("[MCP] 已移除 MCP 客户端: toolId={}", toolId);
+        }
+    }
+
     // ==================== 私有辅助方法 ====================
 
     /**

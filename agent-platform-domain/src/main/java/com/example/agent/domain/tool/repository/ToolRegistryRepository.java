@@ -89,6 +89,13 @@ public interface ToolRegistryRepository {
     void update(ToolRegistry tool);
 
     /**
+     * 更新工具并指定版本号 — 用于回滚操作时精确控制版本.
+     *
+     * @param tool 工具实体（含目标版本号）
+     */
+    void updateWithVersion(ToolRegistry tool);
+
+    /**
      * 更新工具状态 — 用于启停操作.
      *
      * @param toolId 工具业务 ID

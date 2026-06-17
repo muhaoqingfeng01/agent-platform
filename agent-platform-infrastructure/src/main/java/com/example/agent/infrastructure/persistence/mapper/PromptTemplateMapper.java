@@ -49,4 +49,11 @@ public interface PromptTemplateMapper {
                      @Param("status") String status);
 
     int softDelete(@Param("promptId") String promptId);
+
+    Optional<PromptTemplatePO> selectLatestPublished(@Param("tenantId") String tenantId,
+                                                       @Param("name") String name);
+
+    Optional<PromptTemplatePO> selectByVersion(@Param("tenantId") String tenantId,
+                                                @Param("name") String name,
+                                                @Param("version") int version);
 }

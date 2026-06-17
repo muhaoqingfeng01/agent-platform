@@ -1,6 +1,7 @@
 package com.example.agent.interfaces.rest;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.example.agent.application.security.AuthProviderFactory;
 import com.example.agent.common.result.Result;
 import com.example.agent.domain.security.UserService;
 import com.example.agent.domain.security.UserView;
@@ -16,11 +17,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -45,6 +42,7 @@ public class AuthController {
 
     private final UserService userService;
     private final StringRedisTemplate stringRedisTemplate;
+    private final AuthProviderFactory authProviderFactory;
 
     private static final String REFRESH_KEY_PREFIX = "refresh:";
     private static final long REFRESH_TTL_DAYS = 7;
@@ -58,12 +56,19 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "用户名或密码错误")
     })
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        log.info("[Auth] 用户登录请求: username={}, tenantId={}",
-                request.getUsername(), request.getTenantId());
+        log.info("[Auth] 用户登录请求: username={}, tenantId={}, provider={}",
+                request.getUsername(), request.getTenantId(), request.getProvider());
 
-        // 1. 校验账号密码
-        UserView user = userService.authenticate(
+        // 1. 校验账号密码（支持 LDAP/SSO 路由）
+        UserView user;
+        if (request.getProvider() != null && !request.getProvider().isBlank()
+                && !"LOCAL".equalsIgnoreCase(request.getProvider())) {
+            user = authProviderFactory.authenticate(
+                request.getProvider(), request.getUsername(), request.getPassword());
+        } else {
+            user = userService.authenticate(
                 request.getTenantId(), request.getUsername(), request.getPassword());
+        }
         if (user == null) {
             log.warn("[Auth] 登录失败（用户名或密码错误）: username={}", request.getUsername());
             return Result.fail(401, "用户名或密码错误");

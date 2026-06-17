@@ -88,6 +88,16 @@ public class PromptTemplateRepositoryImpl implements PromptTemplateRepository {
         promptTemplateMapper.softDelete(promptId);
     }
 
+    @Override
+    public Optional<PromptTemplate> findLatestPublished(String tenantId, String name) {
+        return promptTemplateMapper.selectLatestPublished(tenantId, name).map(this::toDomain);
+    }
+
+    @Override
+    public Optional<PromptTemplate> findByVersion(String tenantId, String name, int version) {
+        return promptTemplateMapper.selectByVersion(tenantId, name, version).map(this::toDomain);
+    }
+
     // ==================== 映射方法 ====================
 
     private PromptTemplate toDomain(PromptTemplatePO po) {

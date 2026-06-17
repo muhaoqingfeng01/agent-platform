@@ -5,6 +5,7 @@ import com.example.agent.application.tool.ToolApplicationService;
 import com.example.agent.application.tool.dto.ToolInvocationLogResponse;
 import com.example.agent.application.tool.dto.ToolResponse;
 import com.example.agent.application.tool.dto.ToolTestResponse;
+import com.example.agent.application.tool.dto.VersionResponse;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.result.Result;
 import com.example.agent.interfaces.dto.request.tool.CreateToolRequest;
@@ -18,6 +19,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 工具管理 Controller — 纯粹 HTTP 适配层.
@@ -154,6 +157,43 @@ public class ToolController {
             @Parameter(description = "工具 ID") @PathVariable String id,
             @Valid @RequestBody ToolTestRequest request) {
         return Result.ok(toolService.test(id, request.getParams()));
+    }
+
+    // ==================== 版本历史 ====================
+
+    /**
+     * 版本历史列表.
+     */
+    @GetMapping("/{id}/versions")
+    @SaCheckPermission("tool:read")
+    @Operation(summary = "版本历史列表")
+    public Result<List<VersionResponse>> getVersionHistory(
+            @Parameter(description = "工具 ID") @PathVariable String id) {
+        return Result.ok(toolService.getVersionHistory(id));
+    }
+
+    /**
+     * 版本详情.
+     */
+    @GetMapping("/{id}/versions/{version}")
+    @SaCheckPermission("tool:read")
+    @Operation(summary = "版本详情")
+    public Result<VersionResponse> getVersionDetail(
+            @Parameter(description = "工具 ID") @PathVariable String id,
+            @Parameter(description = "版本号") @PathVariable int version) {
+        return Result.ok(toolService.getVersionDetail(id, version));
+    }
+
+    /**
+     * 回滚到指定版本.
+     */
+    @PostMapping("/{id}/rollback")
+    @SaCheckPermission("tool:update")
+    @Operation(summary = "回滚到指定版本")
+    public Result<ToolResponse> rollback(
+            @Parameter(description = "工具 ID") @PathVariable String id,
+            @Parameter(description = "目标版本号") @RequestParam int version) {
+        return Result.ok(toolService.rollback(id, version));
     }
 
     // ==================== DTO 映射方法 ====================

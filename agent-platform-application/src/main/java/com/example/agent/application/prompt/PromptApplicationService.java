@@ -12,6 +12,7 @@ import com.example.agent.domain.prompt.service.PromptDomainService;
 import com.example.agent.domain.prompt.valueobject.PromptStatus;
 import com.example.agent.domain.prompt.valueobject.VariableDef;
 import com.example.agent.infrastructure.context.TenantContext;
+import com.example.agent.infrastructure.persistence.cache.CachedPromptRepository;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,7 @@ public class PromptApplicationService {
     private final PromptTemplateVersionRepository versionRepository;
     private final PromptDomainService domainService;
     private final PromptRenderService renderService;
+    private final CachedPromptRepository cachedPromptRepository;
 
     // ==================== CRUD ====================
 
@@ -156,8 +158,12 @@ public class PromptApplicationService {
      */
     @Transactional
     public void deletePrompt(String promptId) {
-        getTemplateWithAccess(promptId); // 校验存在 + 租户隔离
+        PromptTemplate template = getTemplateWithAccess(promptId); // 校验存在 + 租户隔离
         templateRepository.softDelete(promptId);
+
+        // 删除后清除缓存
+        cachedPromptRepository.evictCache(template.getTenantId(), template.getName());
+
         log.info("[Prompt] 软删除: promptId={}", promptId);
     }
 
@@ -175,6 +181,9 @@ public class PromptApplicationService {
 
         domainService.publish(template, publisher);
 
+        // 发布后更新 Redis 缓存
+        cachedPromptRepository.updateLatestCache(template);
+
         log.info("[Prompt] 发布成功: promptId={}, version={}", promptId, template.getVersion());
         return PromptResponse.from(template);
     }
@@ -189,6 +198,9 @@ public class PromptApplicationService {
 
         domainService.rollback(template, targetVersion, operator);
 
+        // 回滚后更新 Redis 缓存
+        cachedPromptRepository.updateLatestCache(template);
+
         log.info("[Prompt] 回滚成功: promptId={}, targetVersion={}, newVersion={}",
                 promptId, targetVersion, template.getVersion());
         return PromptResponse.from(template);
@@ -201,6 +213,9 @@ public class PromptApplicationService {
     public void archivePrompt(String promptId) {
         PromptTemplate template = getTemplateWithAccess(promptId);
         domainService.archive(template);
+
+        // 归档后清除缓存
+        cachedPromptRepository.evictCache(template.getTenantId(), template.getName());
     }
 
     // ==================== 版本历史 ====================

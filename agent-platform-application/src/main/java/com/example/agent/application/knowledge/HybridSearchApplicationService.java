@@ -1,6 +1,7 @@
 package com.example.agent.application.knowledge;
 
 import com.example.agent.application.knowledge.dto.*;
+import com.example.agent.application.knowledge.rerank.RerankerRegistry;
 import com.example.agent.common.exception.ResourceNotFoundException;
 import com.example.agent.domain.knowledge.entity.Document;
 import com.example.agent.domain.knowledge.entity.KnowledgeBase;
@@ -9,6 +10,7 @@ import com.example.agent.domain.knowledge.repository.DocumentRepository;
 import com.example.agent.domain.knowledge.repository.KnowledgeBaseRepository;
 import com.example.agent.domain.knowledge.repository.KnowledgeHitRecordRepository;
 import com.example.agent.domain.knowledge.service.*;
+import com.example.agent.domain.knowledge.valueobject.RerankerType;
 import com.example.agent.infrastructure.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,10 +39,12 @@ public class HybridSearchApplicationService {
     private final PrecisionConfigDomainService precisionDomainService;
     private final DocumentRepository documentRepository;
     private final KnowledgeBaseRepository kbRepository;                // ★ V1.4.0: KB 过滤
+    private final RerankerRegistry rerankerRegistry;                   // ★ V1.5.0: Reranker 精排
 
     private static final int DEFAULT_VECTOR_TOP_K = 20;
     private static final int DEFAULT_FULLTEXT_TOP_K = 20;
     private static final int DEFAULT_FUSION_TOP_N = 5;
+    private static final int FINAL_TOP_K = 5;            // ★ V1.5.0: Reranker 后最终返回数
     private static final int RRF_K = 60;
 
     public SearchResultDTO search(String query, String knowledgeId, Map<String, Object> searchConfig) {
@@ -78,6 +82,12 @@ public class HybridSearchApplicationService {
         }
 
         List<FusedHit> topN = fused.subList(0, Math.min(fusionTopN, fused.size()));
+
+        // ★ V1.5.0: Reranker 精排（如果 KB 配置了 Reranker）
+        RerankerType rerankerType = resolveRerankerType(knowledgeId, config);
+        if (rerankerType != null && rerankerType != RerankerType.NONE) {
+            topN = applyReranker(query, topN, rerankerType, FINAL_TOP_K);
+        }
 
         // ★ 新增: 批量查询文档元数据
         Map<String, Document> docMap = enrichDocumentMetadata(topN);
@@ -244,4 +254,47 @@ public class HybridSearchApplicationService {
     }
 
     public record FusedHit(VectorSearchProvider.SearchHit hit, double rrfScore) {}
+
+    // ==================== V1.5.0: Reranker 精排 ====================
+
+    /**
+     * 解析知识库的 Reranker 类型配置.
+     */
+    private RerankerType resolveRerankerType(String knowledgeId, PrecisionConfigDomainService.MergedPrecisionConfig config) {
+        if (config.enableReranker() && config.rerankerType() != null) {
+            RerankerType type = RerankerType.fromCode(config.rerankerType());
+            if (type != RerankerType.NONE && rerankerRegistry.hasImpl(type)) {
+                return type;
+            }
+        }
+        return RerankerType.NONE;
+    }
+
+    /**
+     * 应用 Reranker 精排.
+     */
+    private List<FusedHit> applyReranker(String query, List<FusedHit> topN, RerankerType type, int finalTopK) {
+        Reranker reranker = rerankerRegistry.get(type).orElse(null);
+        if (reranker == null) return topN;
+
+        // 转换为 RerankerHit
+        List<Reranker.RerankerHit> candidates = topN.stream()
+            .map(fh -> Reranker.RerankerHit.from(fh.hit, fh.rrfScore))
+            .toList();
+
+        // 模型精排
+        List<Reranker.RerankerHit> reranked = reranker.rerank(query, candidates, finalTopK);
+        log.info("[HybridSearch] Reranker 精排完成: type={}, {} candidates → top-{}", type, candidates.size(), reranked.size());
+
+        // 转换回 FusedHit（保留原始 SearchHit 引用）
+        Map<String, VectorSearchProvider.SearchHit> hitMap = topN.stream()
+            .collect(Collectors.toMap(fh -> fh.hit.chunkId().toString(), fh -> fh.hit, (a, b) -> a));
+
+        return reranked.stream()
+            .map(rh -> {
+                VectorSearchProvider.SearchHit originalHit = hitMap.get(rh.chunkId());
+                return new FusedHit(originalHit != null ? originalHit : topN.get(0).hit, rh.rerankScore());
+            })
+            .toList();
+    }
 }

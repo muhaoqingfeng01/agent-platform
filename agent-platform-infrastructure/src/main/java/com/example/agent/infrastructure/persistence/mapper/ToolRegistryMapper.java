@@ -36,6 +36,11 @@ public interface ToolRegistryMapper {
     int update(ToolRegistryPO po);
 
     /**
+     * 更新工具并指定版本号 — 用于回滚操作.
+     */
+    int updateWithVersion(ToolRegistryPO po);
+
+    /**
      * 更新工具状态 — 仅启停操作.
      *
      * @param toolId 工具业务 ID

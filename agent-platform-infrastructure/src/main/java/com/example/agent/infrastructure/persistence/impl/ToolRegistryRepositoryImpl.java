@@ -52,6 +52,11 @@ public class ToolRegistryRepositoryImpl implements ToolRegistryRepository {
     }
 
     @Override
+    public void updateWithVersion(ToolRegistry tool) {
+        mapper.updateWithVersion(toPO(tool));
+    }
+
+    @Override
     public void updateStatus(String toolId, ToolStatus status) {
         mapper.updateStatus(toolId, status.name());
     }
@@ -119,6 +124,7 @@ public class ToolRegistryRepositoryImpl implements ToolRegistryRepository {
                 .authConfig(parseAuthConfig(po.getAuthConfig()))
                 .requireApproval(po.getRequireApproval() != null && po.getRequireApproval())
                 .status(ToolStatus.fromCode(po.getStatus()))
+                .version(po.getVersion())
                 .createdAt(po.getCreatedAt())
                 .updatedAt(po.getUpdatedAt())
                 .build();
@@ -143,6 +149,7 @@ public class ToolRegistryRepositoryImpl implements ToolRegistryRepository {
                 .authConfig(toJsonString(tool.getAuthConfig()))
                 .requireApproval(tool.isRequireApproval())
                 .status(tool.getStatus().name())
+                .version(tool.getVersion())
                 .createdAt(tool.getCreatedAt())
                 .updatedAt(tool.getUpdatedAt())
                 .build();

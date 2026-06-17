@@ -1,23 +1,28 @@
 package com.example.agent.domain.tool.service;
 
 import com.example.agent.domain.tool.entity.ToolRegistry;
+import com.example.agent.domain.tool.entity.ToolRegistryVersion;
+import com.example.agent.domain.tool.repository.ToolRegistryRepository;
+import com.example.agent.domain.tool.repository.ToolRegistryVersionRepository;
 import com.example.agent.domain.tool.valueobject.ToolStatus;
 import com.example.agent.domain.tool.valueobject.ToolType;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
  * 工具领域服务 — 封装跨实体的工具业务规则.
  *
- * <p>负责校验工具注册的不变量、租户访问权限和状态转换合法性.
- * 所有断言方法在校验失败时抛出异常，调用方无需处理返回值.
- *
  * @author Agent Platform Team
  * @since 1.0.0
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class ToolDomainService {
+
+    private final ToolRegistryRepository toolRepository;
+    private final ToolRegistryVersionRepository versionRepository;
 
     /**
      * 校验新建工具的业务不变量.
@@ -94,5 +99,62 @@ public class ToolDomainService {
                             + " (toolId=" + tool.getToolId() + ")");
         }
         log.debug("[Tool] 禁用校验通过: toolId={}", tool.getToolId());
+    }
+
+    // ==================== 版本化管理 ====================
+
+    /**
+     * 更新工具配置并创建版本快照.
+     *
+     * @param tool         当前工具实体
+     * @param changeReason 变更原因
+     * @return 更新后的工具实体
+     */
+    public ToolRegistry updateWithVersion(ToolRegistry tool, String changeReason) {
+        // 1. 快照当前版本 → t_tool_registry_version
+        ToolRegistryVersion snapshot = ToolRegistryVersion.from(tool, changeReason);
+        versionRepository.save(snapshot);
+
+        // 2. 版本号 +1
+        tool.incrementVersion();
+
+        // 3. 持久化（含版本号更新）
+        toolRepository.updateWithVersion(tool);
+
+        log.info("[Tool] 工具配置更新（版本化）: toolId={}, newVersion={}, reason={}",
+                tool.getToolId(), tool.getVersion(), changeReason);
+        return tool;
+    }
+
+    /**
+     * 回滚到指定历史版本.
+     *
+     * @param current       当前工具实体
+     * @param targetVersion 目标版本号
+     * @param operator      操作人
+     * @return 更新后的工具实体
+     */
+    public ToolRegistry rollback(ToolRegistry current, int targetVersion, String operator) {
+        // 1. 从版本历史读取目标版本
+        ToolRegistryVersion target = versionRepository
+                .findByToolIdAndVersion(current.getToolId(), targetVersion)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "版本不存在: toolId=" + current.getToolId() + " v" + targetVersion));
+
+        // 2. 快照当前版本（保留回滚前的状态）
+        String preRollbackReason = "回滚到 v" + targetVersion + " 前的自动快照";
+        ToolRegistryVersion preRollbackSnapshot = ToolRegistryVersion.from(current, preRollbackReason);
+        versionRepository.save(preRollbackSnapshot);
+
+        // 3. 应用目标版本的内容到当前实体
+        current.incrementVersion();
+        current.restoreFromVersion(target);
+
+        // 4. 持久化
+        toolRepository.updateWithVersion(current);
+
+        log.info("[Tool] 工具回滚成功: toolId={}, {} → v{} (based on v{}), operator={}",
+                current.getToolId(), current.getVersion(), current.getVersion(), targetVersion, operator);
+        return current;
     }
 }

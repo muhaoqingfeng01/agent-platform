@@ -6,6 +6,7 @@ import com.example.agent.domain.tool.valueobject.ToolStatus;
 import com.example.agent.domain.tool.valueobject.ToolType;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
@@ -28,6 +29,7 @@ import java.time.LocalDateTime;
  * @since 1.0.0
  */
 @Getter
+@Setter
 @Builder(toBuilder = true)
 public class ToolRegistry {
 
@@ -60,6 +62,9 @@ public class ToolRegistry {
 
     /** 工具状态 — ACTIVE（可调用）或 DISABLED（不可调用） */
     private ToolStatus status;
+
+    /** 当前版本号 — 每次配置变更自动+1，从 1 开始 */
+    private Integer version;
 
     /** 创建时间 */
     private LocalDateTime createdAt;
@@ -109,5 +114,37 @@ public class ToolRegistry {
      */
     public boolean isDisabled() {
         return this.status == ToolStatus.DISABLED;
+    }
+
+    /**
+     * 获取当前版本号（若为 null 则返回 0）.
+     *
+     * @return 当前版本号
+     */
+    public int getCurrentOrZero() {
+        return version != null ? version : 0;
+    }
+
+    /**
+     * 版本号 +1.
+     */
+    public void incrementVersion() {
+        this.version = getCurrentOrZero() + 1;
+    }
+
+    /**
+     * 从历史版本快照恢复工具配置.
+     */
+    public void restoreFromVersion(ToolRegistryVersion target) {
+        this.name = target.getToolName();
+        this.description = target.getDescription();
+        this.toolType = target.getToolType();
+        this.endpoint = target.getEndpointUrl();
+        this.schema = ToolSchema.builder()
+                .inputSchema(target.getInputSchema())
+                .outputSchema(target.getOutputSchema())
+                .build();
+        this.requireApproval = target.getRequireApproval() != null && target.getRequireApproval();
+        this.updatedAt = LocalDateTime.now();
     }
 }

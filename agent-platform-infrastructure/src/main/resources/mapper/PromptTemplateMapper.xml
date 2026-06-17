@@ -116,4 +116,29 @@
           AND deleted = 0
     </update>
 
+    <select id="selectLatestPublished" resultMap="PromptTemplatePOMap">
+        SELECT id, tenant_id, prompt_id, name, description,
+               template_text, variables, version, status, ab_test_config,
+               created_at, updated_at
+        FROM t_prompt_template
+        WHERE tenant_id = #{tenantId}
+          AND name = #{name}
+          AND status = 'PUBLISHED'
+          AND deleted = 0
+        ORDER BY version DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectByVersion" resultMap="PromptTemplatePOMap">
+        SELECT id, tenant_id, prompt_id, name, description,
+               template_text, variables, version, status, ab_test_config,
+               created_at, updated_at
+        FROM t_prompt_template
+        WHERE tenant_id = #{tenantId}
+          AND name = #{name}
+          AND version = #{version}
+          AND deleted = 0
+        LIMIT 1
+    </select>
+
 </mapper>

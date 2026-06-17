@@ -67,6 +67,10 @@ public class ToolResponse {
     @Schema(description = "状态中文")
     private String statusLabel;
 
+    /** 当前版本号 */
+    @Schema(description = "当前版本号")
+    private Integer version;
+
     /** 创建时间 */
     @Schema(description = "创建时间")
     private LocalDateTime createdAt;
@@ -98,6 +102,7 @@ public class ToolResponse {
         r.setRequireApproval(entity.isRequireApproval());
         r.setStatus(entity.getStatus() != null ? entity.getStatus().name() : null);
         r.setStatusLabel(entity.getStatus() != null ? entity.getStatus().toChinese() : null);
+        r.setVersion(entity.getVersion());
         r.setCreatedAt(entity.getCreatedAt());
         r.setUpdatedAt(entity.getUpdatedAt());
         return r;

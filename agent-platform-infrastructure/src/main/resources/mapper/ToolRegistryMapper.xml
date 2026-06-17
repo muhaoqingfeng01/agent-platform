@@ -15,6 +15,7 @@
         <result column="auth_config"       property="authConfig"/>
         <result column="require_approval"  property="requireApproval"/>
         <result column="status"            property="status"/>
+        <result column="version"           property="version"/>
         <result column="created_at"        property="createdAt"/>
         <result column="updated_at"        property="updatedAt"/>
         <result column="deleted"           property="deleted"/>
@@ -25,11 +26,11 @@
         INSERT INTO t_tool_registry (
             tenant_id, tool_id, name, description, tool_type,
             schema_json, endpoint, auth_config, require_approval,
-            status, created_at, updated_at
+            status, version, created_at, updated_at
         ) VALUES (
             #{tenantId}, #{toolId}, #{name}, #{description}, #{toolType},
             #{schemaJson}, #{endpoint}, #{authConfig}, #{requireApproval},
-            #{status}, #{createdAt}, #{updatedAt}
+            #{status}, COALESCE(#{version}, 1), #{createdAt}, #{updatedAt}
         )
     </insert>
 
@@ -43,6 +44,21 @@
             endpoint = #{endpoint},
             auth_config = #{authConfig},
             require_approval = #{requireApproval},
+            version = version + 1,
+            updated_at = NOW()
+        WHERE tool_id = #{toolId} AND deleted = 0
+    </update>
+
+    <update id="updateWithVersion">
+        UPDATE t_tool_registry
+        SET name = #{name},
+            description = #{description},
+            tool_type = #{toolType},
+            schema_json = #{schemaJson},
+            endpoint = #{endpoint},
+            auth_config = #{authConfig},
+            require_approval = #{requireApproval},
+            version = #{version},
             updated_at = NOW()
         WHERE tool_id = #{toolId} AND deleted = 0
     </update>
@@ -63,7 +79,7 @@
     <select id="selectByToolId" resultMap="ToolRegistryPOMap">
         SELECT id, tenant_id, tool_id, name, description, tool_type,
                schema_json, endpoint, auth_config, require_approval,
-               status, created_at, updated_at, deleted
+               status, version, created_at, updated_at, deleted
         FROM t_tool_registry
         WHERE tool_id = #{toolId} AND deleted = 0
     </select>
@@ -71,7 +87,7 @@
     <select id="selectByTenant" resultMap="ToolRegistryPOMap">
         SELECT id, tenant_id, tool_id, name, description, tool_type,
                schema_json, endpoint, auth_config, require_approval,
-               status, created_at, updated_at, deleted
+               status, version, created_at, updated_at, deleted
         FROM t_tool_registry
         WHERE tenant_id = #{tenantId} AND deleted = 0
         ORDER BY created_at DESC
@@ -86,7 +102,7 @@
     <select id="selectByTenantAndType" resultMap="ToolRegistryPOMap">
         SELECT id, tenant_id, tool_id, name, description, tool_type,
                schema_json, endpoint, auth_config, require_approval,
-               status, created_at, updated_at, deleted
+               status, version, created_at, updated_at, deleted
         FROM t_tool_registry
         WHERE tenant_id = #{tenantId} AND tool_type = #{toolType} AND deleted = 0
         ORDER BY created_at DESC
@@ -101,7 +117,7 @@
     <select id="selectByTypeAndStatus" resultMap="ToolRegistryPOMap">
         SELECT id, tenant_id, tool_id, name, description, tool_type,
                schema_json, endpoint, auth_config, require_approval,
-               status, created_at, updated_at, deleted
+               status, version, created_at, updated_at, deleted
         FROM t_tool_registry
         WHERE tool_type = #{toolType} AND status = #{status} AND deleted = 0
         ORDER BY created_at DESC
