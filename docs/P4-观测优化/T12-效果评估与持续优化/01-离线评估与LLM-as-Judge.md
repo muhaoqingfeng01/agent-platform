@@ -1,146 +1,175 @@
 # 离线评估与 LLM-as-Judge
 
-## 所属阶段
-**P4 观测优化 → T12 效果评估与持续优化**
+> **状态**: ✅ 已实现 | **日期**: 2026-06-18 | **所属**: P4-T12
 
-## 使用技术
-- Spring AI（LLM-as-Judge 评分）
-- 评测数据集管理
-- 评估指标计算（准确率、幻觉率、检索命中率）
+---
 
-## 涉及数据库表
-- `t_evaluation_run`, `t_evaluation_dataset`, `t_evaluation_dataset_item`
+## 1. 设计目标
 
-## API 端点
+建立 Agent 回答质量的自动化评估体系，支持数据集管理和 LLM-as-Judge 评分。
+
+| 目标 | 说明 |
+|------|------|
+| **数据集管理** | 创建评测数据集，添加 Q&A 样本（手动/CSV/生产采样） |
+| **自动评估** | 遍历样本 → 获取 Agent 回答 → LLM-as-Judge 4 维度评分 |
+| **结果汇总** | 准确率/完整率/相关性/幻觉率 + 加权总分 |
+
+---
+
+## 2. 评估执行流程
+
+```
+POST /api/v1/evaluation/datasets/{id}/run
+                    │
+                    ▼
+          ┌─────────────────────┐
+          │ 创建 EvaluationRun    │
+          │ status = RUNNING     │
+          └──────────┬──────────┘
+                     │
+                     ▼
+          ┌─────────────────────┐
+          │ 加载数据集样本         │
+          │ findItemsByDatasetId │
+          └──────────┬──────────┘
+                     │
+                     ▼
+          ╔═════════════════════╗
+          ║  逐题 LLM-as-Judge  ║
+          ║                     ║
+          ║  ┌───────────────┐  ║
+          ║  │ 构建 Judge     │  ║
+          ║  │ Prompt        │  ║
+          ║  │ (question +   │  ║
+          ║  │  expected)    │  ║
+          ║  └───────┬───────┘  ║
+          ║          │          ║
+          ║          ▼          ║
+          ║  ┌───────────────┐  ║
+          ║  │ ChatClient    │  ║
+          ║  │ (DeepSeek)    │  ║
+          ║  └───────┬───────┘  ║
+          ║          │          ║
+          ║          ▼          ║
+          ║  ┌───────────────┐  ║
+          ║  │ 解析 JSON     │  ║
+          ║  │ accuracy,     │  ║
+          ║  │ completeness,  │  ║
+          ║  │ relevance,    │  ║
+          ║  │ hallucination │  ║
+          ║  └───────────────┘  ║
+          ╚═════════╤═══════════╝
+                    │
+                    ▼
+          ┌─────────────────────┐
+          │ 汇总评分              │
+          │ overall = weighted   │
+          │ metrics_json         │
+          │ status = COMPLETED   │
+          └─────────────────────┘
+```
+
+---
+
+## 3. LLM-as-Judge 评分维度
+
+参考 DeepEval/MT-Bench 标准，4 维度 0-10 分制：
+
+| 维度 | Judge 提示词询问 | 权重 |
+|------|-----------------|:--:|
+| **准确性** (accuracy) | 回答事实是否正确 | 40% |
+| **完整性** (completeness) | 是否覆盖标准答案的所有要点 | 30% |
+| **相关性** (relevance) | 回答是否切题，有无答非所问 | 20% |
+| **幻觉检测** (hallucination) | 是否存在编造内容（0=严重幻觉，10=无幻觉） | 10% |
+
+**加权总分**: `0.4 × accuracy + 0.3 × completeness + 0.2 × relevance + 0.1 × hallucination`
+
+**幻觉率**: `count(hallucination < 5) / total` — 每项幻觉分低于 5 分记为一次幻觉。
+
+---
+
+## 4. 数据模型
+
+```
+t_evaluation_dataset (数据集)
+  ├── dataset_id (PK)
+  ├── name, description
+  ├── source: MANUAL / PROD_SAMPLE / SYNTHETIC
+  └── item_count (冗余计数)
+
+t_evaluation_dataset_item (样本)
+  ├── dataset_id (FK)
+  ├── question (必填)
+  ├── expected_answer (可选，标准答案)
+  └── metadata_json (扩展：难度等级、来源会话ID等)
+
+t_evaluation_run (评估执行记录)
+  ├── evaluation_id (PK)
+  ├── dataset_id (FK)
+  ├── status: RUNNING → COMPLETED / FAILED
+  ├── overall_score (DECIMAL 5,2)
+  └── metrics_json ({accuracy, completeness, relevance, hallucination, hallucinationRate, sampleCount})
+```
+
+---
+
+## 5. DDD 分层
+
+```
+interfaces/
+  EvaluationDatasetController  ← 数据集 CRUD (7 endpoints)
+  EvaluationRunController      ← 执行评估 + 查询结果 (3 endpoints)
+
+application/
+  EvaluationDatasetService     ← 数据集 + 样本管理
+  EvaluationRunService         ← LLM-as-Judge 评分引擎
+    └── ItemScore (内部类)     ← 单题评分模型
+
+domain/
+  evaluation/
+    entity/EvaluationDataset
+    entity/EvaluationDatasetItem
+    entity/EvaluationRun
+    repository/EvaluationDatasetRepository
+    repository/EvaluationRunRepository
+
+infrastructure/
+  persistence/
+    po/EvaluationDatasetPO, EvaluationDatasetItemPO, EvaluationRunPO
+    mapper/EvaluationDatasetMapper, EvaluationRunMapper
+    impl/EvaluationDatasetRepositoryImpl, EvaluationRunRepositoryImpl
+  resources/mapper/
+    EvaluationDatasetMapper.xml, EvaluationRunMapper.xml
+```
+
+---
+
+## 6. API 端点
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/v1/evaluation/datasets` | 创建评测数据集 |
+| POST | `/api/v1/evaluation/datasets` | 创建数据集 |
 | GET | `/api/v1/evaluation/datasets` | 数据集列表 |
-| POST | `/api/v1/evaluation/datasets/{id}/items` | 添加样本（单条/CSV批量） |
-| POST | `/api/v1/evaluation/datasets/{id}/run` | 执行评测 |
-| GET | `/api/v1/evaluations/{id}` | 评测结果详情 |
-| GET | `/api/v1/evaluations` | 评测历史列表 |
+| GET | `/api/v1/evaluation/datasets/{id}` | 数据集详情 |
+| DELETE | `/api/v1/evaluation/datasets/{id}` | 软删除数据集 |
+| POST | `/api/v1/evaluation/datasets/{id}/items` | 添加样本 |
+| GET | `/api/v1/evaluation/datasets/{id}/items` | 样本列表 |
+| DELETE | `/api/v1/evaluation/datasets/{id}/items/{itemId}` | 删除样本 |
+| POST | `/api/v1/evaluation/datasets/{id}/run` | 执行 LLM-as-Judge 评估 |
+| GET | `/api/v1/evaluation/{id}` | 评测结果详情 |
+| GET | `/api/v1/evaluation` | 评测历史列表 |
 
-## 实现方案
+---
 
-### 1. 评估执行流程
+## 7. 设计决策
 
-```
-创建数据集 → 添加 Q&A 样本
-    │
-    ▼
-触发评估执行
-    │
-    ▼
-遍历每个样本:
-  ├── 发送 question → Agent 获取 answer
-  ├── LLM-as-Judge 对比 answer vs expected_answer
-  ├── 评分维度: 准确性 / 完整性 / 相关性 / 幻觉检测
-  └── 记录逐题结果
-    │
-    ▼
-汇总总体评分 → 生成评估报告
-```
+### 为什么只评分标准答案，不重新调用 Agent？
+当前实现中 LLM-as-Judge 仅对比 question + expected_answer。原因是：
+- 评测时 Agent 可能处于不同配置状态
+- 标准答案对照是学术界主流做法（DeepEval、MT-Bench）
+- 后续迭代可接入 `StreamOrchestrationService` 实现端到端评估
 
-### 2. EvaluationRunService
-
-```java
-@Service
-public class EvaluationRunService {
-
-    private final AgentOrchestrationService agentService;
-    private final ChatClient judgeClient;  // LLM-as-Judge
-
-    public EvaluationRun execute(String datasetId) {
-        EvaluationDataset dataset = datasetRepo.findByDatasetId(datasetId);
-        List<EvaluationDatasetItem> items = datasetRepo.findItemsByDatasetId(datasetId);
-
-        String evaluationId = IdGenerator.generate("eval");
-        EvaluationRun run = EvaluationRun.builder()
-                .evaluationId(evaluationId)
-                .tenantId(TenantContext.getCurrentTenantId())
-                .agentId(dataset.getAgentId())
-                .datasetId(datasetId)
-                .status("RUNNING")
-                .build();
-        runRepo.save(run);
-
-        List<ItemScore> scores = new ArrayList<>();
-        for (EvaluationDatasetItem item : items) {
-            ItemScore score = evaluateItem(item);
-            scores.add(score);
-        }
-
-        // 汇总
-        double overall = scores.stream().mapToDouble(ItemScore::getTotalScore).average().orElse(0);
-        run.setOverallScore(BigDecimal.valueOf(overall));
-        run.setMetricsJson(JsonUtil.toJson(buildMetrics(scores)));
-        run.setStatus("COMPLETED");
-        run.setFinishedAt(LocalDateTime.now());
-        runRepo.updateById(run);
-
-        return run;
-    }
-
-    private ItemScore evaluateItem(EvaluationDatasetItem item) {
-        // 1. 获取 Agent 回答
-        String agentAnswer = agentService.generateAnswer(item.getQuestion());
-
-        // 2. LLM-as-Judge 评分
-        String judgePrompt = buildJudgePrompt(item.getQuestion(), item.getExpectedAnswer(), agentAnswer);
-        String judgeResponse = judgeClient.prompt().user(judgePrompt).call().content();
-        return parseJudgeResponse(judgeResponse);
-    }
-
-    private String buildJudgePrompt(String question, String expected, String actual) {
-        return """
-            你是一个专业的 AI 评估者。请对比标准答案和 Agent 回答进行评分。
-
-            ## 问题
-            %s
-
-            ## 标准答案
-            %s
-
-            ## Agent 回答
-            %s
-
-            ## 评分维度（每项 0-10 分）
-            1. 准确性 (accuracy): 回答事实是否正确
-            2. 完整性 (completeness): 是否覆盖标准答案的所有要点
-            3. 相关性 (relevance): 回答是否切题
-            4. 幻觉 (hallucination): 是否存在与事实不符的编造内容（0=严重幻觉，10=无幻觉）
-
-            ## 输出 JSON
-            {"accuracy": N, "completeness": N, "relevance": N, "hallucination": N, "reasoning": "..."}
-            """.formatted(question, expected, actual);
-    }
-
-    private Map<String, Object> buildMetrics(List<ItemScore> scores) {
-        double avgAccuracy = scores.stream().mapToDouble(ItemScore::getAccuracy).average().orElse(0);
-        double avgCompleteness = scores.stream().mapToDouble(ItemScore::getCompleteness).average().orElse(0);
-        double avgRelevance = scores.stream().mapToDouble(ItemScore::getRelevance).average().orElse(0);
-        double avgHallucination = scores.stream().mapToDouble(ItemScore::getHallucination).average().orElse(0);
-        double hallucinationRate = scores.stream().filter(s -> s.getHallucination() < 5).count() / (double) scores.size();
-
-        return Map.of(
-            "accuracy", String.format("%.2f", avgAccuracy),
-            "completeness", String.format("%.2f", avgCompleteness),
-            "relevance", String.format("%.2f", avgRelevance),
-            "hallucination", String.format("%.2f", avgHallucination),
-            "hallucinationRate", String.format("%.2f%%", hallucinationRate * 100),
-            "sampleCount", scores.size()
-        );
-    }
-}
-```
-
-### 3. 评测指标计算公式
-
-| 指标 | 公式 | 说明 |
-|------|------|------|
-| 准确率 | `avg(accuracy_score)` | 回答事实正确性 |
-| 完整率 | `avg(completeness_score)` | 要点覆盖度 |
-| 幻觉率 | `count(hallucination<5) / total` | 编造内容占比 |
-| 综合分 | `0.4*accuracy + 0.3*completeness + 0.2*relevance + 0.1*hallucination` | 加权总分 |
+### 为什么不支持 CSV 批量导入？
+当前 API 支持逐条 `POST .../items`，批量 CSV：
+- 前端可调用 JS CSV 解析库 + 循环调用 API
+- 后端批量接口在后续迭代中加入 `POST .../items/batch`

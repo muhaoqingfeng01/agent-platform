@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.EvaluationDatasetMapper">
+
+    <resultMap id="DatasetPOMap" type="com.example.agent.infrastructure.persistence.po.EvaluationDatasetPO">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="dataset_id" property="datasetId"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="item_count" property="itemCount"/>
+        <result column="source" property="source"/>
+        <result column="deleted" property="deleted"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <resultMap id="DatasetItemPOMap" type="com.example.agent.infrastructure.persistence.po.EvaluationDatasetItemPO">
+        <id column="id" property="id"/>
+        <result column="dataset_id" property="datasetId"/>
+        <result column="question" property="question"/>
+        <result column="expected_answer" property="expectedAnswer"/>
+        <result column="retrieval_context" property="retrievalContext"/>
+        <result column="metadata_json" property="metadataJson"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_evaluation_dataset (tenant_id, dataset_id, name, description, item_count, source, created_at, updated_at)
+        VALUES (#{tenantId}, #{datasetId}, #{name}, #{description}, #{itemCount}, #{source}, NOW(), NOW())
+    </insert>
+
+    <update id="updateById">
+        UPDATE t_evaluation_dataset
+        SET name = #{name}, description = #{description}, item_count = #{itemCount},
+            source = #{source}, updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <update id="softDelete">
+        UPDATE t_evaluation_dataset SET deleted = 1, updated_at = NOW()
+        WHERE dataset_id = #{datasetId}
+    </update>
+
+    <select id="selectByDatasetId" resultMap="DatasetPOMap">
+        SELECT * FROM t_evaluation_dataset WHERE dataset_id = #{datasetId} AND deleted = 0
+    </select>
+
+    <select id="selectByTenant" resultMap="DatasetPOMap">
+        SELECT * FROM t_evaluation_dataset
+        WHERE tenant_id = #{tenantId} AND deleted = 0
+        ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByTenant" resultType="long">
+        SELECT COUNT(*) FROM t_evaluation_dataset WHERE tenant_id = #{tenantId} AND deleted = 0
+    </select>
+
+    <!-- Items -->
+    <insert id="insertItem" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_evaluation_dataset_item (dataset_id, question, expected_answer, retrieval_context, metadata_json, created_at)
+        VALUES (#{datasetId}, #{question}, #{expectedAnswer}, #{retrievalContext}, #{metadataJson}, NOW())
+    </insert>
+
+    <select id="selectItemsByDatasetId" resultMap="DatasetItemPOMap">
+        SELECT * FROM t_evaluation_dataset_item WHERE dataset_id = #{datasetId} ORDER BY id ASC
+    </select>
+
+    <delete id="deleteItem">
+        DELETE FROM t_evaluation_dataset_item WHERE id = #{id}
+    </delete>
+
+    <select id="countItemsByDatasetId" resultType="long">
+        SELECT COUNT(*) FROM t_evaluation_dataset_item WHERE dataset_id = #{datasetId}
+    </select>
+
+</mapper>

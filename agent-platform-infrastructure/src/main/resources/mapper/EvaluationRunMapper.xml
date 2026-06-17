@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.EvaluationRunMapper">
+
+    <resultMap id="RunPOMap" type="com.example.agent.infrastructure.persistence.po.EvaluationRunPO">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="evaluation_id" property="evaluationId"/>
+        <result column="agent_id" property="agentId"/>
+        <result column="dataset_id" property="datasetId"/>
+        <result column="status" property="status"/>
+        <result column="overall_score" property="overallScore"/>
+        <result column="metrics_json" property="metricsJson"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="finished_at" property="finishedAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_evaluation_run (tenant_id, evaluation_id, agent_id, dataset_id, status, overall_score, metrics_json, created_at)
+        VALUES (#{tenantId}, #{evaluationId}, #{agentId}, #{datasetId}, #{status}, #{overallScore}, #{metricsJson}, NOW())
+    </insert>
+
+    <update id="updateById">
+        UPDATE t_evaluation_run
+        SET status = #{status}, overall_score = #{overallScore}, metrics_json = #{metricsJson},
+            finished_at = #{finishedAt}
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectByEvaluationId" resultMap="RunPOMap">
+        SELECT * FROM t_evaluation_run WHERE evaluation_id = #{evaluationId}
+    </select>
+
+    <select id="selectByTenant" resultMap="RunPOMap">
+        SELECT * FROM t_evaluation_run
+        WHERE tenant_id = #{tenantId}
+        ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="selectByDatasetId" resultMap="RunPOMap">
+        SELECT * FROM t_evaluation_run
+        WHERE dataset_id = #{datasetId}
+        ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+
+</mapper>

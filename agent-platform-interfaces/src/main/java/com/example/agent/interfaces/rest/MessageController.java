@@ -4,6 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.conversation.MessageApplicationService;
 import com.example.agent.application.conversation.MessageApplicationService.MessageResponse;
 import com.example.agent.application.conversation.StreamOrchestrationService;
+import com.example.agent.application.optimization.event.MessageFeedbackEvent;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.result.Result;
 import com.example.agent.infrastructure.config.sse.SseEmitterFactory;
@@ -15,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -37,6 +39,7 @@ public class MessageController {
     private final MessageApplicationService messageService;
     private final StreamOrchestrationService streamService;
     private final ThreadPoolExecutor streamExecutor;
+    private final ApplicationEventPublisher eventPublisher;
 
     @PostMapping("/api/v1/conversations/{id}/messages")
     @SaCheckPermission("conversation:send")
@@ -88,6 +91,12 @@ public class MessageController {
                                   @PathVariable String msgId,
                                   @Valid @RequestBody MessageFeedbackRequest request) {
         messageService.updateFeedback(msgId, request.getFeedback());
+
+        // 发布反馈事件（BadCase 自动工单监听）
+        String tenantId = TenantContext.getCurrentTenantId();
+        eventPublisher.publishEvent(new MessageFeedbackEvent(
+                this, msgId, id, tenantId, request.getFeedback()));
+
         return Result.ok();
     }
 }

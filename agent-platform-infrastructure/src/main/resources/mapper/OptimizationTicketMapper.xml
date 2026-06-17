@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.OptimizationTicketMapper">
+
+    <resultMap id="TicketPOMap" type="com.example.agent.infrastructure.persistence.po.OptimizationTicketPO">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="ticket_id" property="ticketId"/>
+        <result column="conversation_id" property="conversationId"/>
+        <result column="message_id" property="messageId"/>
+        <result column="issue_type" property="issueType"/>
+        <result column="severity" property="severity"/>
+        <result column="description" property="description"/>
+        <result column="assignee" property="assignee"/>
+        <result column="status" property="status"/>
+        <result column="resolution" property="resolution"/>
+        <result column="resolution_type" property="resolutionType"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_optimization_ticket (tenant_id, ticket_id, conversation_id, message_id,
+            issue_type, severity, description, assignee, status, resolution, resolution_type, created_at, updated_at)
+        VALUES (#{tenantId}, #{ticketId}, #{conversationId}, #{messageId},
+            #{issueType}, #{severity}, #{description}, #{assignee}, #{status}, #{resolution}, #{resolutionType}, NOW(), NOW())
+    </insert>
+
+    <update id="updateById">
+        UPDATE t_optimization_ticket
+        SET status = #{status}, assignee = #{assignee}, severity = #{severity},
+            description = #{description}, resolution = #{resolution}, resolution_type = #{resolutionType},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectByTicketId" resultMap="TicketPOMap">
+        SELECT * FROM t_optimization_ticket WHERE ticket_id = #{ticketId}
+    </select>
+
+    <select id="selectByTenant" resultMap="TicketPOMap">
+        SELECT * FROM t_optimization_ticket
+        WHERE tenant_id = #{tenantId}
+        ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="selectByAssignee" resultMap="TicketPOMap">
+        SELECT * FROM t_optimization_ticket
+        WHERE tenant_id = #{tenantId} AND assignee = #{assignee}
+        ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="selectByStatus" resultMap="TicketPOMap">
+        SELECT * FROM t_optimization_ticket
+        WHERE tenant_id = #{tenantId} AND status = #{status}
+        ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByStatusAndResolvedSince" resultType="long">
+        SELECT COUNT(*) FROM t_optimization_ticket
+        WHERE tenant_id = #{tenantId} AND status = #{status} AND updated_at >= #{since}
+    </select>
+
+    <select id="countCreatedSince" resultType="long">
+        SELECT COUNT(*) FROM t_optimization_ticket
+        WHERE tenant_id = #{tenantId} AND created_at >= #{since}
+    </select>
+
+</mapper>
