@@ -34,6 +34,7 @@ interface BaseMessage {
   type: MessageType;       // 消息类型
   timestamp: number;        // 时间戳
   status: MessageStatus;    // 消息状态
+  channel?: 'web' | 'wecom' | 'dingtalk';  // 消息来源渠道（默认 web）
 }
 
 type MessageType = 'message' | 'approval' | 'feedback' | 'system';
@@ -56,12 +57,21 @@ interface ChatMessage extends BaseMessage {
 interface ApprovalMessage extends BaseMessage {
   type: 'approval';
   approvalId: string;
+  executionId: string;          // 关联任务执行 ID
   title: string;
   detail: string;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  requestedBy: string;          // 请求人
   options: string[];
-  timeout: number;          // 超时秒数
+  timeout: number;              // 超时秒数
+  timeoutAt: string;            // ISO 8601 超时时间点
+  createdAt: string;            // ISO 8601 创建时间
   result?: 'approved' | 'rejected' | 'timeout';
+  metadata?: {                  // 工具/资源元数据
+    toolName: string;
+    toolParams: Record<string, any>;
+    affectedResources: string[];
+  };
 }
 
 // 反馈消息
@@ -111,16 +121,25 @@ type Message = ChatMessage | ApprovalMessage | FeedbackMessage | SystemMessage;
 后端 SSE 端点: `GET /api/v1/conversations/{id}/stream`
 
 ```typescript
-// SSE 事件流定义
+// src/types/sse.d.ts — SSE 事件类型
+
+// Token 用量统计
+interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
+// SSE 事件流联合类型
 type SSEEvent =
-  | { type: 'start'; messageId: string }             // 流式开始
-  | { type: 'token'; content: string }               // 增量 Token
-  | { type: 'tool_call'; toolName: string; args: any } // 工具调用
-  | { type: 'tool_result'; toolName: string; result: any } // 工具结果
-  | { type: 'thinking'; content: string }            // 思考过程
-  | { type: 'error'; code: string; message: string } // 错误
-  | { type: 'done'; usage: TokenUsage }              // 流式结束
-  | { type: 'approval_required'; approvalId: string } // 触发审批
+  | { type: 'start'; messageId: string }                        // 流式开始
+  | { type: 'token'; content: string }                          // 增量 Token
+  | { type: 'tool_call'; toolName: string; args: any }          // 工具调用
+  | { type: 'tool_result'; toolName: string; result: any }      // 工具结果
+  | { type: 'thinking'; content: string }                       // 思考过程
+  | { type: 'error'; code: string; message: string }            // 错误
+  | { type: 'done'; usage: TokenUsage }                          // 流式结束
+  | { type: 'approval_required'; approvalId: string }           // 触发审批
 ```
 
 ### 3.2 SSE Hook 实现
@@ -130,6 +149,8 @@ type SSEEvent =
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useChatStore } from '@/stores/useChatStore';
+import { API_PREFIX } from '@/config/constants';
+import type { SSEEvent } from '@/types/sse';
 
 interface UseSSEReturn {
   isStreaming: boolean;
@@ -152,7 +173,7 @@ export function useSSE(): UseSSEReturn {
     useChatStore.getState().addUserMessage(content);
     const assistantMsgId = appendAssistantMessage();
 
-    const url = `/api/v1/conversations/${conversationId}/stream`;
+    const url = `${API_PREFIX}/conversations/${conversationId}/stream`;
 
     // 使用 fetch + ReadableStream 替代 EventSource（支持 POST）
     abortControllerRef.current = new AbortController();
@@ -505,7 +526,8 @@ export function MessageList({ messages, loadMore, hasMore }: MessageListProps) {
 ```typescript
 // src/stores/useChatStore.ts
 import { create } from 'zustand';
-import type { Message, SSEEvent } from '@/types/message';
+import type { Message } from '@/types/message';
+import type { SSEEvent } from '@/types/sse';
 
 interface ChatState {
   // 当前会话
@@ -548,7 +570,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setConversation: (id) => set({ conversationId: id }),
 
   addUserMessage: (content) => {
-    const msg: Message = {
+    const msg: ChatMessage = {
       id: `user-${++msgCounter}`,
       conversationId: get().conversationId!,
       type: 'message',
@@ -562,7 +584,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   appendAssistantMessage: () => {
     const id = `assistant-${++msgCounter}`;
-    const msg: Message = {
+    const msg: ChatMessage = {
       id,
       conversationId: get().conversationId!,
       type: 'message',
@@ -582,8 +604,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   appendToken: (msgId, token) => {
     set(state => ({
       messages: state.messages.map(m =>
-        m.id === msgId
-          ? { ...m, content: (m as any).content + token }
+        m.id === msgId && m.type === 'message'
+          ? { ...m, content: m.content + token }
           : m
       ),
     }));
@@ -593,8 +615,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // 思考过程折叠显示
     set(state => ({
       messages: state.messages.map(m =>
-        m.id === msgId
-          ? { ...m, content: (m as any).content + `\n\n<details><summary>🤔 思考过程</summary>\n\n${content}\n\n</details>` }
+        m.id === msgId && m.type === 'message'
+          ? { ...m, content: m.content + `\n\n<details><summary>🤔 思考过程</summary>\n\n${content}\n\n</details>` }
           : m
       ),
     }));
@@ -603,8 +625,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   appendToolCall: (msgId, event) => {
     set(state => ({
       messages: state.messages.map(m =>
-        m.id === msgId
-          ? { ...m, content: (m as any).content + `\n\n🔧 **调用工具**: \`${event.toolName}\`\n` }
+        m.id === msgId && m.type === 'message'
+          ? { ...m, content: m.content + `\n\n🔧 **调用工具**: \`${event.toolName}\`\n` }
           : m
       ),
     }));
@@ -613,8 +635,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   appendToolResult: (msgId, event) => {
     set(state => ({
       messages: state.messages.map(m =>
-        m.id === msgId
-          ? { ...m, content: (m as any).content + `\n✓ 工具返回: ${JSON.stringify(event.result).slice(0, 200)}...\n` }
+        m.id === msgId && m.type === 'message'
+          ? { ...m, content: m.content + `\n✓ 工具返回: ${JSON.stringify(event.result).slice(0, 200)}...\n` }
           : m
       ),
     }));
@@ -633,8 +655,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setMessageError: (msgId, error) => {
     set(state => ({
       messages: state.messages.map(m =>
-        m.id === msgId
-          ? { ...m, content: (m as any).content + `\n\n❌ **错误**: ${error}`, status: 'failed' }
+        m.id === msgId && m.type === 'message'
+          ? { ...m, content: m.content + `\n\n❌ **错误**: ${error}`, status: 'failed' as const }
           : m
       ),
       isStreaming: false,
