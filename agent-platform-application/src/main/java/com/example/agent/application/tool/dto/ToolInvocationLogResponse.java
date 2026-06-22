@@ -1,10 +1,9 @@
 package com.example.agent.application.tool.dto;
 
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.tool.entity.ToolInvocationLog;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 /**
  * 工具调用日志响应 DTO — 用于 API 返回调用历史.
@@ -65,7 +64,7 @@ public class ToolInvocationLogResponse {
 
     /** 调用时间 */
     @Schema(description = "调用时间")
-    private LocalDateTime createdAt;
+    private Long createdAt;
 
     /**
      * 从领域实体和工具名称构建响应 DTO — 工厂方法.
@@ -88,7 +87,7 @@ public class ToolInvocationLogResponse {
         r.setStatusLabel(entity.getStatus() != null ? entity.getStatus().toChinese() : null);
         r.setDurationMs(entity.getDurationMs());
         r.setErrorMessage(entity.getErrorMessage());
-        r.setCreatedAt(entity.getCreatedAt());
+        r.setCreatedAt(TimeConverters.toEpochMilli(entity.getCreatedAt()));
         return r;
     }
 }

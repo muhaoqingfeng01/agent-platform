@@ -2,6 +2,7 @@ package com.example.agent.application.optimization;
 
 import com.example.agent.application.optimization.dto.*;
 import com.example.agent.common.util.IdGenerator;
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.optimization.entity.OptimizationTicket;
 import com.example.agent.domain.optimization.repository.OptimizationTicketRepository;
 import com.example.agent.domain.optimization.valueobject.TicketStatus;
@@ -97,6 +98,6 @@ public class OptimizationTicketService {
                 .severity(ticket.getSeverity()).description(ticket.getDescription())
                 .assignee(ticket.getAssignee()).status(ticket.getStatus())
                 .resolution(ticket.getResolution()).resolutionType(ticket.getResolutionType())
-                .createdAt(ticket.getCreatedAt()).updatedAt(ticket.getUpdatedAt()).build();
+                .createdAt(TimeConverters.toEpochMilli(ticket.getCreatedAt())).updatedAt(TimeConverters.toEpochMilli(ticket.getUpdatedAt())).build();
     }
 }

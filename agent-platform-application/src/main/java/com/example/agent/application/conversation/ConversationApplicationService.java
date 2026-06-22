@@ -3,6 +3,7 @@ package com.example.agent.application.conversation;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.exception.ResourceNotFoundException;
 import com.example.agent.common.util.IdGenerator;
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.conversation.entity.Conversation;
 import com.example.agent.domain.conversation.repository.ConversationRepository;
 import com.example.agent.domain.conversation.service.ConversationDomainService;
@@ -115,7 +116,7 @@ public class ConversationApplicationService {
         private String status;
         private int messageCount;
         private long totalTokens;
-        private LocalDateTime createdAt;
+        private Long createdAt;
 
         public static ConversationResponse from(Conversation conv) {
             return ConversationResponse.builder()
@@ -126,7 +127,7 @@ public class ConversationApplicationService {
                     .status(conv.getStatus().name())
                     .messageCount(conv.getMessageCount())
                     .totalTokens(conv.getTotalTokens())
-                    .createdAt(conv.getCreatedAt())
+                    .createdAt(TimeConverters.toEpochMilli(conv.getCreatedAt()))
                     .build();
         }
     }

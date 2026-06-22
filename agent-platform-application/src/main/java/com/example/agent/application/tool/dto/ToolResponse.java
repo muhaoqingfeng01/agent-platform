@@ -1,12 +1,11 @@
 package com.example.agent.application.tool.dto;
 
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.tool.entity.ToolRegistry;
 import com.example.agent.domain.tool.valueobject.AuthConfig;
 import com.example.agent.domain.tool.valueobject.ToolSchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 /**
  * 工具响应 DTO — 用于 API 返回工具详情和列表.
@@ -73,11 +72,11 @@ public class ToolResponse {
 
     /** 创建时间 */
     @Schema(description = "创建时间")
-    private LocalDateTime createdAt;
+    private Long createdAt;
 
     /** 最后更新时间 */
     @Schema(description = "更新时间")
-    private LocalDateTime updatedAt;
+    private Long updatedAt;
 
     /**
      * 从领域实体构建响应 DTO — 工厂方法.
@@ -103,8 +102,8 @@ public class ToolResponse {
         r.setStatus(entity.getStatus() != null ? entity.getStatus().name() : null);
         r.setStatusLabel(entity.getStatus() != null ? entity.getStatus().toChinese() : null);
         r.setVersion(entity.getVersion());
-        r.setCreatedAt(entity.getCreatedAt());
-        r.setUpdatedAt(entity.getUpdatedAt());
+        r.setCreatedAt(TimeConverters.toEpochMilli(entity.getCreatedAt()));
+        r.setUpdatedAt(TimeConverters.toEpochMilli(entity.getUpdatedAt()));
         return r;
     }
 }

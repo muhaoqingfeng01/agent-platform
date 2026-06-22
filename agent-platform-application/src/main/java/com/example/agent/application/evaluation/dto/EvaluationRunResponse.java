@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -19,6 +18,6 @@ public class EvaluationRunResponse {
     private String status;
     private BigDecimal overallScore;
     private String metricsJson;
-    private LocalDateTime createdAt;
-    private LocalDateTime finishedAt;
+    private Long createdAt;
+    private Long finishedAt;
 }

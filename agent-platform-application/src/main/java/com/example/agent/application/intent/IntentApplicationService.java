@@ -6,6 +6,7 @@ import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.common.exception.ResourceNotFoundException;
 import com.example.agent.common.util.IdGenerator;
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.conversation.entity.Intent;
 import com.example.agent.domain.conversation.repository.IntentRepository;
 import com.example.agent.domain.conversation.valueobject.IntentStatus;
@@ -177,7 +178,7 @@ public class IntentApplicationService {
         private List<java.util.Map<String, Object>> requiredParams;
         private String riskLevel;
         private String status;
-        private LocalDateTime createdAt;
+        private Long createdAt;
 
         public static IntentResponse from(Intent intent) {
             return IntentResponse.builder()
@@ -191,7 +192,7 @@ public class IntentApplicationService {
                     .requiredParams(intent.getRequiredParams())
                     .riskLevel(intent.getRiskLevel())
                     .status(intent.getStatus().name())
-                    .createdAt(intent.getCreatedAt())
+                    .createdAt(TimeConverters.toEpochMilli(intent.getCreatedAt()))
                     .build();
         }
     }

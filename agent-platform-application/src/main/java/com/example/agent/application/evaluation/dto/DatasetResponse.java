@@ -5,8 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -17,5 +15,5 @@ public class DatasetResponse {
     private String description;
     private Integer itemCount;
     private String source;
-    private LocalDateTime createdAt;
+    private Long createdAt;
 }

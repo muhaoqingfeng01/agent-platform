@@ -1,10 +1,9 @@
 package com.example.agent.application.user;
 
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.tenant.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 @Data
 public class UserResponse {
@@ -15,7 +14,7 @@ public class UserResponse {
     @Schema(description = "邮箱") private String email;
     @Schema(description = "手机号") private String phone;
     @Schema(description = "状态") private String status;
-    @Schema(description = "创建时间") private LocalDateTime createdAt;
+    @Schema(description = "创建时间") private Long createdAt;
 
     public static UserResponse from(User u) {
         UserResponse r = new UserResponse();
@@ -26,7 +25,7 @@ public class UserResponse {
         r.setEmail(u.getEmail());
         r.setPhone(u.getPhone());
         r.setStatus(u.getStatus());
-        r.setCreatedAt(u.getCreatedAt());
+        r.setCreatedAt(TimeConverters.toEpochMilli(u.getCreatedAt()));
         return r;
     }
 }

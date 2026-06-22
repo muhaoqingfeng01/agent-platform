@@ -2,6 +2,7 @@ package com.example.agent.application.evaluation;
 
 import com.example.agent.application.knowledge.HybridSearchApplicationService;
 import com.example.agent.application.knowledge.dto.SearchResultDTO;
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.evaluation.entity.EvaluationDatasetItem;
 import com.example.agent.domain.evaluation.repository.EvaluationDatasetRepository;
 import lombok.Builder;
@@ -10,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -68,7 +68,7 @@ public class RetrievalPrecisionService {
             .ndcgAt5(calculateNDCG(results, 5))
             .hitRate(calculateHitRate(results))
             .perQueryResults(results)
-            .evaluatedAt(LocalDateTime.now())
+            .evaluatedAt(TimeConverters.toEpochMilli(java.time.LocalDateTime.now()))
             .build();
     }
 
@@ -172,13 +172,13 @@ public class RetrievalPrecisionService {
         private double ndcgAt5;
         private double hitRate;
         private List<QueryResult> perQueryResults;
-        private LocalDateTime evaluatedAt;
+        private Long evaluatedAt;
 
         static PrecisionReport empty(String kbId, String datasetId) {
             return PrecisionReport.builder()
                 .kbId(kbId).datasetId(datasetId)
                 .totalQueries(0).recallAt5(0).mrr(0).ndcgAt5(0).hitRate(0)
-                .perQueryResults(List.of()).evaluatedAt(LocalDateTime.now()).build();
+                .perQueryResults(List.of()).evaluatedAt(TimeConverters.toEpochMilli(java.time.LocalDateTime.now())).build();
         }
     }
 

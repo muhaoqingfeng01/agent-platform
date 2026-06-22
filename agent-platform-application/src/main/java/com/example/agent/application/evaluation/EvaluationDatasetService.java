@@ -2,6 +2,7 @@ package com.example.agent.application.evaluation;
 
 import com.example.agent.application.evaluation.dto.*;
 import com.example.agent.common.util.IdGenerator;
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.evaluation.entity.EvaluationDataset;
 import com.example.agent.domain.evaluation.entity.EvaluationDatasetItem;
 import com.example.agent.domain.evaluation.repository.EvaluationDatasetRepository;
@@ -92,12 +93,12 @@ public class EvaluationDatasetService {
         return DatasetResponse.builder()
                 .datasetId(ds.getDatasetId()).name(ds.getName())
                 .description(ds.getDescription()).itemCount(ds.getItemCount())
-                .source(ds.getSource()).createdAt(ds.getCreatedAt()).build();
+                .source(ds.getSource()).createdAt(TimeConverters.toEpochMilli(ds.getCreatedAt())).build();
     }
 
     private ItemResponse toItemResponse(EvaluationDatasetItem item) {
         return ItemResponse.builder()
                 .id(item.getId()).question(item.getQuestion())
-                .expectedAnswer(item.getExpectedAnswer()).createdAt(item.getCreatedAt()).build();
+                .expectedAnswer(item.getExpectedAnswer()).createdAt(TimeConverters.toEpochMilli(item.getCreatedAt())).build();
     }
 }

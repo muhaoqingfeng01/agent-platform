@@ -1,10 +1,9 @@
 package com.example.agent.application.knowledge.dto;
 
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.knowledge.entity.Document;
 import lombok.Builder;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 /**
  * 文档 DTO.
@@ -26,13 +25,13 @@ public class DocumentDTO {
     private String status;
     private String errorMessage;
     private String uploadedBy;
-    private LocalDateTime uploadedAt;
+    private Long uploadedAt;
     private String chunkStrategy;
     private String chunkConfigJson;
     private String searchStrategyOverride;
     private String searchParamsOverrideJson;
     private String multiStageOverrideJson;
-    private LocalDateTime createdAt;
+    private Long createdAt;
 
     public static DocumentDTO from(Document doc) {
         return DocumentDTO.builder()
@@ -47,13 +46,13 @@ public class DocumentDTO {
                 .status(doc.getStatus() != null ? doc.getStatus().name() : null)
                 .errorMessage(doc.getErrorMessage())
                 .uploadedBy(doc.getUploadedBy())
-                .uploadedAt(doc.getUploadedAt())
+                .uploadedAt(TimeConverters.toEpochMilli(doc.getUploadedAt()))
                 .chunkStrategy(doc.getChunkStrategy())
                 .chunkConfigJson(doc.getChunkConfigJson())
                 .searchStrategyOverride(doc.getSearchStrategyOverride())
                 .searchParamsOverrideJson(doc.getSearchParamsOverrideJson())
                 .multiStageOverrideJson(doc.getMultiStageOverrideJson())
-                .createdAt(doc.getCreatedAt())
+                .createdAt(TimeConverters.toEpochMilli(doc.getCreatedAt()))
                 .build();
     }
 }

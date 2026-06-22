@@ -1,11 +1,10 @@
 package com.example.agent.application.knowledge.dto;
 
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.knowledge.entity.KnowledgeBase;
 import com.example.agent.infrastructure.context.TenantContext;
 import lombok.Builder;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 /**
  * 知识库 DTO.
@@ -36,8 +35,8 @@ public class KnowledgeBaseDTO {
     private String searchParamsJson;
     private String multiStageParamsJson;
     private String monitoringParamsJson;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Long createdAt;
+    private Long updatedAt;
 
     public static KnowledgeBaseDTO from(KnowledgeBase kb) {
         String currentUserId = null;
@@ -67,8 +66,8 @@ public class KnowledgeBaseDTO {
                 .searchParamsJson(kb.getSearchParamsJson())
                 .multiStageParamsJson(kb.getMultiStageParamsJson())
                 .monitoringParamsJson(kb.getMonitoringParamsJson())
-                .createdAt(kb.getCreatedAt())
-                .updatedAt(kb.getUpdatedAt())
+                .createdAt(TimeConverters.toEpochMilli(kb.getCreatedAt()))
+                .updatedAt(TimeConverters.toEpochMilli(kb.getUpdatedAt()))
                 .build();
     }
 }

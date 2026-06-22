@@ -4,7 +4,6 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -37,7 +36,7 @@ public class SearchResultDTO {
         private String documentFilename;
         private String documentFileType;
         private String documentAccessUrl;
-        private LocalDateTime documentUploadedAt;
+        private Long documentUploadedAt;
     }
 
     @Data
@@ -48,6 +47,6 @@ public class SearchResultDTO {
         private String fileType;
         private long fileSize;
         private String accessUrl;
-        private LocalDateTime uploadedAt;
+        private Long uploadedAt;
     }
 }

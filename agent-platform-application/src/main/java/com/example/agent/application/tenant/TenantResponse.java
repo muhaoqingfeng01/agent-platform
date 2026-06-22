@@ -1,10 +1,9 @@
 package com.example.agent.application.tenant;
 
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.tenant.Tenant;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 @Data
 public class TenantResponse {
@@ -21,7 +20,7 @@ public class TenantResponse {
     @Schema(description = "配置 JSON")
     private String configJson;
     @Schema(description = "创建时间")
-    private LocalDateTime createdAt;
+    private Long createdAt;
 
     public static TenantResponse from(Tenant t) {
         TenantResponse r = new TenantResponse();
@@ -31,7 +30,7 @@ public class TenantResponse {
         r.setStatus(t.getStatus());
         r.setTier(t.getTier());
         r.setConfigJson(t.getConfigJson());
-        r.setCreatedAt(t.getCreatedAt());
+        r.setCreatedAt(TimeConverters.toEpochMilli(t.getCreatedAt()));
         return r;
     }
 }

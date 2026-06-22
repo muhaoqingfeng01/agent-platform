@@ -2,6 +2,7 @@ package com.example.agent.application.evaluation;
 
 import com.example.agent.application.evaluation.dto.EvaluationRunResponse;
 import com.example.agent.common.util.IdGenerator;
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.evaluation.entity.EvaluationDatasetItem;
 import com.example.agent.domain.evaluation.entity.EvaluationRun;
 import com.example.agent.domain.evaluation.repository.EvaluationDatasetRepository;
@@ -190,7 +191,7 @@ public class EvaluationRunService {
                 .evaluationId(run.getEvaluationId()).agentId(run.getAgentId())
                 .datasetId(run.getDatasetId()).status(run.getStatus())
                 .overallScore(run.getOverallScore()).metricsJson(run.getMetricsJson())
-                .createdAt(run.getCreatedAt()).finishedAt(run.getFinishedAt()).build();
+                .createdAt(TimeConverters.toEpochMilli(run.getCreatedAt())).finishedAt(TimeConverters.toEpochMilli(run.getFinishedAt())).build();
     }
 
     @lombok.Builder

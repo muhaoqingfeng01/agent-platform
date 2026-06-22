@@ -1,11 +1,10 @@
 package com.example.agent.application.security.dto;
 
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.security.entity.SensitiveWord;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 /**
  * 敏感词规则响应 DTO.
@@ -58,10 +57,10 @@ public class SensitiveWordResponse {
     private String statusLabel;
 
     @Schema(description = "创建时间")
-    private LocalDateTime createdAt;
+    private Long createdAt;
 
     @Schema(description = "最后更新时间")
-    private LocalDateTime updatedAt;
+    private Long updatedAt;
 
     public static SensitiveWordResponse from(SensitiveWord entity) {
         return SensitiveWordResponse.builder()
@@ -78,8 +77,8 @@ public class SensitiveWordResponse {
                 .actionLabel(actionLabel(entity.getAction().name()))
                 .status(entity.getStatus().name())
                 .statusLabel(entity.isActive() ? "启用" : "禁用")
-                .createdAt(entity.getCreatedAt())
-                .updatedAt(entity.getUpdatedAt())
+                .createdAt(TimeConverters.toEpochMilli(entity.getCreatedAt()))
+                .updatedAt(TimeConverters.toEpochMilli(entity.getUpdatedAt()))
                 .build();
     }
 

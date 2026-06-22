@@ -1,11 +1,10 @@
 package com.example.agent.application.approval.dto;
 
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.security.entity.ApprovalWorkflow;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 /**
  * 审批工单响应 DTO.
@@ -55,10 +54,10 @@ public class ApprovalWorkflowResponse {
     private String approveComment;
 
     @Schema(description = "超时时间")
-    private LocalDateTime timeoutAt;
+    private Long timeoutAt;
 
     @Schema(description = "审批完成时间")
-    private LocalDateTime approvedAt;
+    private Long approvedAt;
 
     @Schema(description = "是否已超时")
     private boolean expired;
@@ -67,14 +66,14 @@ public class ApprovalWorkflowResponse {
     private long remainingSeconds;
 
     @Schema(description = "创建时间")
-    private LocalDateTime createdAt;
+    private Long createdAt;
 
     @Schema(description = "最后更新时间")
-    private LocalDateTime updatedAt;
+    private Long updatedAt;
 
     public static ApprovalWorkflowResponse from(ApprovalWorkflow entity) {
         long remaining = entity.isPending()
-                ? java.time.Duration.between(LocalDateTime.now(), entity.getTimeoutAt()).getSeconds()
+                ? java.time.Duration.between(java.time.LocalDateTime.now(), entity.getTimeoutAt()).getSeconds()
                 : 0;
 
         return ApprovalWorkflowResponse.builder()
@@ -90,12 +89,12 @@ public class ApprovalWorkflowResponse {
                 .status(entity.getStatus().name())
                 .statusLabel(statusLabel(entity.getStatus().name()))
                 .approveComment(entity.getApproveComment())
-                .timeoutAt(entity.getTimeoutAt())
-                .approvedAt(entity.getApprovedAt())
+                .timeoutAt(TimeConverters.toEpochMilli(entity.getTimeoutAt()))
+                .approvedAt(TimeConverters.toEpochMilli(entity.getApprovedAt()))
                 .expired(entity.isExpired())
                 .remainingSeconds(Math.max(0, remaining))
-                .createdAt(entity.getCreatedAt())
-                .updatedAt(entity.getUpdatedAt())
+                .createdAt(TimeConverters.toEpochMilli(entity.getCreatedAt()))
+                .updatedAt(TimeConverters.toEpochMilli(entity.getUpdatedAt()))
                 .build();
     }
 

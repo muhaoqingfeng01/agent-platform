@@ -3,6 +3,7 @@ package com.example.agent.application.knowledge;
 import com.example.agent.application.knowledge.dto.*;
 import com.example.agent.application.knowledge.rerank.RerankerRegistry;
 import com.example.agent.common.exception.ResourceNotFoundException;
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.knowledge.entity.Document;
 import com.example.agent.domain.knowledge.entity.KnowledgeBase;
 import com.example.agent.domain.knowledge.entity.KnowledgeHitRecord;
@@ -114,7 +115,7 @@ public class HybridSearchApplicationService {
                 builder.documentFilename(doc.getFilename())
                         .documentFileType(doc.getFileType())
                         .documentAccessUrl(buildAccessUrl(doc.getDocumentId()))
-                        .documentUploadedAt(doc.getUploadedAt());
+                        .documentUploadedAt(TimeConverters.toEpochMilli(doc.getUploadedAt()));
             }
             items.add(builder.build());
         }
@@ -127,7 +128,7 @@ public class HybridSearchApplicationService {
                         .fileType(d.getFileType())
                         .fileSize(d.getFileSize())
                         .accessUrl(buildAccessUrl(d.getDocumentId()))
-                        .uploadedAt(d.getUploadedAt())
+                        .uploadedAt(TimeConverters.toEpochMilli(d.getUploadedAt()))
                         .build())
                 .toList();
 

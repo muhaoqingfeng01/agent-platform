@@ -1,11 +1,10 @@
 package com.example.agent.application.security.dto;
 
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.security.entity.SecurityEvent;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 /**
  * 安全事件响应 DTO.
@@ -52,7 +51,7 @@ public class SecurityEventResponse {
     private String operator;
 
     @Schema(description = "创建时间")
-    private LocalDateTime createdAt;
+    private Long createdAt;
 
     public static SecurityEventResponse from(SecurityEvent entity) {
         return SecurityEventResponse.builder()
@@ -69,7 +68,7 @@ public class SecurityEventResponse {
                 .matchedPattern(entity.getMatchedPattern())
                 .actionTaken(entity.getActionTaken())
                 .operator(entity.getOperator())
-                .createdAt(entity.getCreatedAt())
+                .createdAt(TimeConverters.toEpochMilli(entity.getCreatedAt()))
                 .build();
     }
 }

@@ -1,10 +1,9 @@
 package com.example.agent.application.tool.dto;
 
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.tool.entity.ToolRegistryVersion;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 /**
  * 工具版本历史响应 DTO.
@@ -52,7 +51,7 @@ public class VersionResponse {
     private String changeReason;
 
     @Schema(description = "创建时间")
-    private LocalDateTime createdAt;
+    private Long createdAt;
 
     public static VersionResponse from(ToolRegistryVersion v) {
         VersionResponse r = new VersionResponse();
@@ -68,7 +67,7 @@ public class VersionResponse {
         r.setRequireApproval(v.getRequireApproval());
         r.setDescription(v.getDescription());
         r.setChangeReason(v.getChangeReason());
-        r.setCreatedAt(v.getCreatedAt());
+        r.setCreatedAt(TimeConverters.toEpochMilli(v.getCreatedAt()));
         return r;
     }
 }

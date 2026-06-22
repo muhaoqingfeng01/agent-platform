@@ -4,6 +4,7 @@ import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.common.exception.ResourceNotFoundException;
 import com.example.agent.common.util.IdGenerator;
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.prompt.entity.PromptTemplate;
 import com.example.agent.domain.prompt.entity.PromptTemplateVersion;
 import com.example.agent.domain.prompt.repository.PromptTemplateRepository;
@@ -348,8 +349,8 @@ public class PromptApplicationService {
         private String status;
         private String statusLabel;
         private String abTestConfig;
-        private LocalDateTime createdAt;
-        private LocalDateTime updatedAt;
+        private Long createdAt;
+        private Long updatedAt;
 
         public static PromptResponse from(PromptTemplate template) {
             return PromptResponse.builder()
@@ -364,8 +365,8 @@ public class PromptApplicationService {
                     .status(template.getStatus().name())
                     .statusLabel(template.getStatus().getLabel())
                     .abTestConfig(template.getAbTestConfig())
-                    .createdAt(template.getCreatedAt())
-                    .updatedAt(template.getUpdatedAt())
+                    .createdAt(TimeConverters.toEpochMilli(template.getCreatedAt()))
+                    .updatedAt(TimeConverters.toEpochMilli(template.getUpdatedAt()))
                     .build();
         }
     }
@@ -380,7 +381,7 @@ public class PromptApplicationService {
         private List<VariableDef> variables;
         private String changeLog;
         private String publisher;
-        private LocalDateTime publishedAt;
+        private Long publishedAt;
 
         public static VersionResponse from(PromptTemplateVersion v) {
             return VersionResponse.builder()
@@ -391,7 +392,7 @@ public class PromptApplicationService {
                     .variables(v.getVariables())
                     .changeLog(v.getChangeLog())
                     .publisher(v.getPublisher())
-                    .publishedAt(v.getPublishedAt())
+                    .publishedAt(TimeConverters.toEpochMilli(v.getPublishedAt()))
                     .build();
         }
     }

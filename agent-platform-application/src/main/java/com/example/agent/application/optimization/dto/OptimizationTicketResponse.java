@@ -5,8 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -22,6 +20,6 @@ public class OptimizationTicketResponse {
     private String status;
     private String resolution;
     private String resolutionType;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Long createdAt;
+    private Long updatedAt;
 }

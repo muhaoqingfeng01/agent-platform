@@ -2,6 +2,7 @@ package com.example.agent.application.conversation;
 
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.util.IdGenerator;
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.conversation.entity.Message;
 import com.example.agent.domain.conversation.repository.ConversationRepository;
 import com.example.agent.domain.conversation.repository.MessageRepository;
@@ -17,7 +18,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,7 +78,7 @@ public class MessageApplicationService {
                 .content(content)
                 .tokenCount(estimateTokens(content))
                 .metadata(metadata != null ? metadata : new HashMap<>())
-                .createdAt(LocalDateTime.now())
+                .createdAt(java.time.LocalDateTime.now())
                 .build();
         messageRepository.save(message);
         conversationRepository.incrementMessageCount(conversationId, 1);
@@ -103,7 +103,7 @@ public class MessageApplicationService {
         private String content;
         private Integer tokenCount;
         private String feedback;
-        private LocalDateTime createdAt;
+        private Long createdAt;
 
         public static MessageResponse from(Message msg) {
             return MessageResponse.builder()
@@ -113,7 +113,7 @@ public class MessageApplicationService {
                     .content(msg.getContent())
                     .tokenCount(msg.getTokenCount())
                     .feedback(msg.getFeedback() != null ? msg.getFeedback().name() : null)
-                    .createdAt(msg.getCreatedAt())
+                    .createdAt(TimeConverters.toEpochMilli(msg.getCreatedAt()))
                     .build();
         }
     }

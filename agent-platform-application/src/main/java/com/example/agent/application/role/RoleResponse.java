@@ -1,10 +1,9 @@
 package com.example.agent.application.role;
 
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.tenant.Role;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 @Data
 public class RoleResponse {
@@ -13,7 +12,7 @@ public class RoleResponse {
     @Schema(description = "角色编码") private String roleCode;
     @Schema(description = "角色名称") private String roleName;
     @Schema(description = "角色描述") private String description;
-    @Schema(description = "创建时间") private LocalDateTime createdAt;
+    @Schema(description = "创建时间") private Long createdAt;
 
     public static RoleResponse from(Role r) {
         RoleResponse resp = new RoleResponse();
@@ -22,7 +21,7 @@ public class RoleResponse {
         resp.setRoleCode(r.getRoleCode());
         resp.setRoleName(r.getRoleName());
         resp.setDescription(r.getDescription());
-        resp.setCreatedAt(r.getCreatedAt());
+        resp.setCreatedAt(TimeConverters.toEpochMilli(r.getCreatedAt()));
         return resp;
     }
 }

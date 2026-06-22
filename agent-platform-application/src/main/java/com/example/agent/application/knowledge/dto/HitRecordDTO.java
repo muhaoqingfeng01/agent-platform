@@ -1,11 +1,11 @@
 package com.example.agent.application.knowledge.dto;
 
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.knowledge.entity.KnowledgeHitRecord;
 import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 /**
  * 命中记录 DTO.
@@ -27,7 +27,7 @@ public class HitRecordDTO {
     private boolean usedInPrompt;
     private String humanFeedback;
     private String feedbackNote;
-    private LocalDateTime createdAt;
+    private Long createdAt;
 
     public static HitRecordDTO from(KnowledgeHitRecord r) {
         return HitRecordDTO.builder()
@@ -42,7 +42,7 @@ public class HitRecordDTO {
                 .usedInPrompt(r.isUsedInPrompt())
                 .humanFeedback(r.getHumanFeedback())
                 .feedbackNote(r.getFeedbackNote())
-                .createdAt(r.getCreatedAt())
+                .createdAt(TimeConverters.toEpochMilli(r.getCreatedAt()))
                 .build();
     }
 }
