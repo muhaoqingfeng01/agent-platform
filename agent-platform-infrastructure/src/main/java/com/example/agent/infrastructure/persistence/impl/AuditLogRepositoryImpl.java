@@ -43,7 +43,7 @@ public class AuditLogRepositoryImpl implements AuditLogRepository {
 
     @Override
     public List<AuditLog> findByTenant(Long tenantId, int page, int size) {
-        int offset = (page - 1) * size;
+        int offset = page * size;
         return mapper.selectByTenant(tenantId, offset, size).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
@@ -51,7 +51,7 @@ public class AuditLogRepositoryImpl implements AuditLogRepository {
 
     @Override
     public List<AuditLog> findByConversation(String conversationId, int page, int size) {
-        int offset = (page - 1) * size;
+        int offset = page * size;
         return mapper.selectByConversation(conversationId, offset, size).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());

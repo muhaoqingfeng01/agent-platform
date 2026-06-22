@@ -71,7 +71,7 @@ public class UserController {
         return Result.ok(userService.updateUser(id, request));
     }
 
-    @PatchMapping("/{id}/status")
+    @PutMapping("/{id}/status")
     @SaCheckPermission("user:write")
     @Operation(summary = "启停用户")
     public Result<UserResponse> toggleStatus(
@@ -80,7 +80,7 @@ public class UserController {
         return Result.ok(userService.toggleStatus(id, request));
     }
 
-    @PatchMapping("/{id}/password")
+    @PutMapping("/{id}/password")
     @Operation(summary = "修改密码", description = "当前用户修改自己的密码（需验证旧密码）")
     public Result<Void> changePassword(
             @Parameter(description = "用户主键 ID") @PathVariable Long id,

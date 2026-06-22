@@ -35,14 +35,14 @@ public class OptimizationTicketController {
         return Result.ok(ticketService.getByTicketId(ticketId));
     }
 
-    @PatchMapping("/{ticketId}/assign")
+    @PutMapping("/{ticketId}/assign")
     @Operation(summary = "指派处理人")
     public Result<OptimizationTicketResponse> assign(@PathVariable String ticketId,
                                                       @RequestBody @jakarta.validation.Valid AssignRequest request) {
         return Result.ok(ticketService.assign(ticketId, request.getAssignee()));
     }
 
-    @PatchMapping("/{ticketId}/status")
+    @PutMapping("/{ticketId}/status")
     @Operation(summary = "更新工单状态")
     public Result<OptimizationTicketResponse> updateStatus(@PathVariable String ticketId,
                                                             @RequestParam String status) {

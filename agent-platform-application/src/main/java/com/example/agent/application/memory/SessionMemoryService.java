@@ -34,7 +34,7 @@ public class SessionMemoryService {
     private static final Duration TTL = Duration.ofMinutes(30);
 
     private final RedisTemplate<String, String> redisTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;  // 使用 Spring Boot 自动配置的 ObjectMapper（已支持 Java 8 日期时间）
 
     public void appendMessage(String conversationId, Message message) {
         String key = buildSessionKey(conversationId);

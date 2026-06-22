@@ -21,6 +21,18 @@
         SELECT * FROM t_permission WHERE deleted = 0 ORDER BY created_at DESC
     </select>
 
+    <!-- 分页查询权限列表 -->
+    <select id="findAllPaginated" resultMap="PermissionPOMap">
+        SELECT * FROM t_permission WHERE deleted = 0
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 统计权限总数 -->
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM t_permission WHERE deleted = 0
+    </select>
+
     <!--
         单表查询：通过子查询拆解，避免 JOIN。
         1. t_role_permission → 找到 permission_id 列表
@@ -54,8 +66,20 @@
         VALUES (#{permissionCode}, #{resource}, #{action}, #{description}, #{createdAt}, #{deleted})
     </insert>
 
+    <insert id="batchInsert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_permission (permission_code, resource, action, description, created_at, deleted) VALUES
+        <foreach collection="permissions" item="p" separator=",">
+            (#{p.permissionCode}, #{p.resource}, #{p.action}, #{p.description}, #{p.createdAt}, #{p.deleted})
+        </foreach>
+    </insert>
+
     <update id="deleteById">
         UPDATE t_permission SET deleted = 1 WHERE id = #{id}
     </update>
+
+    <!-- 级联删除：先删角色-权限关联，再删权限（事务内原子执行） -->
+    <delete id="deleteRolePermissionByPermissionId">
+        DELETE FROM t_role_permission WHERE permission_id = #{permissionId}
+    </delete>
 
 </mapper>

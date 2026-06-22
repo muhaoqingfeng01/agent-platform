@@ -35,6 +35,18 @@ public class PermissionRepositoryImpl implements PermissionRepository {
     }
 
     @Override
+    public List<Permission> findAllPaginated(int page, int size) {
+        int offset = page * size;
+        return permissionMapper.findAllPaginated(offset, size)
+                .stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public long count() {
+        return permissionMapper.count();
+    }
+
+    @Override
     public List<Permission> findByRoleId(Long roleId) {
         return permissionMapper.findByRoleId(roleId)
                 .stream().map(this::toDomain).toList();
@@ -49,6 +61,24 @@ public class PermissionRepositoryImpl implements PermissionRepository {
     @Override
     public void save(Permission permission) {
         permissionMapper.insert(toPO(permission));
+    }
+
+    @Override
+    public void saveAll(List<Permission> permissions) {
+        if (permissions.isEmpty()) return;
+        List<PermissionPO> poList = permissions.stream().map(this::toPO).toList();
+        permissionMapper.batchInsert(poList);
+    }
+
+    /**
+     * 级联删除：先删 t_role_permission 关联，再删 t_permission（逻辑删除）。
+     * 调用方需使用 @Transactional 保证原子性。
+     */
+    @Override
+    public void deleteCascade(Long id) {
+        log.info("[PermissionRepo] 级联删除权限: id={}", id);
+        permissionMapper.deleteRolePermissionByPermissionId(id);
+        permissionMapper.deleteById(id);
     }
 
     @Override

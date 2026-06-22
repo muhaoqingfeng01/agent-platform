@@ -38,14 +38,14 @@ public class EvaluationRunRepositoryImpl implements EvaluationRunRepository {
 
     @Override
     public List<EvaluationRun> findByTenant(Long tenantId, int page, int size) {
-        int offset = (page - 1) * size;
+        int offset = page * size;
         return mapper.selectByTenant(tenantId, offset, size).stream()
                 .map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
     public List<EvaluationRun> findByDatasetId(String datasetId, int page, int size) {
-        int offset = (page - 1) * size;
+        int offset = page * size;
         return mapper.selectByDatasetId(datasetId, offset, size).stream()
                 .map(this::toDomain).collect(Collectors.toList());
     }

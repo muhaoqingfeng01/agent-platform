@@ -54,7 +54,7 @@ public class ConversationController {
                 applicationService.getConversation(id)));
     }
 
-    @PatchMapping("/{id}/title")
+    @PutMapping("/{id}/title")
     @SaCheckPermission("conversation:update")
     @Operation(summary = "更新标题")
     public Result<Void> updateTitle(@PathVariable String id,
@@ -63,7 +63,7 @@ public class ConversationController {
         return Result.ok();
     }
 
-    @PatchMapping("/{id}/status")
+    @PutMapping("/{id}/status")
     @SaCheckPermission("conversation:update")
     @Operation(summary = "状态流转")
     public Result<Void> transitionStatus(@PathVariable String id,

@@ -132,7 +132,7 @@ public class ToolController {
      * @param request 包含目标状态
      * @return 更新后的工具详情
      */
-    @PatchMapping("/{id}/status")
+    @PutMapping("/{id}/status")
     @SaCheckPermission("tool:update")
     @Operation(summary = "启停工具")
     public Result<ToolResponse> toggleStatus(

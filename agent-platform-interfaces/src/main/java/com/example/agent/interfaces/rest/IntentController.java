@@ -63,7 +63,7 @@ public class IntentController {
         return Result.ok(intentService.updateIntent(id, appReq));
     }
 
-    @PatchMapping("/{id}/status")
+    @PutMapping("/{id}/status")
     @SaCheckPermission("intent:update")
     @Operation(summary = "启停意图")
     public Result<Void> toggleStatus(@PathVariable String id,

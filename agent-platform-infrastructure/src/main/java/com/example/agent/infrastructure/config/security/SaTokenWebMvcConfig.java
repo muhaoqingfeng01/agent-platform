@@ -4,10 +4,13 @@ import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.router.SaRouter;
 import cn.dev33.satoken.stp.StpUtil;
 import com.example.agent.infrastructure.interceptor.TenantInterceptor;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
  * Sa-Token Web MVC 路由拦截配置
@@ -67,6 +70,18 @@ public class SaTokenWebMvcConfig implements WebMvcConfigurer {
                                    "/ws/**",
                                    "/error")
                             .stop();                                // 停止校验，直接放行
+
+                    // ==================== 排除 OPTIONS 预检请求（CORS Preflight） ====================
+                    // OPTIONS 请求不会携带 Token，必须放行以避免 CORS 失败
+                    // 通过 Spring RequestContextHolder 获取当前请求
+                    ServletRequestAttributes attributes = 
+                        (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+                    if (attributes != null) {
+                        HttpServletRequest request = attributes.getRequest();
+                        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+                            return;  // 直接返回，不进行后续鉴权
+                        }
+                    }
 
                     // ==================== 管理员接口 → ADMIN 角色 ====================
                     SaRouter

@@ -74,7 +74,7 @@ public class TenantController {
         return Result.ok(tenantService.updateTenant(id, request));
     }
 
-    @PatchMapping("/{id}/status")
+    @PutMapping("/{id}/status")
     @SaCheckRole("TENANT_ADMIN")
     @Operation(summary = "启停租户")
     public Result<TenantResponse> toggleStatus(

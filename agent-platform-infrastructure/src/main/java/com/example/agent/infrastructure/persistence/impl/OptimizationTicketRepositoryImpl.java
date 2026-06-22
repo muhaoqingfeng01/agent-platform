@@ -39,21 +39,21 @@ public class OptimizationTicketRepositoryImpl implements OptimizationTicketRepos
 
     @Override
     public List<OptimizationTicket> findByTenant(Long tenantId, int page, int size) {
-        int offset = (page - 1) * size;
+        int offset = page * size;
         return mapper.selectByTenant(tenantId, offset, size).stream()
                 .map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
     public List<OptimizationTicket> findByAssignee(Long tenantId, String assignee, int page, int size) {
-        int offset = (page - 1) * size;
+        int offset = page * size;
         return mapper.selectByAssignee(tenantId, assignee, offset, size).stream()
                 .map(this::toDomain).collect(Collectors.toList());
     }
 
     @Override
     public List<OptimizationTicket> findByStatus(Long tenantId, String status, int page, int size) {
-        int offset = (page - 1) * size;
+        int offset = page * size;
         return mapper.selectByStatus(tenantId, status, offset, size).stream()
                 .map(this::toDomain).collect(Collectors.toList());
     }

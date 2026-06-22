@@ -6,6 +6,6 @@ import lombok.Data;
 
 @Data
 public class MessageFeedbackRequest {
-    @NotNull
+    @NotNull(message = "feedback 不能为空，请传入 LIKE 或 DISLIKE")
     private FeedbackType feedback;
 }

@@ -84,7 +84,7 @@ public class MessageController {
         return Result.ok(messageService.loadMessagesBefore(id, before, 50));
     }
 
-    @PatchMapping("/api/v1/conversations/{id}/messages/{msgId}/feedback")
+    @PutMapping("/api/v1/conversations/{id}/messages/{msgId}/feedback")
     @SaCheckPermission("conversation:feedback")
     @Operation(summary = "消息反馈")
     public Result<Void> feedback(@PathVariable String id,
