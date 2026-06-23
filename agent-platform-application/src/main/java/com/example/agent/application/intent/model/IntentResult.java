@@ -1,5 +1,6 @@
 package com.example.agent.application.intent.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -62,10 +63,12 @@ public class IntentResult {
                 .build();
     }
 
+    @JsonIgnore
     public boolean isMatched() {
         return !"UNKNOWN".equals(intentCode);
     }
 
+    @JsonIgnore
     public boolean isHighRisk() {
         return "HIGH".equals(riskLevel) || "CRITICAL".equals(riskLevel);
     }

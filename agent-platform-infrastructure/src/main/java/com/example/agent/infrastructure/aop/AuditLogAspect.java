@@ -2,6 +2,7 @@ package com.example.agent.infrastructure.aop;
 
 import com.example.agent.domain.audit.entity.AuditLog;
 import com.example.agent.domain.audit.repository.AuditLogRepository;
+import com.example.agent.domain.audit.valueobject.ActorTypeEnums;
 import com.example.agent.infrastructure.annotation.Auditable;
 import com.example.agent.infrastructure.context.TenantContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -13,10 +14,8 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.MDC;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -91,7 +90,7 @@ public class AuditLogAspect {
             AuditLog auditLog = AuditLog.builder()
                     .traceId(traceId)
                     .tenantId(tenantId)
-                    .actorType(userId != null ? "USER" : "SYSTEM")
+                    .actorType(userId != null ? ActorTypeEnums.USER.name() : ActorTypeEnums.SYSTEM.name())
                     .actorId(userId)
                     .action(auditable.action())
                     .resourceType(auditable.resourceType())

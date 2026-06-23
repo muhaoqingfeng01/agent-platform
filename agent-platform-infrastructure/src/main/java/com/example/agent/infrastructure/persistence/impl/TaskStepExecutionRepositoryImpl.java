@@ -38,18 +38,18 @@ public class TaskStepExecutionRepositoryImpl implements TaskStepExecutionReposit
 
     @Override
     public void updateStatus(String executionId, String stepId, StepStatus status) {
-        mapper.updateStatus(executionId, stepId, status.name());
+        mapper.updateStatus(executionId, stepId, status.getCode());
     }
 
     @Override
     public void updateResult(String executionId, String stepId, StepStatus status,
                               String outputJson, String errorMessage, long durationMs) {
-        mapper.updateResult(executionId, stepId, status.name(), outputJson, errorMessage, durationMs);
+        mapper.updateResult(executionId, stepId, status.getCode(), outputJson, errorMessage, durationMs);
     }
 
     @Override
     public void updateRetry(String executionId, String stepId, int retryCount, StepStatus status) {
-        mapper.updateRetry(executionId, stepId, retryCount, status.name());
+        mapper.updateRetry(executionId, stepId, retryCount, status.getCode());
     }
 
     @Override
@@ -65,7 +65,7 @@ public class TaskStepExecutionRepositoryImpl implements TaskStepExecutionReposit
 
     @Override
     public void batchUpdateStatusByExecutionId(String executionId, StepStatus status) {
-        mapper.batchUpdateStatusByExecutionId(executionId, status.name());
+        mapper.batchUpdateStatusByExecutionId(executionId, status.getCode());
     }
 
     // ==================== 映射方法 ====================
@@ -79,7 +79,7 @@ public class TaskStepExecutionRepositoryImpl implements TaskStepExecutionReposit
                 .handlerClass(po.getHandlerClass())
                 .inputJson(po.getInputJson())
                 .outputJson(po.getOutputJson())
-                .status(StepStatus.valueOf(po.getStatus()))
+                .status(StepStatus.fromCode(po.getStatus()))
                 .retryCount(po.getRetryCount() != null ? po.getRetryCount() : 0)
                 .maxRetries(po.getMaxRetries() != null ? po.getMaxRetries() : 3)
                 .durationMs(po.getDurationMs())
@@ -99,7 +99,7 @@ public class TaskStepExecutionRepositoryImpl implements TaskStepExecutionReposit
                 .handlerClass(step.getHandlerClass())
                 .inputJson(step.getInputJson())
                 .outputJson(step.getOutputJson())
-                .status(step.getStatus().name())
+                .status(step.getStatus().getCode())
                 .retryCount(step.getRetryCount())
                 .maxRetries(step.getMaxRetries())
                 .durationMs(step.getDurationMs())

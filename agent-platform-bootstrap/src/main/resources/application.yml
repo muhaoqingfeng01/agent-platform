@@ -46,7 +46,7 @@ spring:
   # --- Spring AI (DeepSeek Chat + OpenAI Embedding) ---
   ai:
     deepseek:
-      api-key: ${DEEPSEEK_API_KEY:sk-2ef99c0b14cb4e2c959ad9bcaaf6d11e}
+      api-key: ${DEEPSEEK_API_KEY:}
       chat:
         options:
           model: ${AI_MODEL:deepseek-v4-pro}
@@ -54,7 +54,7 @@ spring:
           max-tokens: 4096
     # OpenAI 仅用于 Embedding，禁用 ChatModel 避免与 DeepSeek 冲突
     openai:
-      api-key: ${EMBEDDING_API_KEY:sk-2ef99c0b14cb4e2c959ad9bcaaf6d11e}
+      api-key: ${EMBEDDING_API_KEY:}
       base-url: ${EMBEDDING_BASE_URL:https://api.deepseek.com}
       embedding:
         options:

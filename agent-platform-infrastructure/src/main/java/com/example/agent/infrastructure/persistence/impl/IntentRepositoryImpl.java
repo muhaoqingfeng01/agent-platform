@@ -46,7 +46,7 @@ public class IntentRepositoryImpl implements IntentRepository {
 
     @Override
     public void updateStatus(String intentId, IntentStatus status) {
-        intentMapper.updateStatus(intentId, status.name());
+        intentMapper.updateStatus(intentId, status.getCode());
     }
 
     @Override
@@ -95,7 +95,7 @@ public class IntentRepositoryImpl implements IntentRepository {
                 .llmPrompt(po.getLlmPrompt())
                 .requiredParams(parseJsonMapList(po.getRequiredParams()))
                 .riskLevel(po.getRiskLevel())
-                .status(IntentStatus.valueOf(po.getStatus()))
+                .status(IntentStatus.fromCode(po.getStatus()))
                 .createdAt(po.getCreatedAt())
                 .updatedAt(po.getUpdatedAt())
                 .build();
@@ -113,7 +113,7 @@ public class IntentRepositoryImpl implements IntentRepository {
                 .llmPrompt(intent.getLlmPrompt())
                 .requiredParams(toJson(intent.getRequiredParams()))
                 .riskLevel(intent.getRiskLevel())
-                .status(intent.getStatus().name())
+                .status(intent.getStatus().getCode())
                 .createdAt(intent.getCreatedAt() != null ? intent.getCreatedAt() : LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();

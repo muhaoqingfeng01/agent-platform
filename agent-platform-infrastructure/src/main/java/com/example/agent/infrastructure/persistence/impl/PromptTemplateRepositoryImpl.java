@@ -58,7 +58,7 @@ public class PromptTemplateRepositoryImpl implements PromptTemplateRepository {
     @Override
     public List<PromptTemplate> findByTenantIdAndStatus(Long tenantId, PromptStatus status,
                                                          int offset, int size) {
-        return promptTemplateMapper.selectByTenantIdAndStatus(tenantId, status.name(), offset, size)
+        return promptTemplateMapper.selectByTenantIdAndStatus(tenantId, status.getCode(), offset, size)
                 .stream().map(this::toDomain).toList();
     }
 
@@ -80,7 +80,7 @@ public class PromptTemplateRepositoryImpl implements PromptTemplateRepository {
 
     @Override
     public void updateStatus(String promptId, PromptStatus status) {
-        promptTemplateMapper.updateStatus(promptId, status.name());
+        promptTemplateMapper.updateStatus(promptId, status.getCode());
     }
 
     @Override
@@ -110,7 +110,7 @@ public class PromptTemplateRepositoryImpl implements PromptTemplateRepository {
                 .templateText(po.getTemplateText())
                 .variables(parseVariables(po.getVariablesJson()))
                 .version(po.getVersion())
-                .status(PromptStatus.valueOf(po.getStatus()))
+                .status(PromptStatus.fromCode(po.getStatus()))
                 .abTestConfig(po.getAbTestConfig())
                 .createdAt(po.getCreatedAt())
                 .updatedAt(po.getUpdatedAt())
@@ -127,7 +127,7 @@ public class PromptTemplateRepositoryImpl implements PromptTemplateRepository {
                 .templateText(template.getTemplateText())
                 .variablesJson(toVariablesJson(template.getVariables()))
                 .version(template.getVersion() != null ? template.getVersion() : 1)
-                .status(template.getStatus() != null ? template.getStatus().name() : "DRAFT")
+                .status(template.getStatus() != null ? template.getStatus().getCode() : PromptStatus.DRAFT.getCode())
                 .abTestConfig(template.getAbTestConfig())
                 .createdAt(template.getCreatedAt() != null ? template.getCreatedAt() : LocalDateTime.now())
                 .updatedAt(template.getUpdatedAt() != null ? template.getUpdatedAt() : LocalDateTime.now())

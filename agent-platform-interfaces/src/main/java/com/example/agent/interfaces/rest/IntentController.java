@@ -4,6 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.intent.IntentApplicationService;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.result.Result;
+import com.example.agent.common.util.IdGenerator;
 import com.example.agent.interfaces.dto.request.intent.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -106,8 +107,8 @@ public class IntentController {
 
     private IntentApplicationService.CreateIntentRequest toAppRequest(CreateIntentRequest request) {
         IntentApplicationService.CreateIntentRequest appReq = new IntentApplicationService.CreateIntentRequest();
-        appReq.setIntentCode(request.getIntentCode());
-        appReq.setIntentName(request.getIntentName());
+        appReq.setIntentCode(IdGenerator.generate("int"));
+        appReq.setIntentName(request.getName());
         appReq.setCategory(request.getCategory());
         appReq.setPatterns(request.getPatterns());
         appReq.setExamples(request.getExamples());

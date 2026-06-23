@@ -2,6 +2,7 @@ package com.example.agent.infrastructure.persistence.impl;
 
 import com.example.agent.domain.tenant.User;
 import com.example.agent.domain.tenant.UserRepository;
+import com.example.agent.domain.tenant.valueobject.UserStatusEnums;
 import com.example.agent.infrastructure.persistence.mapper.UserMapper;
 import com.example.agent.infrastructure.persistence.po.UserPO;
 import lombok.RequiredArgsConstructor;
@@ -80,7 +81,7 @@ public class UserRepositoryImpl implements UserRepository {
                 .passwordHash(po.getPasswordHash())
                 .email(po.getEmail())
                 .phone(po.getPhone())
-                .status(po.getStatus())
+                .status(UserStatusEnums.fromCode(po.getStatus()))
                 .createdAt(po.getCreatedAt())
                 .updatedAt(po.getUpdatedAt())
                 .deleted(po.getDeleted())
@@ -96,7 +97,7 @@ public class UserRepositoryImpl implements UserRepository {
                 .passwordHash(user.getPasswordHash())
                 .email(user.getEmail())
                 .phone(user.getPhone())
-                .status(user.getStatus())
+                .status(Optional.ofNullable(user.getStatus()).map(UserStatusEnums::getCode).orElse(null))
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .deleted(user.getDeleted())

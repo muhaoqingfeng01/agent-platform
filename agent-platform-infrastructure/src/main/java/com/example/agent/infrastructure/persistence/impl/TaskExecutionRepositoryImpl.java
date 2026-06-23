@@ -40,7 +40,7 @@ public class TaskExecutionRepositoryImpl implements TaskExecutionRepository {
 
     @Override
     public void updateStatus(String executionId, ExecutionStatus status) {
-        mapper.updateStatus(executionId, status.name());
+        mapper.updateStatus(executionId, status.getCode());
     }
 
     @Override
@@ -91,7 +91,7 @@ public class TaskExecutionRepositoryImpl implements TaskExecutionRepository {
                 .conversationId(po.getConversationId())
                 .agentId(po.getAgentId())
                 .planJson(po.getPlanJson())
-                .status(ExecutionStatus.valueOf(po.getStatus()))
+                .status(ExecutionStatus.fromCode(po.getStatus()))
                 .totalSteps(po.getTotalSteps() != null ? po.getTotalSteps() : 0)
                 .completedSteps(po.getCompletedSteps() != null ? po.getCompletedSteps() : 0)
                 .failedStepId(po.getFailedStepId())
@@ -111,7 +111,7 @@ public class TaskExecutionRepositoryImpl implements TaskExecutionRepository {
                 .conversationId(execution.getConversationId())
                 .agentId(execution.getAgentId())
                 .planJson(execution.getPlanJson())
-                .status(execution.getStatus().name())
+                .status(execution.getStatus().getCode())
                 .totalSteps(execution.getTotalSteps())
                 .completedSteps(execution.getCompletedSteps())
                 .failedStepId(execution.getFailedStepId())

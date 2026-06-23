@@ -112,7 +112,7 @@ public class PromptDomainService {
     public PromptTemplate publish(PromptTemplate template, String publisher) {
         if (!template.isPublishable()) {
             throw new IllegalStateException(
-                    "只有草稿状态可发布，当前状态: " + template.getStatus().getLabel());
+                    "只有草稿状态可发布，当前状态: " + template.getStatus().getDesc());
         }
 
         int newVersion = template.getCurrentOrZero() + 1;

@@ -8,8 +8,7 @@ import java.util.Map;
 
 @Data
 public class CreateIntentRequest {
-    @NotBlank private String intentCode;
-    @NotBlank private String intentName;
+    @NotBlank private String name;
     private String category;
     private List<String> patterns;
     private List<String> examples;

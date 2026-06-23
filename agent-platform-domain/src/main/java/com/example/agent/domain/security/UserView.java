@@ -1,5 +1,6 @@
 package com.example.agent.domain.security;
 
+import com.example.agent.domain.tenant.valueobject.UserStatusEnums;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -26,11 +27,11 @@ public class UserView implements Serializable {
     /** 所属租户 */
     private Long tenantId;
 
-    /** 状态: ACTIVE / DISABLED */
-    private String status;
+    /** 状态 */
+    private UserStatusEnums status;
 
     /** 是否活跃 */
     public boolean isActive() {
-        return "ACTIVE".equals(status);
+        return status != null && status.isActive();
     }
 }

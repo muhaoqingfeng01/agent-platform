@@ -1,5 +1,6 @@
 package com.example.agent.domain.optimization.entity;
 
+import com.example.agent.domain.optimization.valueobject.TicketStatus;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -24,7 +25,7 @@ public class OptimizationTicket {
     private String severity;
     private String description;
     private String assignee;
-    private String status;
+    private TicketStatus status;
     private String resolution;
     private String resolutionType;
     private LocalDateTime createdAt;
@@ -32,20 +33,20 @@ public class OptimizationTicket {
 
     public void assign(String userId) {
         this.assignee = userId;
-        this.status = "IN_PROGRESS";
+        this.status = TicketStatus.IN_PROGRESS;
     }
 
     public void resolve(String resolution, String resolutionType) {
         this.resolution = resolution;
         this.resolutionType = resolutionType;
-        this.status = "RESOLVED";
+        this.status = TicketStatus.RESOLVED;
     }
 
     public void close() {
-        this.status = "CLOSED";
+        this.status = TicketStatus.CLOSED;
     }
 
     public void startAnalysis() {
-        this.status = "ANALYZING";
+        this.status = TicketStatus.ANALYZING;
     }
 }

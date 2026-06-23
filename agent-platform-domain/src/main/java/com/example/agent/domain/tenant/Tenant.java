@@ -1,5 +1,7 @@
 package com.example.agent.domain.tenant;
 
+import com.example.agent.domain.tenant.valueobject.TenantStatusEnums;
+import com.example.agent.domain.tenant.valueobject.TenantTierEnums;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -15,18 +17,18 @@ public class Tenant {
     private Long id;
     private Long tenantId;
     private String name;
-    private String status;   // ACTIVE / SUSPENDED / DELETED
-    private String tier;     // STANDARD / PREMIUM / ENTERPRISE
+    private TenantStatusEnums status;
+    private TenantTierEnums tier;
     private String configJson;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Boolean deleted;
 
     public boolean isActive() {
-        return "ACTIVE".equals(status);
+        return status != null && status.isActive();
     }
 
     public boolean isSuspended() {
-        return "SUSPENDED".equals(status);
+        return status == TenantStatusEnums.SUSPENDED;
     }
 }

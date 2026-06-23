@@ -20,7 +20,7 @@ import java.util.Set;
 public enum PromptStatus {
 
     /** 草稿 — 可编辑，可发布 */
-    DRAFT("草稿") {
+    DRAFT("DRAFT", "草稿") {
         @Override
         public Set<PromptStatus> allowedTransitions() {
             return EnumSet.of(PUBLISHED, ARCHIVED);
@@ -28,7 +28,7 @@ public enum PromptStatus {
     },
 
     /** 已发布 — 运行时使用，可归档 */
-    PUBLISHED("已发布") {
+    PUBLISHED("PUBLISHED", "已发布") {
         @Override
         public Set<PromptStatus> allowedTransitions() {
             return EnumSet.of(ARCHIVED);
@@ -36,14 +36,15 @@ public enum PromptStatus {
     },
 
     /** 已归档 — 只读，不可逆 */
-    ARCHIVED("已归档") {
+    ARCHIVED("ARCHIVED", "已归档") {
         @Override
         public Set<PromptStatus> allowedTransitions() {
             return EnumSet.noneOf(PromptStatus.class);
         }
     };
 
-    private final String label;
+    private final String code;
+    private final String desc;
 
     /** 当前状态允许转移到的目标状态集合 */
     public abstract Set<PromptStatus> allowedTransitions();
@@ -51,5 +52,13 @@ public enum PromptStatus {
     /** 校验状态转移是否合法 */
     public boolean canTransitionTo(PromptStatus target) {
         return allowedTransitions().contains(target);
+    }
+
+    public static PromptStatus fromCode(String code) {
+        if (code == null || code.isBlank()) return DRAFT;
+        for (PromptStatus e : values()) {
+            if (e.code.equalsIgnoreCase(code)) return e;
+        }
+        throw new IllegalArgumentException("未知: " + code);
     }
 }

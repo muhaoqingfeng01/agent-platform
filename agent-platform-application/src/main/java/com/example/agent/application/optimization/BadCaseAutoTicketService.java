@@ -7,12 +7,13 @@ import com.example.agent.domain.conversation.repository.MessageRepository;
 import com.example.agent.domain.conversation.valueobject.FeedbackType;
 import com.example.agent.domain.optimization.entity.OptimizationTicket;
 import com.example.agent.domain.optimization.repository.OptimizationTicketRepository;
-import com.example.agent.infrastructure.context.TenantContext;
+import com.example.agent.domain.optimization.valueobject.TicketStatus;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -37,6 +38,7 @@ public class BadCaseAutoTicketService {
     /**
      * 监听消息点踩事件，LLM 自动分析问题类型并生成工单.
      */
+    @Async
     @EventListener
     public void onMessageDisliked(MessageFeedbackEvent event) {
         if (event.getFeedback() != FeedbackType.DISLIKE) return;
@@ -59,7 +61,7 @@ public class BadCaseAutoTicketService {
                     .ticketId(IdGenerator.generate("ticket"))
                     .conversationId(conversationId).messageId(messageId)
                     .issueType(result.type).severity(result.severity)
-                    .description(result.description).status("OPEN").build();
+                    .description(result.description).status(TicketStatus.OPEN).build();
             ticketRepository.save(ticket);
 
             log.info("[BadCase] 自动工单已创建: ticketId={}, issueType={}, severity={}",
@@ -74,7 +76,7 @@ public class BadCaseAutoTicketService {
     private String analyzeIssue(List<Message> context, String dislikedMsgId) {
         StringBuilder ctxBuilder = new StringBuilder();
         for (Message msg : context) {
-            ctxBuilder.append(msg.getRole().getLabel()).append(": ")
+            ctxBuilder.append(msg.getRole().getDesc()).append(": ")
                     .append(truncate(msg.getContent(), 200)).append("\n");
         }
 

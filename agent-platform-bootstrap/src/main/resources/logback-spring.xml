@@ -18,7 +18,7 @@
 
     <!-- 日志格式：时间 [线程] 级别 [traceId,spanId,tenantId,userId] Logger - 消息 -->
     <property name="LOG_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{spanId},%X{tenantId},%X{userId}] %logger{36} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId}] %logger{36} - %msg%n"/>
 
     <!-- ============================================================ -->
     <!-- Appender: 控制台（所有环境通用） -->

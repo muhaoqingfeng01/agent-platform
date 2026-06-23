@@ -284,7 +284,7 @@ public class ToolApplicationService {
         // 清除缓存
         toolCacheManager.refresh(tenantId, toolId);
 
-        log.info("[Tool] 工具状态切换成功: toolId={}, status={}", toolId, targetStatus.toChinese());
+        log.info("[Tool] 工具状态切换成功: toolId={}, status={}", toolId, targetStatus.getDesc());
         return ToolResponse.from(tool);
     }
 
@@ -391,7 +391,7 @@ public class ToolApplicationService {
                 case CUSTOM:
                     // 内置和自定义工具需通过 T5 任务引擎测试
                     throw new BusinessException(400,
-                            tool.getToolType().toChinese() + " 暂不支持在线测试，请通过任务引擎触发");
+                            tool.getToolType().getDesc() + " 暂不支持在线测试，请通过任务引擎触发");
 
                 default:
                     throw new BusinessException(400, "未知的工具类型: " + tool.getToolType());

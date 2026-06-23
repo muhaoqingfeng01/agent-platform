@@ -14,15 +14,24 @@ import lombok.Getter;
 public enum MemoryType {
 
     /** 事实 — 永不过期 */
-    FACT("事实", 3),
+    FACT("FACT", "事实", 3),
     /** 偏好 — 90 天过期，最高加载优先级 */
-    PREFERENCE("偏好", 1),
+    PREFERENCE("PREFERENCE", "偏好", 1),
     /** 上下文 — 7 天过期 */
-    CONTEXT("上下文", 2),
+    CONTEXT("CONTEXT", "上下文", 2),
     /** 摘要 — 30 天过期 */
-    SUMMARY("摘要", 4);
+    SUMMARY("SUMMARY", "摘要", 4);
 
-    private final String label;
+    private final String code;
+    private final String desc;
     /** 加载优先级（数字越小越先注入 Prompt） */
     private final int loadPriority;
+
+    public static MemoryType fromCode(String code) {
+        if (code == null || code.isBlank()) return FACT;
+        for (MemoryType e : values()) {
+            if (e.code.equalsIgnoreCase(code)) return e;
+        }
+        throw new IllegalArgumentException("未知: " + code);
+    }
 }

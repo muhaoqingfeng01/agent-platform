@@ -2,6 +2,7 @@ package com.example.agent.infrastructure.rag;
 
 import com.example.agent.domain.knowledge.entity.Document;
 import com.example.agent.domain.knowledge.service.TextExtractor;
+import com.example.agent.infrastructure.config.storage.MinioConfig;
 import io.minio.GetObjectArgs;
 import io.minio.MinioClient;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ import java.io.InputStream;
 public class TikaTextExtractor implements TextExtractor {
 
     private final MinioClient minioClient;
+    private final MinioConfig minioConfig;
     private final Tika tika = new Tika();
 
     // TODO: 若 Tika 解析大文件 OOM，设置 tika.setMaxStringLength(10_000_000) 限制 10MB
@@ -35,8 +37,7 @@ public class TikaTextExtractor implements TextExtractor {
         log.info("[Tika] 开始解析: docId={}, fileType={}, filename={}",
                 doc.getDocumentId(), doc.getFileType(), doc.getFilename());
 
-        // TODO: 确认 MinIO bucket 名与配置一致
-        String bucket = "knowledge-docs";
+        String bucket = minioConfig.getBucket();
         String objectPath = doc.getMinioPath();
 
         try (InputStream is = minioClient.getObject(

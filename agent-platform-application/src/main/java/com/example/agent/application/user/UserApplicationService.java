@@ -8,6 +8,7 @@ import com.example.agent.domain.tenant.Tenant;
 import com.example.agent.domain.tenant.TenantRepository;
 import com.example.agent.domain.tenant.User;
 import com.example.agent.domain.tenant.UserRepository;
+import com.example.agent.domain.tenant.valueobject.UserStatusEnums;
 import com.example.agent.infrastructure.config.security.PasswordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,7 +60,7 @@ public class UserApplicationService {
                 .username(request.getUsername())
                 .passwordHash(passwordService.encode(request.getPassword()))
                 .email(request.getEmail()).phone(request.getPhone())
-                .status("ACTIVE").createdAt(LocalDateTime.now()).updatedAt(LocalDateTime.now()).deleted(false)
+                .status(UserStatusEnums.ACTIVE).createdAt(LocalDateTime.now()).updatedAt(LocalDateTime.now()).deleted(false)
                 .build();
         userRepository.save(user);
 
@@ -117,7 +118,7 @@ public class UserApplicationService {
                 .id(user.getId()).tenantId(user.getTenantId()).userId(user.getUserId())
                 .username(user.getUsername()).passwordHash(user.getPasswordHash())
                 .email(user.getEmail()).phone(user.getPhone())
-                .status(request.getStatus()).createdAt(user.getCreatedAt())
+                .status(UserStatusEnums.fromCode(request.getStatus())).createdAt(user.getCreatedAt())
                 .updatedAt(LocalDateTime.now()).deleted(user.getDeleted())
                 .build();
         userRepository.update(user);

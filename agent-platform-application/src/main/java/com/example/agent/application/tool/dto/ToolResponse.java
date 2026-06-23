@@ -4,8 +4,12 @@ import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.tool.entity.ToolRegistry;
 import com.example.agent.domain.tool.valueobject.AuthConfig;
 import com.example.agent.domain.tool.valueobject.ToolSchema;
+import com.example.agent.domain.tool.valueobject.ToolStatus;
+import com.example.agent.domain.tool.valueobject.ToolType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
+import java.util.Optional;
 
 /**
  * 工具响应 DTO — 用于 API 返回工具详情和列表.
@@ -94,13 +98,13 @@ public class ToolResponse {
         r.setName(entity.getName());
         r.setDescription(entity.getDescription());
         r.setToolType(entity.getToolType() != null ? entity.getToolType().name() : null);
-        r.setToolTypeLabel(entity.getToolType() != null ? entity.getToolType().toChinese() : null);
+        r.setToolTypeLabel(Optional.ofNullable(entity.getToolType()).map(ToolType::getDesc).orElse(null));
         r.setSchema(entity.getSchema());
         r.setEndpoint(entity.getEndpoint());
         r.setAuthConfig(entity.getAuthConfig());
         r.setRequireApproval(entity.isRequireApproval());
         r.setStatus(entity.getStatus() != null ? entity.getStatus().name() : null);
-        r.setStatusLabel(entity.getStatus() != null ? entity.getStatus().toChinese() : null);
+        r.setStatusLabel(Optional.ofNullable(entity.getStatus()).map(ToolStatus::getDesc).orElse(null));
         r.setVersion(entity.getVersion());
         r.setCreatedAt(TimeConverters.toEpochMilli(entity.getCreatedAt()));
         r.setUpdatedAt(TimeConverters.toEpochMilli(entity.getUpdatedAt()));

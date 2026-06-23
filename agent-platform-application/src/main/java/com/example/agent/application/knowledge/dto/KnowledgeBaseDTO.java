@@ -55,7 +55,7 @@ public class KnowledgeBaseDTO {
                 .chunkOverlap(kb.getChunkOverlap())
                 .documentCount(kb.getDocumentCount())
                 .status(kb.getStatus() != null ? kb.getStatus().name() : null)
-                .statusLabel(kb.getStatus() != null ? kb.getStatus().toChinese() : null)
+                .statusLabel(kb.getStatus() != null ? kb.getStatus().getDesc() : null)
                 .createdBy(kb.getCreatedBy())
                 .isCreatedByCurrentUser(currentUserId != null && kb.isCreatedBy(currentUserId))
                 .defaultChunkStrategy(kb.getDefaultChunkStrategy())

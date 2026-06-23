@@ -18,7 +18,7 @@ public class DocumentLifecycleDomainService {
         if (doc == null) throw new IllegalArgumentException("文档不存在");
         if (doc.getStatus() != DocumentStatus.PENDING_PARSE && doc.getStatus() != DocumentStatus.FAILED) {
             throw new IllegalStateException(
-                "仅待解析或失败的文档可触发解析，当前状态: " + doc.getStatus().getLabel());
+                "仅待解析或失败的文档可触发解析，当前状态: " + doc.getStatus().getDesc());
         }
     }
 
@@ -27,7 +27,7 @@ public class DocumentLifecycleDomainService {
         if (doc == null) throw new IllegalArgumentException("文档不存在");
         if (doc.getStatus() != DocumentStatus.PARSED && doc.getStatus() != DocumentStatus.FAILED) {
             throw new IllegalStateException(
-                "仅已解析或失败的文档可弃用，当前状态: " + doc.getStatus().getLabel());
+                "仅已解析或失败的文档可弃用，当前状态: " + doc.getStatus().getDesc());
         }
     }
 
@@ -38,11 +38,11 @@ public class DocumentLifecycleDomainService {
             || doc.getStatus() == DocumentStatus.CHUNKING
             || doc.getStatus() == DocumentStatus.EMBEDDING) {
             throw new IllegalStateException(
-                "文档正在处理中，不可删除，当前状态: " + doc.getStatus().getLabel());
+                "文档正在处理中，不可删除，当前状态: " + doc.getStatus().getDesc());
         }
         if (doc.getStatus() == DocumentStatus.PARSED) {
             throw new IllegalStateException(
-                "已解析的文档必须先弃用（删除向量）再删除，当前状态: " + doc.getStatus().getLabel());
+                "已解析的文档必须先弃用（删除向量）再删除，当前状态: " + doc.getStatus().getDesc());
         }
     }
 

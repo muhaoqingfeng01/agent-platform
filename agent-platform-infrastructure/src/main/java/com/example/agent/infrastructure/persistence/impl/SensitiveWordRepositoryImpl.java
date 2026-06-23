@@ -43,7 +43,7 @@ public class SensitiveWordRepositoryImpl implements SensitiveWordRepository {
 
     @Override
     public void updateStatus(Long id, SensitiveWordStatus status) {
-        mapper.updateStatus(id, status.name());
+        mapper.updateStatus(id, status.getCode());
     }
 
     @Override
@@ -71,7 +71,7 @@ public class SensitiveWordRepositoryImpl implements SensitiveWordRepository {
 
     @Override
     public List<SensitiveWord> findActiveByCategory(Long tenantId, SensitiveCategory category) {
-        return mapper.selectActiveByCategory(tenantId, category.name()).stream()
+        return mapper.selectActiveByCategory(tenantId, category.getCode()).stream()
                 .map(this::toDomain).toList();
     }
 
@@ -108,11 +108,11 @@ public class SensitiveWordRepositoryImpl implements SensitiveWordRepository {
                 .id(word.getId())
                 .tenantId(word.getTenantId())
                 .word(word.getWord())
-                .matchType(word.getMatchType().name())
-                .category(word.getCategory().name())
-                .severity(word.getSeverity().name())
-                .action(word.getAction().name())
-                .status(word.getStatus().name())
+                .matchType(word.getMatchType().getCode())
+                .category(word.getCategory().getCode())
+                .severity(word.getSeverity().getCode())
+                .action(word.getAction().getCode())
+                .status(word.getStatus().getCode())
                 .createdAt(word.getCreatedAt())
                 .updatedAt(word.getUpdatedAt())
                 .build();

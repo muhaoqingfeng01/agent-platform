@@ -59,7 +59,7 @@ public class LongTermMemoryRepositoryImpl implements LongTermMemoryRepository {
 
     @Override
     public List<LongTermMemory> findByUserIdAndType(Long tenantId, String userId, MemoryType type) {
-        return memoryMapper.selectByUserIdAndType(tenantId, userId, type.name())
+        return memoryMapper.selectByUserIdAndType(tenantId, userId, type.getCode())
                 .stream().map(this::toDomain).toList();
     }
 
@@ -70,7 +70,7 @@ public class LongTermMemoryRepositoryImpl implements LongTermMemoryRepository {
                 .id(po.getId())
                 .tenantId(po.getTenantId())
                 .userId(po.getUserId())
-                .memoryType(MemoryType.valueOf(po.getMemoryType()))
+                .memoryType(MemoryType.fromCode(po.getMemoryType()))
                 .memoryKey(po.getMemoryKey())
                 .memoryValue(po.getMemoryValue())
                 .confidence(po.getConfidence())
@@ -86,7 +86,7 @@ public class LongTermMemoryRepositoryImpl implements LongTermMemoryRepository {
                 .id(memory.getId())
                 .tenantId(memory.getTenantId())
                 .userId(memory.getUserId())
-                .memoryType(memory.getMemoryType().name())
+                .memoryType(memory.getMemoryType().getCode())
                 .memoryKey(memory.getMemoryKey())
                 .memoryValue(memory.getMemoryValue())
                 .confidence(memory.getConfidence())

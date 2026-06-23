@@ -93,7 +93,7 @@ public class LongTermMemoryService {
 
     private String summarizeConversation(List<Message> history) {
         String conversationText = history.stream()
-                .map(m -> m.getRole().getLabel() + ": " + m.getContent())
+                .map(m -> m.getRole().getDesc() + ": " + m.getContent())
                 .collect(Collectors.joining("\n"));
 
         return chatClient.prompt()

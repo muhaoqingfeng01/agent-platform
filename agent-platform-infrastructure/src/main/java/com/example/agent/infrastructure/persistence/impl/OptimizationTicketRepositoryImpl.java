@@ -2,6 +2,7 @@ package com.example.agent.infrastructure.persistence.impl;
 
 import com.example.agent.domain.optimization.entity.OptimizationTicket;
 import com.example.agent.domain.optimization.repository.OptimizationTicketRepository;
+import com.example.agent.domain.optimization.valueobject.TicketStatus;
 import com.example.agent.infrastructure.persistence.mapper.OptimizationTicketMapper;
 import com.example.agent.infrastructure.persistence.po.OptimizationTicketPO;
 import lombok.RequiredArgsConstructor;
@@ -73,7 +74,8 @@ public class OptimizationTicketRepositoryImpl implements OptimizationTicketRepos
                 .id(po.getId()).tenantId(po.getTenantId()).ticketId(po.getTicketId())
                 .conversationId(po.getConversationId()).messageId(po.getMessageId())
                 .issueType(po.getIssueType()).severity(po.getSeverity()).description(po.getDescription())
-                .assignee(po.getAssignee()).status(po.getStatus())
+                .assignee(po.getAssignee())
+                .status(TicketStatus.fromCode(po.getStatus()) )
                 .resolution(po.getResolution()).resolutionType(po.getResolutionType())
                 .createdAt(po.getCreatedAt()).updatedAt(po.getUpdatedAt()).build();
     }
@@ -83,7 +85,8 @@ public class OptimizationTicketRepositoryImpl implements OptimizationTicketRepos
                 .id(ticket.getId()).tenantId(ticket.getTenantId()).ticketId(ticket.getTicketId())
                 .conversationId(ticket.getConversationId()).messageId(ticket.getMessageId())
                 .issueType(ticket.getIssueType()).severity(ticket.getSeverity()).description(ticket.getDescription())
-                .assignee(ticket.getAssignee()).status(ticket.getStatus())
+                .assignee(ticket.getAssignee())
+                .status(ticket.getStatus() != null ? ticket.getStatus().getCode() : null)
                 .resolution(ticket.getResolution()).resolutionType(ticket.getResolutionType())
                 .createdAt(ticket.getCreatedAt()).updatedAt(ticket.getUpdatedAt()).build();
     }

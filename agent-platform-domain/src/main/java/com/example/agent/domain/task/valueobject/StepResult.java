@@ -22,8 +22,8 @@ public class StepResult {
     /** 步骤 ID */
     private String stepId;
 
-    /** 执行状态: SUCCESS, FAILED, TIMEOUT, SKIPPED */
-    private String status;
+    /** 执行状态 */
+    private StepStatus status;
 
     /** 执行结果数据 */
     private Object result;
@@ -45,7 +45,7 @@ public class StepResult {
     public static StepResult success(String stepId, Object result, long durationMs) {
         return StepResult.builder()
                 .stepId(stepId)
-                .status("SUCCESS")
+                .status(StepStatus.SUCCESS)
                 .result(result)
                 .durationMs(durationMs)
                 .build();
@@ -54,7 +54,7 @@ public class StepResult {
     public static StepResult failed(String stepId, String errorMessage, long durationMs) {
         return StepResult.builder()
                 .stepId(stepId)
-                .status("FAILED")
+                .status(StepStatus.FAILED)
                 .errorMessage(errorMessage)
                 .durationMs(durationMs)
                 .build();
@@ -63,7 +63,7 @@ public class StepResult {
     public static StepResult timeout(String stepId, long durationMs) {
         return StepResult.builder()
                 .stepId(stepId)
-                .status("TIMEOUT")
+                .status(StepStatus.TIMEOUT)
                 .durationMs(durationMs)
                 .errorMessage("执行超时")
                 .build();
@@ -72,16 +72,16 @@ public class StepResult {
     public static StepResult skipped(String stepId, String reason) {
         return StepResult.builder()
                 .stepId(stepId)
-                .status("SKIPPED")
+                .status(StepStatus.SKIPPED)
                 .errorMessage(reason)
                 .build();
     }
 
     public boolean isSuccess() {
-        return "SUCCESS".equals(status);
+        return this.status == StepStatus.SUCCESS;
     }
 
     public boolean isFailed() {
-        return "FAILED".equals(status) || "TIMEOUT".equals(status);
+        return this.status == StepStatus.FAILED || this.status == StepStatus.TIMEOUT;
     }
 }

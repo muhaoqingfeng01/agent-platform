@@ -1,6 +1,7 @@
 package com.example.agent.domain.tenant;
 
 import com.example.agent.domain.security.UserView;
+import com.example.agent.domain.tenant.valueobject.UserStatusEnums;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,13 +23,13 @@ public class User {
     private String passwordHash;
     private String email;
     private String phone;
-    private String status;   // ACTIVE / DISABLED
+    private UserStatusEnums status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Boolean deleted;
 
     public boolean isActive() {
-        return "ACTIVE".equals(status);
+        return status != null && status.isActive();
     }
 
     public UserView toView() {

@@ -12,6 +12,7 @@ import com.example.agent.domain.task.repository.TaskStepExecutionRepository;
 import com.example.agent.domain.task.valueobject.*;
 import com.example.agent.infrastructure.config.websocket.ConversationWebSocketHandler;
 import com.example.agent.infrastructure.config.websocket.WebSocketMessage;
+import com.example.agent.infrastructure.config.websocket.WebSocketMessageType;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
@@ -22,11 +23,13 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * DAG 执行器 — Mediator + Facade + Observer 模式.
@@ -79,7 +82,7 @@ public class DagExecutionService {
                     .orElseThrow(() -> new BusinessException(404, "执行记录不存在: " + executionId));
             execution.start();
             executionRepository.update(execution);
-            pushProgress(conversationId, executionId, null, "RUNNING", 0, execution.getTotalSteps());
+            pushProgress(conversationId, executionId, null, ExecutionStatus.RUNNING.name(), 0, execution.getTotalSteps());
 
             // 2. 获取拓扑层级
             List<List<TaskNode>> levels = graph.getTopologicalLevels();
@@ -139,7 +142,7 @@ public class DagExecutionService {
                             }
                         }).count();
                 executionRepository.updateProgress(executionId, completed);
-                pushProgress(conversationId, executionId, null, "RUNNING", completed, execution.getTotalSteps());
+                pushProgress(conversationId, executionId, null, ExecutionStatus.RUNNING.name(), completed, execution.getTotalSteps());
 
                 // 3e. 失败时停止后续层
                 if (hasFailed) {
@@ -156,22 +159,22 @@ public class DagExecutionService {
             if (hasFailed) {
                 String errMsg = "步骤 " + failedStepId + " 执行失败";
                 executionRepository.markFailed(executionId, failedStepId, errMsg);
-                pushProgress(conversationId, executionId, null, "FAILED",
+                pushProgress(conversationId, executionId, null, ExecutionStatus.FAILED.name(),
                         finalExec.getTotalSteps(), finalExec.getTotalSteps());
             } else {
                 finalExec.complete();
                 executionRepository.update(finalExec);
-                pushProgress(conversationId, executionId, null, "COMPLETED",
+                pushProgress(conversationId, executionId, null, ExecutionStatus.COMPLETED.name(),
                         finalExec.getTotalSteps(), finalExec.getTotalSteps());
             }
 
             log.info("[DagExec] 执行完成: executionId={}, status={}", executionId,
-                    hasFailed ? "FAILED" : "COMPLETED");
+                    hasFailed ? ExecutionStatus.FAILED : ExecutionStatus.COMPLETED);
 
         } catch (Exception e) {
             log.error("[DagExec] 执行异常: executionId={}", executionId, e);
             executionRepository.markFailed(executionId, null, "执行异常: " + e.getMessage());
-            pushProgress(conversationId, executionId, null, "FAILED", 0, graph.size());
+            pushProgress(conversationId, executionId, null, ExecutionStatus.FAILED.name(), 0, graph.size());
         }
     }
 
@@ -235,7 +238,7 @@ public class DagExecutionService {
 
         // 1. 更新步骤状态为 RUNNING
         stepExecutionRepository.updateStatus(executionId, stepId, StepStatus.RUNNING);
-        pushProgress(conversationId, executionId, stepId, "RUNNING", -1, -1);
+        pushProgress(conversationId, executionId, stepId, StepStatus.RUNNING.name(), -1, -1);
 
         // 2. 参数校验
         try {
@@ -244,15 +247,15 @@ public class DagExecutionService {
             log.error("[DagExec] 步骤 {} 参数校验失败: {}", stepId, e.getMessage());
             StepResult failResult = StepResult.failed(stepId, "参数校验失败: " + e.getMessage(), 0);
             persistStepResult(executionId, stepId, failResult);
-            pushProgress(conversationId, executionId, stepId, "FAILED", -1, -1);
+            pushProgress(conversationId, executionId, stepId, StepStatus.FAILED.name(), -1, -1);
             return failResult;
         }
 
         // 3. 执行（含超时控制）
         StepResult result = TimeoutController.executeWithTimeout(handler, node.getParams(), stepId);
 
-        // 4. 失败时尝试重试
-        if (result.isFailed() && !result.getStatus().equals("TIMEOUT")) {
+        // 4. 失败时尝试重试（超时不重试）
+        if (result.isFailed() && result.getStatus() != StepStatus.TIMEOUT) {
             int maxRetries = handler.maxRetries();
             if (maxRetries > 0) {
                 log.info("[DagExec] 步骤 {} 失败，开始重试 (max={})", stepId, maxRetries);
@@ -272,7 +275,7 @@ public class DagExecutionService {
         persistStepResult(executionId, stepId, result);
 
         // 6. 推送进度
-        String wsStatus = result.isSuccess() ? "SUCCESS" : "FAILED";
+        String wsStatus = result.getStatus().name();
         pushProgress(conversationId, executionId, stepId, wsStatus, -1, -1);
 
         return result;
@@ -304,8 +307,7 @@ public class DagExecutionService {
                 outputJson = "{\"error\":\"序列化失败\"}";
             }
         }
-        StepStatus status = StepStatus.valueOf(
-                result.getStatus().equals("TIMEOUT") ? "FAILED" : result.getStatus());
+        StepStatus status = result.getStatus();
         stepExecutionRepository.updateResult(executionId, stepId, status,
                 outputJson, result.getErrorMessage(), result.getDurationMs());
     }
@@ -323,7 +325,7 @@ public class DagExecutionService {
             if (totalSteps >= 0) payload.put("totalSteps", totalSteps);
 
             WebSocketMessage msg = WebSocketMessage.builder()
-                    .type("task_progress")
+                    .type(WebSocketMessageType.TASK_PROGRESS)
                     .payload(payload)
                     .timestamp(System.currentTimeMillis())
                     .build();
@@ -374,10 +376,10 @@ public class DagExecutionService {
         // WebSocket 推送取消通知
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("executionId", executionId);
-        payload.put("status", "CANCELLED");
+        payload.put("status", ExecutionStatus.CANCELLED.name());
         payload.put("reason", reason);
         WebSocketMessage msg = WebSocketMessage.builder()
-                .type("task_cancelled")
+                .type(WebSocketMessageType.TASK_CANCELLED)
                 .payload(payload)
                 .timestamp(System.currentTimeMillis())
                 .build();

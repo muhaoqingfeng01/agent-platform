@@ -58,7 +58,7 @@ public class ToolRegistryRepositoryImpl implements ToolRegistryRepository {
 
     @Override
     public void updateStatus(String toolId, ToolStatus status) {
-        mapper.updateStatus(toolId, status.name());
+        mapper.updateStatus(toolId, status.getCode());
     }
 
     @Override
@@ -88,18 +88,18 @@ public class ToolRegistryRepositoryImpl implements ToolRegistryRepository {
     @Override
     public List<ToolRegistry> findByTenantAndType(Long tenantId, ToolType toolType, int page, int size) {
         int offset = page * size;
-        return mapper.selectByTenantAndType(tenantId, toolType.name(), offset, size).stream()
+        return mapper.selectByTenantAndType(tenantId, toolType.getCode(), offset, size).stream()
                 .map(this::toDomain).toList();
     }
 
     @Override
     public long countByTenantAndType(Long tenantId, ToolType toolType) {
-        return mapper.countByTenantAndType(tenantId, toolType.name());
+        return mapper.countByTenantAndType(tenantId, toolType.getCode());
     }
 
     @Override
     public List<ToolRegistry> findByTypeAndStatus(ToolType toolType, ToolStatus status) {
-        return mapper.selectByTypeAndStatus(toolType.name(), status.name()).stream()
+        return mapper.selectByTypeAndStatus(toolType.getCode(), status.getCode()).stream()
                 .map(this::toDomain).toList();
     }
 
@@ -143,12 +143,12 @@ public class ToolRegistryRepositoryImpl implements ToolRegistryRepository {
                 .toolId(tool.getToolId())
                 .name(tool.getName())
                 .description(tool.getDescription())
-                .toolType(tool.getToolType().name())
+                .toolType(tool.getToolType().getCode())
                 .schemaJson(toJsonString(tool.getSchema()))
                 .endpoint(tool.getEndpoint())
                 .authConfig(toJsonString(tool.getAuthConfig()))
                 .requireApproval(tool.isRequireApproval())
-                .status(tool.getStatus().name())
+                .status(tool.getStatus().getCode())
                 .version(tool.getVersion())
                 .createdAt(tool.getCreatedAt())
                 .updatedAt(tool.getUpdatedAt())

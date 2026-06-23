@@ -2,6 +2,10 @@ package com.example.agent.application.security.dto;
 
 import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.security.entity.SensitiveWord;
+import com.example.agent.domain.security.valueobject.ActionType;
+import com.example.agent.domain.security.valueobject.MatchType;
+import com.example.agent.domain.security.valueobject.SensitiveCategory;
+import com.example.agent.domain.security.valueobject.SeverityLevel;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
@@ -68,13 +72,13 @@ public class SensitiveWordResponse {
                 .tenantId(entity.getTenantId())
                 .word(entity.getWord())
                 .matchType(entity.getMatchType().name())
-                .matchTypeLabel(matchTypeLabel(entity.getMatchType().name()))
+                .matchTypeLabel(matchTypeLabel(entity.getMatchType()))
                 .category(entity.getCategory().name())
-                .categoryLabel(categoryLabel(entity.getCategory().name()))
+                .categoryLabel(categoryLabel(entity.getCategory()))
                 .severity(entity.getSeverity().name())
-                .severityLabel(severityLabel(entity.getSeverity().name()))
+                .severityLabel(severityLabel(entity.getSeverity()))
                 .action(entity.getAction().name())
-                .actionLabel(actionLabel(entity.getAction().name()))
+                .actionLabel(actionLabel(entity.getAction()))
                 .status(entity.getStatus().name())
                 .statusLabel(entity.isActive() ? "启用" : "禁用")
                 .createdAt(TimeConverters.toEpochMilli(entity.getCreatedAt()))
@@ -82,41 +86,37 @@ public class SensitiveWordResponse {
                 .build();
     }
 
-    private static String matchTypeLabel(String type) {
+    private static String matchTypeLabel(MatchType type) {
         return switch (type) {
-            case "EXACT" -> "精确匹配";
-            case "REGEX" -> "正则表达式";
-            case "SEMANTIC" -> "语义匹配";
-            default -> type;
+            case EXACT -> "精确匹配";
+            case REGEX -> "正则表达式";
+            case SEMANTIC -> "语义匹配";
         };
     }
 
-    private static String categoryLabel(String category) {
+    private static String categoryLabel(SensitiveCategory category) {
         return switch (category) {
-            case "INJECTION" -> "注入攻击";
-            case "JAILBREAK" -> "越狱检测";
-            case "PII" -> "个人隐私";
-            case "CUSTOM" -> "自定义";
-            default -> category;
+            case INJECTION -> "注入攻击";
+            case JAILBREAK -> "越狱检测";
+            case PII -> "个人隐私";
+            case CUSTOM -> "自定义";
         };
     }
 
-    private static String severityLabel(String severity) {
+    private static String severityLabel(SeverityLevel severity) {
         return switch (severity) {
-            case "LOW" -> "低";
-            case "MEDIUM" -> "中";
-            case "HIGH" -> "高";
-            case "BLOCK" -> "阻断";
-            default -> severity;
+            case LOW -> "低";
+            case MEDIUM -> "中";
+            case HIGH -> "高";
+            case BLOCK -> "阻断";
         };
     }
 
-    private static String actionLabel(String action) {
+    private static String actionLabel(ActionType action) {
         return switch (action) {
-            case "LOG" -> "仅记录";
-            case "WARN" -> "告警";
-            case "BLOCK" -> "阻断";
-            default -> action;
+            case LOG -> "仅记录";
+            case WARN -> "告警";
+            case BLOCK -> "阻断";
         };
     }
 }

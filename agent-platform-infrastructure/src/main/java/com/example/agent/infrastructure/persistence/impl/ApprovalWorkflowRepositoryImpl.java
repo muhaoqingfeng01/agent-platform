@@ -119,7 +119,7 @@ public class ApprovalWorkflowRepositoryImpl implements ApprovalWorkflowRepositor
                 .approverId(workflow.getApproverId())
                 .title(workflow.getTitle())
                 .operationDetail(workflow.getOperationDetail())
-                .status(workflow.getStatus().name())
+                .status(workflow.getStatus().getCode())
                 .approveComment(workflow.getApproveComment())
                 .timeoutAt(workflow.getTimeoutAt())
                 .approvedAt(workflow.getApprovedAt())

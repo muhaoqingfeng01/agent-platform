@@ -1,11 +1,16 @@
 package com.example.agent.domain.knowledge.valueobject;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
 /**
  * 文档切片策略枚举 — 6 种策略支持.
  *
  * @author Agent Platform Team
  * @since 1.3.0
  */
+@Getter
+@AllArgsConstructor
 public enum ChunkStrategy {
 
     /** 段落 + 滑动窗口切片 — 通用长文档（PDF/DOCX） */
@@ -27,25 +32,12 @@ public enum ChunkStrategy {
     SEMANTIC("semantic", "语义切片");
 
     private final String code;
-    private final String description;
-
-    ChunkStrategy(String code, String description) {
-        this.code = code;
-        this.description = description;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public String getDescription() {
-        return description;
-    }
+    private final String desc;
 
     public static ChunkStrategy fromCode(String code) {
         if (code == null || code.isBlank()) return null;
-        for (ChunkStrategy s : values()) {
-            if (s.code.equalsIgnoreCase(code)) return s;
+        for (ChunkStrategy e : values()) {
+            if (e.code.equalsIgnoreCase(code)) return e;
         }
         throw new IllegalArgumentException("未知切片策略: " + code);
     }

@@ -4,6 +4,7 @@ import com.example.agent.domain.security.entity.ApprovalWorkflow;
 import com.example.agent.domain.security.repository.ApprovalWorkflowRepository;
 import com.example.agent.infrastructure.config.websocket.ConversationWebSocketHandler;
 import com.example.agent.infrastructure.config.websocket.WebSocketMessage;
+import com.example.agent.infrastructure.config.websocket.WebSocketMessageType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -81,7 +82,7 @@ public class ApprovalTimeoutJob {
             payload.put("toolId", approval.getToolId());
 
             WebSocketMessage msg = WebSocketMessage.builder()
-                    .type("approval_result")
+                    .type(WebSocketMessageType.APPROVAL_RESULT)
                     .payload(payload)
                     .timestamp(System.currentTimeMillis())
                     .build();

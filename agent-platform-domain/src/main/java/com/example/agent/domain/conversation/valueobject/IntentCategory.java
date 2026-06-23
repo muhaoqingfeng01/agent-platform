@@ -12,10 +12,19 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum IntentCategory {
-    FAQ("常见问答"),
-    TASK("任务执行"),
-    CHITCHAT("闲聊"),
-    MULTI_STEP("多步骤任务");
+    FAQ("FAQ", "常见问答"),
+    TASK("TASK", "任务执行"),
+    CHITCHAT("CHITCHAT", "闲聊"),
+    MULTI_STEP("MULTI_STEP", "多步骤任务");
 
-    private final String label;
+    private final String code;
+    private final String desc;
+
+    public static IntentCategory fromCode(String code) {
+        if (code == null || code.isBlank()) return FAQ;
+        for (IntentCategory e : values()) {
+            if (e.code.equalsIgnoreCase(code)) return e;
+        }
+        throw new IllegalArgumentException("未知: " + code);
+    }
 }

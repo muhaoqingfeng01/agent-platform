@@ -19,7 +19,7 @@ import java.util.Set;
 public enum ConversationStatus {
 
     /** 活跃 — 可收发消息 */
-    ACTIVE("活跃") {
+    ACTIVE("ACTIVE", "活跃") {
         @Override
         public Set<ConversationStatus> allowedTransitions() {
             return EnumSet.of(CLOSED, ARCHIVED);
@@ -27,7 +27,7 @@ public enum ConversationStatus {
     },
 
     /** 已关闭 — 不可收发，可重开或归档 */
-    CLOSED("已关闭") {
+    CLOSED("CLOSED", "已关闭") {
         @Override
         public Set<ConversationStatus> allowedTransitions() {
             return EnumSet.of(ACTIVE, ARCHIVED);
@@ -35,14 +35,15 @@ public enum ConversationStatus {
     },
 
     /** 已归档 — 只读，不可逆 */
-    ARCHIVED("已归档") {
+    ARCHIVED("ARCHIVED", "已归档") {
         @Override
         public Set<ConversationStatus> allowedTransitions() {
             return EnumSet.noneOf(ConversationStatus.class);
         }
     };
 
-    private final String label;
+    private final String code;
+    private final String desc;
 
     /** 当前状态允许转移到的目标状态集合 */
     public abstract Set<ConversationStatus> allowedTransitions();
@@ -50,5 +51,13 @@ public enum ConversationStatus {
     /** 校验状态转移是否合法 */
     public boolean canTransitionTo(ConversationStatus target) {
         return allowedTransitions().contains(target);
+    }
+
+    public static ConversationStatus fromCode(String code) {
+        if (code == null || code.isBlank()) return ACTIVE;
+        for (ConversationStatus e : values()) {
+            if (e.code.equalsIgnoreCase(code)) return e;
+        }
+        throw new IllegalArgumentException("未知: " + code);
     }
 }

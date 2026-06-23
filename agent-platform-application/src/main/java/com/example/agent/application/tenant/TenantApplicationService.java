@@ -3,6 +3,8 @@ package com.example.agent.application.tenant;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.domain.tenant.Tenant;
 import com.example.agent.domain.tenant.TenantRepository;
+import com.example.agent.domain.tenant.valueobject.TenantStatusEnums;
+import com.example.agent.domain.tenant.valueobject.TenantTierEnums;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,7 +34,8 @@ public class TenantApplicationService {
         }
         Tenant tenant = Tenant.builder()
                 .tenantId(request.getTenantId()).name(request.getName())
-                .tier(request.getTier()).status("ACTIVE")
+                .tier(TenantTierEnums.fromCode(request.getTier()))
+                .status(TenantStatusEnums.ACTIVE)
                 .createdAt(LocalDateTime.now()).updatedAt(LocalDateTime.now()).deleted(false)
                 .build();
         tenantRepository.save(tenant);
@@ -60,7 +63,7 @@ public class TenantApplicationService {
         tenant = Tenant.builder()
                 .id(tenant.getId()).tenantId(tenant.getTenantId())
                 .name(request.getName())
-                .tier(request.getTier() != null ? request.getTier() : tenant.getTier())
+                .tier(TenantTierEnums.fromCode(request.getTier()) )
                 .configJson(request.getConfigJson() != null ? request.getConfigJson() : tenant.getConfigJson())
                 .status(tenant.getStatus()).createdAt(tenant.getCreatedAt())
                 .updatedAt(LocalDateTime.now()).deleted(tenant.getDeleted())
@@ -76,7 +79,8 @@ public class TenantApplicationService {
                 .orElseThrow(() -> new BusinessException(404, "租户不存在: " + id));
         tenant = Tenant.builder()
                 .id(tenant.getId()).tenantId(tenant.getTenantId()).name(tenant.getName())
-                .tier(tenant.getTier()).status(request.getStatus())
+                .tier(tenant.getTier())
+                .status(TenantStatusEnums.fromCode(request.getStatus()))
                 .configJson(tenant.getConfigJson()).createdAt(tenant.getCreatedAt())
                 .updatedAt(LocalDateTime.now()).deleted(tenant.getDeleted())
                 .build();

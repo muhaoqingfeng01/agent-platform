@@ -46,7 +46,7 @@ public class MessageRepositoryImpl implements MessageRepository {
 
     @Override
     public void updateFeedback(String messageId, FeedbackType feedback) {
-        messageMapper.updateFeedback(messageId, feedback.name());
+        messageMapper.updateFeedback(messageId, feedback.getCode());
     }
 
     // ==================== 映射方法 ====================
@@ -55,10 +55,10 @@ public class MessageRepositoryImpl implements MessageRepository {
         return Message.builder()
                 .messageId(po.getMessageId())
                 .conversationId(po.getConversationId())
-                .role(MessageRole.valueOf(po.getRole()))
+                .role(MessageRole.fromCode(po.getRole()))
                 .content(po.getContent())
                 .tokenCount(po.getTokenCount())
-                .feedback(po.getFeedback() != null ? FeedbackType.valueOf(po.getFeedback()) : null)
+                .feedback(po.getFeedback() != null ? FeedbackType.fromCode(po.getFeedback()) : null)
                 .createdAt(po.getCreatedAt())
                 .build();
     }
@@ -67,10 +67,10 @@ public class MessageRepositoryImpl implements MessageRepository {
         return MessagePO.builder()
                 .conversationId(message.getConversationId())
                 .messageId(message.getMessageId())
-                .role(message.getRole().name())
+                .role(message.getRole().getCode())
                 .content(message.getContent())
                 .tokenCount(message.getTokenCount())
-                .feedback(message.getFeedback() != null ? message.getFeedback().name() : null)
+                .feedback(message.getFeedback() != null ? message.getFeedback().getCode() : null)
                 .createdAt(message.getCreatedAt())
                 .build();
     }

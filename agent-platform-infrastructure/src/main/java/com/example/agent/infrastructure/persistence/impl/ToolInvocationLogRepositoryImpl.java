@@ -103,7 +103,7 @@ public class ToolInvocationLogRepositoryImpl implements ToolInvocationLogReposit
                 .executionId(log.getExecutionId())
                 .inputJson(log.getInputJson())
                 .outputJson(log.getOutputJson())
-                .status(log.getStatus().name())
+                .status(log.getStatus().getCode())
                 .durationMs(log.getDurationMs())
                 .errorMessage(log.getErrorMessage())
                 .createdAt(log.getCreatedAt())

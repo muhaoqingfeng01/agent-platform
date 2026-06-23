@@ -2,6 +2,7 @@ package com.example.agent.infrastructure.persistence.impl;
 
 import com.example.agent.domain.evaluation.entity.EvaluationRun;
 import com.example.agent.domain.evaluation.repository.EvaluationRunRepository;
+import com.example.agent.domain.evaluation.valueobject.EvaluationRunStatusEnums;
 import com.example.agent.infrastructure.persistence.mapper.EvaluationRunMapper;
 import com.example.agent.infrastructure.persistence.po.EvaluationRunPO;
 import lombok.RequiredArgsConstructor;
@@ -53,7 +54,8 @@ public class EvaluationRunRepositoryImpl implements EvaluationRunRepository {
     private EvaluationRun toDomain(EvaluationRunPO po) {
         return EvaluationRun.builder()
                 .id(po.getId()).tenantId(po.getTenantId()).evaluationId(po.getEvaluationId())
-                .agentId(po.getAgentId()).datasetId(po.getDatasetId()).status(po.getStatus())
+                .agentId(po.getAgentId()).datasetId(po.getDatasetId())
+                .status(po.getStatus() != null ? EvaluationRunStatusEnums.fromCode(po.getStatus()) : null)
                 .overallScore(po.getOverallScore()).metricsJson(po.getMetricsJson())
                 .createdAt(po.getCreatedAt()).finishedAt(po.getFinishedAt()).build();
     }
@@ -61,7 +63,8 @@ public class EvaluationRunRepositoryImpl implements EvaluationRunRepository {
     private EvaluationRunPO toPO(EvaluationRun run) {
         return EvaluationRunPO.builder()
                 .id(run.getId()).tenantId(run.getTenantId()).evaluationId(run.getEvaluationId())
-                .agentId(run.getAgentId()).datasetId(run.getDatasetId()).status(run.getStatus())
+                .agentId(run.getAgentId()).datasetId(run.getDatasetId())
+                .status(run.getStatus() != null ? run.getStatus().getCode() : null)
                 .overallScore(run.getOverallScore()).metricsJson(run.getMetricsJson())
                 .createdAt(run.getCreatedAt()).finishedAt(run.getFinishedAt()).build();
     }

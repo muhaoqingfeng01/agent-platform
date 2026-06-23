@@ -13,6 +13,7 @@ import com.example.agent.domain.tool.entity.ToolRegistry;
 import com.example.agent.domain.tool.repository.ToolRegistryRepository;
 import com.example.agent.infrastructure.config.websocket.ConversationWebSocketHandler;
 import com.example.agent.infrastructure.config.websocket.WebSocketMessage;
+import com.example.agent.infrastructure.config.websocket.WebSocketMessageType;
 import com.example.agent.infrastructure.context.TenantContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -220,10 +221,10 @@ public class ApprovalWorkflowApplicationService {
     public Map<String, Object> stats() {
         Long tenantId = TenantContext.getCurrentTenantId();
         Map<String, Object> stats = new LinkedHashMap<>();
-        stats.put("pending", approvalRepository.countByStatus(tenantId, "PENDING"));
-        stats.put("approved", approvalRepository.countByStatus(tenantId, "APPROVED"));
-        stats.put("rejected", approvalRepository.countByStatus(tenantId, "REJECTED"));
-        stats.put("timeout", approvalRepository.countByStatus(tenantId, "TIMEOUT"));
+        stats.put("pending", approvalRepository.countByStatus(tenantId, ApprovalStatus.PENDING.name()));
+        stats.put("approved", approvalRepository.countByStatus(tenantId, ApprovalStatus.APPROVED.name()));
+        stats.put("rejected", approvalRepository.countByStatus(tenantId, ApprovalStatus.REJECTED.name()));
+        stats.put("timeout", approvalRepository.countByStatus(tenantId, ApprovalStatus.TIMEOUT.name()));
         stats.put("total", approvalRepository.countByTenant(tenantId));
         return stats;
     }
@@ -265,7 +266,7 @@ public class ApprovalWorkflowApplicationService {
             payload.put("operationDetail", approval.getOperationDetail());
 
             WebSocketMessage msg = WebSocketMessage.builder()
-                    .type("approval_card")
+                    .type(WebSocketMessageType.APPROVAL_CARD)
                     .payload(payload)
                     .timestamp(System.currentTimeMillis())
                     .build();
@@ -294,7 +295,7 @@ public class ApprovalWorkflowApplicationService {
                     ? approval.getApprovedAt().toString() : null);
 
             WebSocketMessage msg = WebSocketMessage.builder()
-                    .type("approval_result")
+                    .type(WebSocketMessageType.APPROVAL_RESULT)
                     .payload(payload)
                     .timestamp(System.currentTimeMillis())
                     .build();

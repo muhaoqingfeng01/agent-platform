@@ -97,7 +97,7 @@ public class PromptApplicationService {
         PromptTemplate template = getTemplateWithAccess(promptId);
 
         if (template.getStatus() != PromptStatus.DRAFT) {
-            throw new BusinessException(400, "仅草稿状态可编辑，当前状态: " + template.getStatus().getLabel());
+            throw new BusinessException(400, "仅草稿状态可编辑，当前状态: " + template.getStatus().getDesc());
         }
 
         String name = request.getName() != null ? request.getName() : template.getName();
@@ -287,7 +287,7 @@ public class PromptApplicationService {
 
         if (!template.isPublished()) {
             throw new BusinessException(400, "仅已发布的模板可用于运行时渲染，当前状态: "
-                    + template.getStatus().getLabel());
+                    + template.getStatus().getDesc());
         }
 
         return renderService.renderWithValidation(
@@ -363,7 +363,7 @@ public class PromptApplicationService {
                     .variables(template.getVariables())
                     .version(template.getVersion())
                     .status(template.getStatus().name())
-                    .statusLabel(template.getStatus().getLabel())
+                    .statusLabel(template.getStatus().getDesc())
                     .abTestConfig(template.getAbTestConfig())
                     .createdAt(TimeConverters.toEpochMilli(template.getCreatedAt()))
                     .updatedAt(TimeConverters.toEpochMilli(template.getUpdatedAt()))

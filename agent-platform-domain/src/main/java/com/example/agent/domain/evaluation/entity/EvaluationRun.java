@@ -1,5 +1,6 @@
 package com.example.agent.domain.evaluation.entity;
 
+import com.example.agent.domain.evaluation.valueobject.EvaluationRunStatusEnums;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -21,21 +22,21 @@ public class EvaluationRun {
     private String evaluationId;
     private String agentId;
     private String datasetId;
-    private String status;
+    private EvaluationRunStatusEnums status;
     private BigDecimal overallScore;
     private String metricsJson;
     private LocalDateTime createdAt;
     private LocalDateTime finishedAt;
 
     public void complete(BigDecimal score, String metrics) {
-        this.status = "COMPLETED";
+        this.status = EvaluationRunStatusEnums.COMPLETED;
         this.overallScore = score;
         this.metricsJson = metrics;
         this.finishedAt = LocalDateTime.now();
     }
 
     public void fail() {
-        this.status = "FAILED";
+        this.status = EvaluationRunStatusEnums.FAILED;
         this.finishedAt = LocalDateTime.now();
     }
 }

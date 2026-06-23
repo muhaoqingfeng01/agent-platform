@@ -1,11 +1,16 @@
 package com.example.agent.domain.knowledge.valueobject;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
 /**
  * 检索策略预设枚举.
  *
  * @author Agent Platform Team
  * @since 1.3.0
  */
+@Getter
+@AllArgsConstructor
 public enum SearchStrategy {
     /** 高精度 — 医疗/法律/金融 */
     PRECISE("precise", "高精度"),
@@ -19,21 +24,13 @@ public enum SearchStrategy {
     TURBO("turbo", "极速");
 
     private final String code;
-    private final String description;
-
-    SearchStrategy(String code, String description) {
-        this.code = code;
-        this.description = description;
-    }
-
-    public String getCode() { return code; }
-    public String getDescription() { return description; }
+    private final String desc;
 
     public static SearchStrategy fromCode(String code) {
         if (code == null || code.isBlank()) return BALANCED;
-        for (SearchStrategy s : values()) {
-            if (s.code.equalsIgnoreCase(code)) return s;
+        for (SearchStrategy e : values()) {
+            if (e.code.equalsIgnoreCase(code)) return e;
         }
-        throw new IllegalArgumentException("未知检索策略: " + code);
+        return BALANCED;
     }
 }

@@ -79,7 +79,7 @@ public class ToolRegistryVersionRepositoryImpl implements ToolRegistryVersionRep
                 .toolId(version.getToolId())
                 .version(version.getVersion())
                 .toolName(version.getToolName())
-                .toolType(version.getToolType().name())
+                .toolType(version.getToolType().getCode())
                 .endpointUrl(version.getEndpointUrl())
                 .inputSchema(version.getInputSchema())
                 .outputSchema(version.getOutputSchema())

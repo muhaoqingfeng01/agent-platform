@@ -54,13 +54,13 @@ public class OptimizationTicketService {
         OptimizationTicket ticket = ticketRepository.findByTicketId(ticketId);
         if (ticket == null) throw new RuntimeException("工单不存在: " + ticketId);
 
-        TicketStatus current = TicketStatus.fromCode(ticket.getStatus());
+        TicketStatus current = ticket.getStatus();
         TicketStatus target = TicketStatus.fromCode(newStatus);
         if (!current.canTransitionTo(target)) {
             throw new IllegalArgumentException("状态流转不允许: " + current + " → " + target);
         }
 
-        ticket = ticket.toBuilder().status(target.name()).build();
+        ticket = ticket.toBuilder().status(target).build();
         ticketRepository.updateById(ticket);
         log.info("[Optimization] 工单状态更新: ticketId={}, {} → {}", ticketId, current, target);
         return toResponse(ticket);
@@ -82,7 +82,7 @@ public class OptimizationTicketService {
         LocalDateTime since = LocalDateTime.now().minusDays(days);
 
         long total = ticketRepository.countCreatedSince(tenantId, since);
-        long resolved = ticketRepository.countByStatusAndSince(tenantId, "RESOLVED", since);
+        long resolved = ticketRepository.countByStatusAndSince(tenantId, TicketStatus.RESOLVED.getCode(), since);
         double resolveRate = total > 0 ? (double) resolved / total * 100 : 0;
 
         return FeedbackStatsResponse.builder()
@@ -96,7 +96,7 @@ public class OptimizationTicketService {
                 .ticketId(ticket.getTicketId()).conversationId(ticket.getConversationId())
                 .messageId(ticket.getMessageId()).issueType(ticket.getIssueType())
                 .severity(ticket.getSeverity()).description(ticket.getDescription())
-                .assignee(ticket.getAssignee()).status(ticket.getStatus())
+                .assignee(ticket.getAssignee()).status(ticket.getStatus().getCode())
                 .resolution(ticket.getResolution()).resolutionType(ticket.getResolutionType())
                 .createdAt(TimeConverters.toEpochMilli(ticket.getCreatedAt())).updatedAt(TimeConverters.toEpochMilli(ticket.getUpdatedAt())).build();
     }

@@ -52,12 +52,12 @@ public class DocumentRepositoryImpl implements DocumentRepository {
 
     @Override
     public List<Document> findByStatus(DocumentStatus status) {
-        return mapper.selectByStatus(status.name()).stream().map(this::toDomain).toList();
+        return mapper.selectByStatus(status.getCode()).stream().map(this::toDomain).toList();
     }
 
     @Override
     public void updateStatus(String documentId, DocumentStatus status) {
-        mapper.updateStatus(documentId, status.name());
+        mapper.updateStatus(documentId, status.getCode());
     }
 
     @Override
@@ -78,7 +78,7 @@ public class DocumentRepositoryImpl implements DocumentRepository {
 
     @Override
     public long countByKnowledgeIdAndStatus(String knowledgeId, DocumentStatus status) {
-        return mapper.countByKnowledgeIdAndStatus(knowledgeId, status.name());
+        return mapper.countByKnowledgeIdAndStatus(knowledgeId, status.getCode());
     }
 
     @Override
@@ -100,7 +100,7 @@ public class DocumentRepositoryImpl implements DocumentRepository {
                 .minioPath(po.getMinioPath())
                 .contentHash(po.getContentHash())
                 .chunkCount(po.getChunkCount() != null ? po.getChunkCount() : 0)
-                .status(po.getStatus() != null ? DocumentStatus.valueOf(po.getStatus()) : null)
+                .status(po.getStatus() != null ? DocumentStatus.fromCode(po.getStatus()) : null)
                 .errorMessage(po.getErrorMessage())
                 .uploadedBy(po.getUploadedBy())
                 .uploadedAt(po.getUploadedAt())
@@ -125,7 +125,7 @@ public class DocumentRepositoryImpl implements DocumentRepository {
                 .minioPath(doc.getMinioPath())
                 .contentHash(doc.getContentHash())
                 .chunkCount(doc.getChunkCount())
-                .status(doc.getStatus() != null ? doc.getStatus().name() : null)
+                .status(doc.getStatus() != null ? doc.getStatus().getCode() : null)
                 .errorMessage(doc.getErrorMessage())
                 .uploadedBy(doc.getUploadedBy())
                 .uploadedAt(doc.getUploadedAt())

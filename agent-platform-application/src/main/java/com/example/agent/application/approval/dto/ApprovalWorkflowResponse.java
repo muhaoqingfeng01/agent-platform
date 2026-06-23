@@ -2,6 +2,7 @@ package com.example.agent.application.approval.dto;
 
 import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.security.entity.ApprovalWorkflow;
+import com.example.agent.domain.security.valueobject.ApprovalStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
@@ -87,7 +88,7 @@ public class ApprovalWorkflowResponse {
                 .title(entity.getTitle())
                 .operationDetail(entity.getOperationDetail())
                 .status(entity.getStatus().name())
-                .statusLabel(statusLabel(entity.getStatus().name()))
+                .statusLabel(statusLabel(entity.getStatus()))
                 .approveComment(entity.getApproveComment())
                 .timeoutAt(TimeConverters.toEpochMilli(entity.getTimeoutAt()))
                 .approvedAt(TimeConverters.toEpochMilli(entity.getApprovedAt()))
@@ -98,14 +99,13 @@ public class ApprovalWorkflowResponse {
                 .build();
     }
 
-    private static String statusLabel(String status) {
+    private static String statusLabel(ApprovalStatus status) {
         return switch (status) {
-            case "PENDING" -> "待审批";
-            case "APPROVED" -> "已同意";
-            case "REJECTED" -> "已拒绝";
-            case "TIMEOUT" -> "已超时";
-            case "CANCELLED" -> "已取消";
-            default -> status;
+            case PENDING -> "待审批";
+            case APPROVED -> "已同意";
+            case REJECTED -> "已拒绝";
+            case TIMEOUT -> "已超时";
+            case CANCELLED -> "已取消";
         };
     }
 }

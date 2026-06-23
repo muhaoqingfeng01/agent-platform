@@ -1,10 +1,10 @@
 package com.example.agent.application.knowledge;
 
-import com.example.agent.application.knowledge.dto.*;
+import com.example.agent.application.knowledge.dto.DocumentDTO;
 import com.example.agent.application.knowledge.pipeline.DocumentPipelineOrchestrator;
 import com.example.agent.common.dto.PageResponse;
-import com.example.agent.common.exception.ResourceNotFoundException;
 import com.example.agent.common.exception.BusinessException;
+import com.example.agent.common.exception.ResourceNotFoundException;
 import com.example.agent.common.util.IdGenerator;
 import com.example.agent.domain.knowledge.entity.Document;
 import com.example.agent.domain.knowledge.entity.DocumentChunk;
@@ -15,6 +15,7 @@ import com.example.agent.domain.knowledge.service.DocumentLifecycleDomainService
 import com.example.agent.domain.knowledge.service.KnowledgeBaseDomainService;
 import com.example.agent.domain.knowledge.service.MilvusStoreClient;
 import com.example.agent.domain.knowledge.valueobject.DocumentStatus;
+import com.example.agent.infrastructure.config.storage.MinioConfig;
 import com.example.agent.infrastructure.context.TenantContext;
 import io.minio.GetObjectArgs;
 import io.minio.MinioClient;
@@ -27,9 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.List;
@@ -53,8 +52,10 @@ public class DocumentApplicationService {
     private final DocumentPipelineOrchestrator pipelineOrchestrator;
     private final MilvusStoreClient milvusStore;
     private final MinioClient minioClient;
+    private final MinioConfig minioConfig;
 
-    private static final String MINIO_BUCKET = "knowledge-docs";
+    /** MinIO part size: 5MB for multipart uploads, -1 for single-shot below 5MB */
+    private static final long MIN_PART_SIZE = 5 * 1024 * 1024L;
 
     /**
      * 上传文档（含 MinIO 存储）— Controller 传入 MultipartFile，此处处理完整流程.
@@ -77,14 +78,16 @@ public class DocumentApplicationService {
         String minioPath = knowledgeId + "/" + documentId + "/" + filename;
 
         // 1. 上传到 MinIO
+        //    partSize: 文件>5MB 时使用 5MB part 以启用分片上传; ≤5MB 使用 -1 一次性上传
+        long partSize = fileSize > MIN_PART_SIZE ? MIN_PART_SIZE : -1;
         try {
             minioClient.putObject(PutObjectArgs.builder()
-                    .bucket(MINIO_BUCKET)
+                    .bucket(minioConfig.getBucket())
                     .object(minioPath)
-                    .stream(file.getInputStream(), fileSize, -1)
+                    .stream(file.getInputStream(), fileSize, partSize)
                     .contentType(resolveMimeType(fileType))
                     .build());
-            log.info("[MinIO] 文件上传成功: bucket={}, path={}, size={}", MINIO_BUCKET, minioPath, fileSize);
+            log.info("[MinIO] 文件上传成功: bucket={}, path={}, size={}", minioConfig.getBucket(), minioPath, fileSize);
         } catch (Exception e) {
             throw new BusinessException(500, "文件上传到 MinIO 失败: " + filename, e);
         }
@@ -138,7 +141,7 @@ public class DocumentApplicationService {
 
         try {
             return minioClient.getObject(GetObjectArgs.builder()
-                    .bucket(MINIO_BUCKET)
+                    .bucket(minioConfig.getBucket())
                     .object(doc.getMinioPath())
                     .build());
         } catch (Exception e) {
@@ -278,7 +281,7 @@ public class DocumentApplicationService {
         // 删除 MinIO 文件
         try {
             minioClient.removeObject(RemoveObjectArgs.builder()
-                    .bucket(MINIO_BUCKET)
+                    .bucket(minioConfig.getBucket())
                     .object(doc.getMinioPath())
                     .build());
         } catch (Exception e) {

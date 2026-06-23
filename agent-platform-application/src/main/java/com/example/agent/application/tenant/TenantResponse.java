@@ -2,8 +2,12 @@ package com.example.agent.application.tenant;
 
 import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.tenant.Tenant;
+import com.example.agent.domain.tenant.valueobject.TenantStatusEnums;
+import com.example.agent.domain.tenant.valueobject.TenantTierEnums;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
+import java.util.Optional;
 
 @Data
 public class TenantResponse {
@@ -27,8 +31,8 @@ public class TenantResponse {
         r.setId(t.getId());
         r.setTenantId(t.getTenantId());
         r.setName(t.getName());
-        r.setStatus(t.getStatus());
-        r.setTier(t.getTier());
+        r.setStatus(Optional.ofNullable(t.getStatus()).map(TenantStatusEnums::getCode).orElse(null));
+        r.setTier(Optional.ofNullable(t.getTier()).map(TenantTierEnums::getCode).orElse(null));
         r.setConfigJson(t.getConfigJson());
         r.setCreatedAt(TimeConverters.toEpochMilli(t.getCreatedAt()));
         return r;

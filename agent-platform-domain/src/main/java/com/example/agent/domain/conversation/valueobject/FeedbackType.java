@@ -2,6 +2,8 @@ package com.example.agent.domain.conversation.valueobject;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 /**
  * 消息反馈类型枚举.
@@ -9,13 +11,18 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * @author Agent Platform Team
  * @since 1.0.0
  */
+@Getter
+@AllArgsConstructor
 public enum FeedbackType {
-    LIKE,
-    DISLIKE;
+    LIKE("LIKE", "点赞"),
+    DISLIKE("DISLIKE", "点踩");
+
+    private final String code;
+    private final String desc;
 
     @JsonValue
     public String getValue() {
-        return name();
+        return code;
     }
 
     /**
@@ -29,6 +36,17 @@ public enum FeedbackType {
         if (value == null || value.isBlank()) {
             return null;
         }
-        return FeedbackType.valueOf(value.toUpperCase());
+        for (FeedbackType e : values()) {
+            if (e.code.equalsIgnoreCase(value)) return e;
+        }
+        return null;
+    }
+
+    public static FeedbackType fromCode(String code) {
+        if (code == null || code.isBlank()) return null;
+        for (FeedbackType e : values()) {
+            if (e.code.equalsIgnoreCase(code)) return e;
+        }
+        throw new IllegalArgumentException("未知: " + code);
     }
 }

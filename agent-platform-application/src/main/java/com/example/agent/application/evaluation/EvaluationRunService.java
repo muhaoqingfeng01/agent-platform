@@ -7,6 +7,7 @@ import com.example.agent.domain.evaluation.entity.EvaluationDatasetItem;
 import com.example.agent.domain.evaluation.entity.EvaluationRun;
 import com.example.agent.domain.evaluation.repository.EvaluationDatasetRepository;
 import com.example.agent.domain.evaluation.repository.EvaluationRunRepository;
+import com.example.agent.domain.evaluation.valueobject.EvaluationRunStatusEnums;
 import com.example.agent.infrastructure.context.TenantContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,7 +51,7 @@ public class EvaluationRunService {
         EvaluationRun run = EvaluationRun.builder()
                 .tenantId(tenantId).evaluationId(evaluationId)
                 .agentId(agentId).datasetId(datasetId)
-                .status("RUNNING").build();
+                .status(EvaluationRunStatusEnums.RUNNING).build();
         runRepository.save(run);
 
         // 获取数据集样本
@@ -189,7 +190,7 @@ public class EvaluationRunService {
     private EvaluationRunResponse toResponse(EvaluationRun run) {
         return EvaluationRunResponse.builder()
                 .evaluationId(run.getEvaluationId()).agentId(run.getAgentId())
-                .datasetId(run.getDatasetId()).status(run.getStatus())
+                .datasetId(run.getDatasetId()).status(run.getStatus().getCode())
                 .overallScore(run.getOverallScore()).metricsJson(run.getMetricsJson())
                 .createdAt(TimeConverters.toEpochMilli(run.getCreatedAt())).finishedAt(TimeConverters.toEpochMilli(run.getFinishedAt())).build();
     }

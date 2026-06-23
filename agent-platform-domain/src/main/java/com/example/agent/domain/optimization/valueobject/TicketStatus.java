@@ -1,28 +1,26 @@
 package com.example.agent.domain.optimization.valueobject;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
 /**
  * 优化工单状态 — 含状态流转规则.
  *
  * @author Agent Platform Team
  * @since 1.0.0
  */
+@Getter
+@AllArgsConstructor
 public enum TicketStatus {
 
-    OPEN("待处理"),
-    ANALYZING("分析中"),
-    IN_PROGRESS("处理中"),
-    RESOLVED("已解决"),
-    CLOSED("已关闭");
+    OPEN("OPEN", "待处理"),
+    ANALYZING("ANALYZING", "分析中"),
+    IN_PROGRESS("IN_PROGRESS", "处理中"),
+    RESOLVED("RESOLVED", "已解决"),
+    CLOSED("CLOSED", "已关闭");
 
-    private final String label;
-
-    TicketStatus(String label) {
-        this.label = label;
-    }
-
-    public String getLabel() {
-        return label;
-    }
+    private final String code;
+    private final String desc;
 
     /** 校验状态流转是否合法 */
     public boolean canTransitionTo(TicketStatus target) {
@@ -36,11 +34,10 @@ public enum TicketStatus {
     }
 
     public static TicketStatus fromCode(String code) {
-        if (code == null) return OPEN;
-        try {
-            return valueOf(code.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            return OPEN;
+        if (code == null || code.isBlank()) return OPEN;
+        for (TicketStatus e : values()) {
+            if (e.code.equalsIgnoreCase(code)) return e;
         }
+        return OPEN;
     }
 }

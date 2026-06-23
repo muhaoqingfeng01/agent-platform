@@ -12,10 +12,19 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum MessageRole {
-    USER("用户"),
-    ASSISTANT("助手"),
-    SYSTEM("系统"),
-    TOOL("工具");
+    USER("USER", "用户"),
+    ASSISTANT("ASSISTANT", "助手"),
+    SYSTEM("SYSTEM", "系统"),
+    TOOL("TOOL", "工具");
 
-    private final String label;
+    private final String code;
+    private final String desc;
+
+    public static MessageRole fromCode(String code) {
+        if (code == null || code.isBlank()) return USER;
+        for (MessageRole e : values()) {
+            if (e.code.equalsIgnoreCase(code)) return e;
+        }
+        throw new IllegalArgumentException("未知: " + code);
+    }
 }

@@ -2,6 +2,8 @@ package com.example.agent.infrastructure.persistence.impl;
 
 import com.example.agent.domain.tenant.Tenant;
 import com.example.agent.domain.tenant.TenantRepository;
+import com.example.agent.domain.tenant.valueobject.TenantStatusEnums;
+import com.example.agent.domain.tenant.valueobject.TenantTierEnums;
 import com.example.agent.infrastructure.persistence.mapper.TenantMapper;
 import com.example.agent.infrastructure.persistence.po.TenantPO;
 import lombok.RequiredArgsConstructor;
@@ -66,8 +68,8 @@ public class TenantRepositoryImpl implements TenantRepository {
                 .id(po.getId())
                 .tenantId(po.getTenantId())
                 .name(po.getName())
-                .status(po.getStatus())
-                .tier(po.getTier())
+                .status( TenantStatusEnums.fromCode(po.getStatus()))
+                .tier(TenantTierEnums.fromCode(po.getTier()))
                 .configJson(po.getConfigJson())
                 .createdAt(po.getCreatedAt())
                 .updatedAt(po.getUpdatedAt())
@@ -80,8 +82,8 @@ public class TenantRepositoryImpl implements TenantRepository {
                 .id(tenant.getId())
                 .tenantId(tenant.getTenantId())
                 .name(tenant.getName())
-                .status(tenant.getStatus())
-                .tier(tenant.getTier())
+                .status(Optional.ofNullable(tenant.getStatus()).map(TenantStatusEnums::getCode).orElse(null))
+                .tier(Optional.ofNullable(tenant.getTier()).map(TenantTierEnums::getCode).orElse(null))
                 .configJson(tenant.getConfigJson())
                 .createdAt(tenant.getCreatedAt())
                 .updatedAt(tenant.getUpdatedAt())

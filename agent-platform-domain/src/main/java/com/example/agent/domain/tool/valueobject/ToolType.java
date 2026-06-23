@@ -17,28 +17,19 @@ import lombok.Getter;
 public enum ToolType {
 
     /** MCP 协议工具 — 通过 MCP SSE 端点连接外部 MCP Server */
-    MCP("MCP工具"),
+    MCP("MCP", "MCP协议工具"),
 
     /** HTTP 接口工具 — 将 REST API 包装为统一工具调用格式 */
-    HTTP("HTTP接口"),
+    HTTP("HTTP", "HTTP接口工具"),
 
     /** 内置工具 — 平台内置的 Java ActionHandler 实现 */
-    BUILTIN("内置工具"),
+    BUILTIN("BUILTIN", "内置工具"),
 
     /** 自定义工具 — 用户自定义脚本或扩展 */
-    CUSTOM("自定义工具");
+    CUSTOM("CUSTOM", "自定义工具");
 
-    /** 中文标签，用于前端展示和日志输出 */
-    private final String label;
-
-    /**
-     * 获取中文显示名称.
-     *
-     * @return 中文标签
-     */
-    public String toChinese() {
-        return this.label;
-    }
+    private final String code;
+    private final String desc;
 
     /**
      * 根据代码字符串查找对应的枚举值.
@@ -48,10 +39,9 @@ public enum ToolType {
      * @throws IllegalArgumentException 如果代码不匹配任何已知类型
      */
     public static ToolType fromCode(String code) {
-        for (ToolType type : values()) {
-            if (type.name().equalsIgnoreCase(code)) {
-                return type;
-            }
+        if (code == null || code.isBlank()) return MCP;
+        for (ToolType e : values()) {
+            if (e.code.equalsIgnoreCase(code)) return e;
         }
         throw new IllegalArgumentException("未知的工具类型: " + code + "，有效值: MCP, HTTP, BUILTIN, CUSTOM");
     }

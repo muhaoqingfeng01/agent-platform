@@ -73,7 +73,7 @@ public class KnowledgeBaseRepositoryImpl implements KnowledgeBaseRepository {
 
     @Override
     public void updateIndexConfig(String knowledgeId, IndexType indexType, String indexParamsJson) {
-        mapper.updateIndexConfig(knowledgeId, indexType.name(), indexParamsJson);
+        mapper.updateIndexConfig(knowledgeId, indexType.getCode(), indexParamsJson);
     }
 
     @Override
@@ -96,12 +96,12 @@ public class KnowledgeBaseRepositoryImpl implements KnowledgeBaseRepository {
 
     @Override
     public void updateKnowledgeBaseStatus(String knowledgeId, KnowledgeBaseStatus status) {
-        mapper.updateStatus(knowledgeId, status.name());
+        mapper.updateStatus(knowledgeId, status.getCode());
     }
 
     @Override
     public List<KnowledgeBase> findByTenantAndStatus(Long tenantId, KnowledgeBaseStatus status) {
-        return mapper.selectByTenantAndStatus(tenantId, status.name()).stream()
+        return mapper.selectByTenantAndStatus(tenantId, status.getCode()).stream()
                 .map(this::toDomain).toList();
     }
 
@@ -145,10 +145,10 @@ public class KnowledgeBaseRepositoryImpl implements KnowledgeBaseRepository {
                 .chunkSize(kb.getChunkSize())
                 .chunkOverlap(kb.getChunkOverlap())
                 .documentCount(kb.getDocumentCount())
-                .status(kb.getStatus().name())
+                .status(kb.getStatus().getCode())
                 .defaultChunkStrategy(kb.getDefaultChunkStrategy())
                 .chunkConfigJson(kb.getChunkConfigJson())
-                .indexType(kb.getIndexType() != null ? kb.getIndexType().name() : null)
+                .indexType(kb.getIndexType() != null ? kb.getIndexType().getCode() : null)
                 .indexParamsJson(kb.getIndexParamsJson())
                 .searchStrategy(kb.getSearchStrategy())
                 .searchParamsJson(kb.getSearchParamsJson())

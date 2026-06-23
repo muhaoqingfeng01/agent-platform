@@ -164,7 +164,7 @@ public class StreamOrchestrationService {
     private String buildFullPrompt(List<Message> history, String userContent) {
         StringBuilder sb = new StringBuilder();
         for (Message msg : history) {
-            sb.append(msg.getRole().getLabel()).append(": ").append(msg.getContent()).append("\n");
+            sb.append(msg.getRole().getDesc()).append(": ").append(msg.getContent()).append("\n");
         }
         sb.append("User: ").append(userContent);
         return sb.toString();

@@ -132,6 +132,12 @@ interfaces → application → domain ← infrastructure
 10. **`spring-ai-alibaba-agent-framework` 不含 ChatModel**，需单独引入模型依赖（项目用 DeepSeek）
 11. **新增依赖后必须 `mvn install`**，否则 bootstrap 模块解析不到传递依赖
 12. **Application 层禁止 import interfaces 层** — DTO 必须下沉到 Application 层，否则循环依赖
+13. **🔴 枚举统一规范（强制）** — 所有枚举必须有 `code` + `desc` 两个字段，使用 `fromCode(code)` 获取枚举，使用 `getCode()` 序列化，**禁止使用 `name()` 进行枚举比较或 `valueOf()` 转换**
+    - 格式: `@Getter @AllArgsConstructor public enum Xxx { VALUE("VALUE", "中文描述"); private final String code; private final String desc; }`
+    - code 必须与枚举常量名一致（`name()`）
+    - 所有枚举强制包含 `fromCode(String code)` 工厂方法，通过 `e.code.equalsIgnoreCase(code)` 比较
+    - Repository 中 toDomain 用 `Xxx.fromCode(po.getXxx())`，toPO 用 `entity.getXxx().getCode()`
+    - 同类型枚举比较用 `==` 直接比较；String→枚举用 `fromCode()`；枚举→String 用 `getCode()`
 
 ---
 

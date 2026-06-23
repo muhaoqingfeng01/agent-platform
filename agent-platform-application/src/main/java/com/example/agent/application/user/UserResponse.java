@@ -2,8 +2,11 @@ package com.example.agent.application.user;
 
 import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.tenant.User;
+import com.example.agent.domain.tenant.valueobject.UserStatusEnums;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+
+import java.util.Optional;
 
 @Data
 public class UserResponse {
@@ -24,7 +27,7 @@ public class UserResponse {
         r.setUsername(u.getUsername());
         r.setEmail(u.getEmail());
         r.setPhone(u.getPhone());
-        r.setStatus(u.getStatus());
+        r.setStatus(Optional.ofNullable(u.getStatus()).map(UserStatusEnums::getCode).orElse(UserStatusEnums.DISABLED.getCode()));
         r.setCreatedAt(TimeConverters.toEpochMilli(u.getCreatedAt()));
         return r;
     }

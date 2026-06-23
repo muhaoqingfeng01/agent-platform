@@ -56,7 +56,7 @@ public class ConversationRepositoryImpl implements ConversationRepository {
 
     @Override
     public void updateStatus(String conversationId, ConversationStatus status) {
-        conversationMapper.updateStatus(conversationId, status.name());
+        conversationMapper.updateStatus(conversationId, status.getCode());
     }
 
     @Override
@@ -83,7 +83,7 @@ public class ConversationRepositoryImpl implements ConversationRepository {
                 .agentId(po.getAgentId())
                 .userId(po.getUserId())
                 .title(po.getTitle())
-                .status(ConversationStatus.valueOf(po.getStatus()))
+                .status(ConversationStatus.fromCode(po.getStatus()))
                 .messageCount(po.getMessageCount() != null ? po.getMessageCount() : 0)
                 .totalTokens(po.getTotalTokens() != null ? po.getTotalTokens() : 0L)
                 .createdAt(po.getCreatedAt())
@@ -98,7 +98,7 @@ public class ConversationRepositoryImpl implements ConversationRepository {
                 .agentId(conversation.getAgentId())
                 .userId(conversation.getUserId())
                 .title(conversation.getTitle())
-                .status(conversation.getStatus().name())
+                .status(conversation.getStatus().getCode())
                 .messageCount(conversation.getMessageCount())
                 .totalTokens(conversation.getTotalTokens())
                 .createdAt(conversation.getCreatedAt())

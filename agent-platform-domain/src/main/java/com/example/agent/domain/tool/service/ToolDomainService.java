@@ -80,7 +80,7 @@ public class ToolDomainService {
     public void assertCanEnable(ToolRegistry tool) {
         if (tool.getStatus() != ToolStatus.DISABLED) {
             throw new IllegalStateException(
-                    "只有已禁用的工具才能启用，当前状态: " + tool.getStatus().toChinese()
+                    "只有已禁用的工具才能启用，当前状态: " + tool.getStatus().getDesc()
                             + " (toolId=" + tool.getToolId() + ")");
         }
         log.debug("[Tool] 启用校验通过: toolId={}", tool.getToolId());
@@ -95,7 +95,7 @@ public class ToolDomainService {
     public void assertCanDisable(ToolRegistry tool) {
         if (tool.getStatus() != ToolStatus.ACTIVE) {
             throw new IllegalStateException(
-                    "只有已启用的工具才能禁用，当前状态: " + tool.getStatus().toChinese()
+                    "只有已启用的工具才能禁用，当前状态: " + tool.getStatus().getDesc()
                             + " (toolId=" + tool.getToolId() + ")");
         }
         log.debug("[Tool] 禁用校验通过: toolId={}", tool.getToolId());

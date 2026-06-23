@@ -12,8 +12,17 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum IntentStatus {
-    ACTIVE("启用"),
-    DISABLED("禁用");
+    ACTIVE("ACTIVE", "启用"),
+    DISABLED("DISABLED", "禁用");
 
-    private final String label;
+    private final String code;
+    private final String desc;
+
+    public static IntentStatus fromCode(String code) {
+        if (code == null || code.isBlank()) return ACTIVE;
+        for (IntentStatus e : values()) {
+            if (e.code.equalsIgnoreCase(code)) return e;
+        }
+        throw new IllegalArgumentException("未知: " + code);
+    }
 }
