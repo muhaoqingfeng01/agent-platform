@@ -4,6 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.knowledge.DocumentApplicationService;
 import com.example.agent.application.knowledge.dto.DocumentDTO;
 import com.example.agent.common.dto.PageResponse;
+import com.example.agent.common.helper.ResultCheckHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.domain.knowledge.entity.DocumentChunk;
 import com.example.agent.interfaces.dto.request.knowledge.*;
@@ -48,8 +49,10 @@ public class DocumentController {
             @RequestParam(value = "chunk_overlap", required = false) Integer chunkOverlap,
             @RequestParam(value = "chunk_config", required = false) String chunkConfig) {
 
-        DocumentDTO doc = docService.uploadFile(knowledgeId, file, chunkStrategy, chunkConfig);
-        return Result.ok(doc);
+        return ResultCheckHelper.wrap(() -> {
+            DocumentDTO doc = docService.uploadFile(knowledgeId, file, chunkStrategy, chunkConfig);
+            return Result.ok(doc);
+        }, "文档上传", file.getOriginalFilename());
     }
 
     @GetMapping("/documents")

@@ -14,7 +14,12 @@ import java.util.Optional;
  */
 public interface DocumentRepository {
 
-    void save(Document doc);
+    /**
+     * 保存文档实体.
+     *
+     * @return 受影响行数（INSERT 成功应为 1，0 表示插入失败）
+     */
+    int save(Document doc);
 
     void update(Document doc);
 

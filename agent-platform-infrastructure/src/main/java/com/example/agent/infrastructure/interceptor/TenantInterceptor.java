@@ -48,7 +48,20 @@ public class TenantInterceptor implements HandlerInterceptor {
                     MDC.put(MDC_USER_ID, userId);
                     log.trace("[TenantInterceptor] 上下文设置: tenantId={}, userId={}", tenantId, userId);
                 } else {
-                    log.trace("[TenantInterceptor] Session 中无 tenantId，跳过上下文设置");
+                    // 🔴 已登录但 Session 中无 tenantId → 后续数据库写入会因 tenant_id NOT NULL 失败
+                    log.warn("[TenantInterceptor] ⚠️ 已登录用户 {} 的 Session 中无 tenantId，" +
+                             "后续涉及 tenant_id 的数据库写入将失败！", userId);
+                    // 兜底：尝试从请求参数/Header 获取（某些场景下 tenantId 通过 Header 传递）
+                    String headerTenantId = request.getHeader("X-Tenant-Id");
+                    if (headerTenantId != null) {
+                        try {
+                            TenantContext.setTenantId(Long.parseLong(headerTenantId));
+                            TenantContext.setUserId(userId);
+                            log.info("[TenantInterceptor] 从 Header X-Tenant-Id 兜底获取 tenantId={}", headerTenantId);
+                        } catch (NumberFormatException nfe) {
+                            log.warn("[TenantInterceptor] Header X-Tenant-Id 解析失败: {}", headerTenantId);
+                        }
+                    }
                 }
             }
         } catch (Exception e) {

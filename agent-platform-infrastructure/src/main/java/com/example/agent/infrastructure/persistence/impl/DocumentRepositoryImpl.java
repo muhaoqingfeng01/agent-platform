@@ -29,7 +29,15 @@ public class DocumentRepositoryImpl implements DocumentRepository {
     private final DocumentMapper mapper;
 
     @Override
-    public void save(Document doc) { mapper.insert(toPO(doc)); }
+    public int save(Document doc) {
+        DocumentPO po = toPO(doc);
+        int rows = mapper.insert(po);
+        if (rows <= 0) {
+            log.error("[DocumentRepository] INSERT 返回 {} 行: documentId={}, filename={}",
+                    rows, doc.getDocumentId(), doc.getFilename());
+        }
+        return rows;
+    }
 
     @Override
     public void update(Document doc) { mapper.update(toPO(doc)); }

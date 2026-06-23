@@ -59,14 +59,26 @@ public class DocumentApplicationService {
 
     /**
      * 上传文档（含 MinIO 存储）— Controller 传入 MultipartFile，此处处理完整流程.
+     * <p>
+     * ★ 防御性校验顺序：所有校验在 MinIO 上传之前完成，避免 MinIO 孤立文件。
+     * ★ 若 MinIO 上传后 DB 写入失败，自动清理 MinIO 文件（补偿机制）。
      */
     @Transactional
     public DocumentDTO uploadFile(String knowledgeId, MultipartFile file,
                                   String chunkStrategy, String chunkConfigJson) {
+        // ========== 0. 前置校验（必须在 MinIO 上传前完成，防止孤儿文件） ==========
+        Long tenantId = TenantContext.getCurrentTenantId();
+        String userId = TenantContext.getCurrentUserId();
+        if (tenantId == null || userId == null) {
+            throw new BusinessException(500,
+                    "租户上下文缺失: tenantId=" + tenantId + ", userId=" + userId +
+                    "。请确认登录 Session 是否包含 tenantId，或检查 Redis 连接。");
+        }
+
         // 校验知识库
         var kb = kbRepository.findByKnowledgeId(knowledgeId)
                 .orElseThrow(() -> new ResourceNotFoundException("知识库", knowledgeId));
-        domainService.assertTenantAccess(kb, TenantContext.getCurrentTenantId());
+        domainService.assertTenantAccess(kb, tenantId);
         domainService.assertDocumentLimit(kb.getDocumentCount());
 
         String filename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "unknown";
@@ -77,7 +89,7 @@ public class DocumentApplicationService {
         String documentId = IdGenerator.generate("doc");
         String minioPath = knowledgeId + "/" + documentId + "/" + filename;
 
-        // 1. 上传到 MinIO
+        // ========== 1. 上传到 MinIO ==========
         //    partSize: 文件>5MB 时使用 5MB part 以启用分片上传; ≤5MB 使用 -1 一次性上传
         long partSize = fileSize > MIN_PART_SIZE ? MIN_PART_SIZE : -1;
         try {
@@ -92,37 +104,60 @@ public class DocumentApplicationService {
             throw new BusinessException(500, "文件上传到 MinIO 失败: " + filename, e);
         }
 
-        // 2. 计算 contentHash
-        String contentHash = computeSha256(file);
+        // ========== 2. 写入数据库（带 MinIO 补偿清理） ==========
+        try {
+            // 2.1 计算 contentHash
+            String contentHash = computeSha256(file);
 
-        // 3. 写入 t_document
-        Document doc = Document.builder()
-                .documentId(documentId)
-                .tenantId(TenantContext.getCurrentTenantId())
-                .knowledgeId(knowledgeId)
-                .filename(filename)
-                .fileType(fileType)
-                .fileSize(fileSize)
-                .minioPath(minioPath)
-                .contentHash(contentHash)
-                .chunkCount(0)
-                .status(DocumentStatus.PENDING_PARSE)
-                .uploadedBy(TenantContext.getCurrentUserId())
-                .uploadedAt(LocalDateTime.now())
-                .chunkStrategy(chunkStrategy)
-                .chunkConfigJson(chunkConfigJson)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
+            // 2.2 写入 t_document
+            Document doc = Document.builder()
+                    .documentId(documentId)
+                    .tenantId(tenantId)
+                    .knowledgeId(knowledgeId)
+                    .filename(filename)
+                    .fileType(fileType)
+                    .fileSize(fileSize)
+                    .minioPath(minioPath)
+                    .contentHash(contentHash)
+                    .chunkCount(0)
+                    .status(DocumentStatus.PENDING_PARSE)
+                    .uploadedBy(userId)
+                    .uploadedAt(LocalDateTime.now())
+                    .chunkStrategy(chunkStrategy)
+                    .chunkConfigJson(chunkConfigJson)
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
 
-        documentRepository.save(doc);
+            int rows = documentRepository.save(doc);
+            if (rows <= 0) {
+                throw new BusinessException(500,
+                        "文档写入数据库失败（insert 返回 0 行）: docId=" + documentId);
+            }
 
-        // ★ V1.4.0: 不再自动触发解析，用户需手动调用 POST /documents/{id}/parse
-        // pipelineOrchestrator.processAsync(documentId);
+            // ★ V1.4.0: 不再自动触发解析，用户需手动调用 POST /documents/{id}/parse
+            // pipelineOrchestrator.processAsync(documentId);
 
-        log.info("[Document] 文档上传完成（待手动触发解析）: docId={}, kbId={}, filename={}, size={}",
-                documentId, knowledgeId, filename, fileSize);
-        return DocumentDTO.from(doc);
+            log.info("[Document] 文档上传完成（待手动触发解析）: docId={}, kbId={}, filename={}, size={}",
+                    documentId, knowledgeId, filename, fileSize);
+            return DocumentDTO.from(doc);
+
+        } catch (Exception e) {
+            // ★ 补偿机制：DB 写入失败时，清理已上传的 MinIO 文件，防止孤儿文件
+            log.error("[Document] DB 写入失败，尝试清理 MinIO 孤儿文件: docId={}, minioPath={}",
+                    documentId, minioPath, e);
+            try {
+                minioClient.removeObject(RemoveObjectArgs.builder()
+                        .bucket(minioConfig.getBucket())
+                        .object(minioPath)
+                        .build());
+                log.info("[MinIO] 孤儿文件已清理: {}", minioPath);
+            } catch (Exception cleanupEx) {
+                log.error("[MinIO] ⚠️ 孤儿文件清理失败，需手动删除: path={}, error={}",
+                        minioPath, cleanupEx.getMessage());
+            }
+            throw e;  // 重新抛出原始异常，让事务回滚 + GlobalExceptionHandler 处理
+        }
     }
 
     /**
