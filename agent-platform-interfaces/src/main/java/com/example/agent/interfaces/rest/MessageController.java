@@ -7,10 +7,13 @@ import com.example.agent.application.conversation.StreamOrchestrationService;
 import com.example.agent.application.optimization.event.MessageFeedbackEvent;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.result.Result;
+import com.example.agent.domain.conversation.valueobject.FeedbackType;
 import com.example.agent.infrastructure.config.sse.SseEmitterFactory;
 import com.example.agent.infrastructure.context.TenantContext;
+import com.example.agent.interfaces.dto.request.message.MessageSendRequest;
+import com.example.agent.interfaces.dto.request.message.MessageListRequest;
+import com.example.agent.interfaces.dto.request.message.MessageLoadBeforeRequest;
 import com.example.agent.interfaces.dto.request.message.MessageFeedbackRequest;
-import com.example.agent.interfaces.dto.request.message.SendMessageRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -41,61 +44,52 @@ public class MessageController {
     private final ThreadPoolExecutor streamExecutor;
     private final ApplicationEventPublisher eventPublisher;
 
-    @PostMapping("/api/v1/conversations/{id}/messages")
+    @PostMapping("/api/v1/conversations/messages/send")
     @SaCheckPermission("conversation:send")
     @Operation(summary = "发送消息（非流式）")
-    public Result<MessageResponse> sendMessage(@PathVariable String id,
-                                                @Valid @RequestBody SendMessageRequest request) {
+    public Result<MessageResponse> sendMessage(@Valid @RequestBody MessageSendRequest request) {
         MessageResponse userMsg = MessageResponse.from(
-                messageService.saveUserMessage(id, request.getContent()));
+                messageService.saveUserMessage(request.getConversationId(), request.getContent()));
         return Result.ok(userMsg);
     }
 
-    @PostMapping(value = "/api/v1/conversations/{id}/stream",
+    @PostMapping(value = "/api/v1/conversations/messages/stream",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @SaCheckPermission("conversation:send")
     @Operation(summary = "发送消息（SSE 流式）")
-    public SseEmitter streamChat(@PathVariable String id,
-                                  @Valid @RequestBody SendMessageRequest request) {
-        // 在线程池线程执行前捕获 ThreadLocal 上下文
+    public SseEmitter streamChat(@Valid @RequestBody MessageSendRequest request) {
         Long tenantId = TenantContext.getCurrentTenantId();
         String userId = TenantContext.getCurrentUserId();
         SseEmitter emitter = SseEmitterFactory.create(300_000L);
         streamExecutor.submit(() -> streamService.executeStreamPipeline(
-                id, tenantId, userId, request.getContent(), emitter));
+                request.getConversationId(), tenantId, userId, request.getContent(), emitter));
         return emitter;
     }
 
-    @GetMapping("/api/v1/conversations/{id}/messages")
+    @PostMapping("/api/v1/conversations/messages/list")
     @SaCheckPermission("conversation:read")
     @Operation(summary = "历史消息列表")
-    public Result<PageResponse<MessageResponse>> listMessages(
-            @PathVariable String id,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
-        return Result.ok(messageService.listMessages(id, page, size));
+    public Result<PageResponse<MessageResponse>> listMessages(@RequestBody MessageListRequest request) {
+        return Result.ok(messageService.listMessages(request.getId(), request.getPage(), request.getSize()));
     }
 
-    @GetMapping(value = "/api/v1/conversations/{id}/messages", params = "before")
+    @PostMapping("/api/v1/conversations/messages/before")
     @SaCheckPermission("conversation:read")
     @Operation(summary = "加载更早的消息")
-    public Result<List<MessageResponse>> loadBefore(@PathVariable String id,
-                                                      @RequestParam String before) {
-        return Result.ok(messageService.loadMessagesBefore(id, before, 50));
+    public Result<List<MessageResponse>> loadBefore(@Valid @RequestBody MessageLoadBeforeRequest request) {
+        return Result.ok(messageService.loadMessagesBefore(request.getId(), request.getBefore(), 50));
     }
 
-    @PutMapping("/api/v1/conversations/{id}/messages/{msgId}/feedback")
+    @PostMapping("/api/v1/conversations/messages/feedback")
     @SaCheckPermission("conversation:feedback")
     @Operation(summary = "消息反馈")
-    public Result<Void> feedback(@PathVariable String id,
-                                  @PathVariable String msgId,
-                                  @Valid @RequestBody MessageFeedbackRequest request) {
-        messageService.updateFeedback(msgId, request.getFeedback());
+    public Result<Void> feedback(@Valid @RequestBody MessageFeedbackRequest request) {
+        FeedbackType feedbackType = FeedbackType.fromCode(request.getFeedback());
+        messageService.updateFeedback(request.getMsgId(), feedbackType);
 
-        // 发布反馈事件（BadCase 自动工单监听）
         Long tenantId = TenantContext.getCurrentTenantId();
         eventPublisher.publishEvent(new MessageFeedbackEvent(
-                this, msgId, id, tenantId, request.getFeedback()));
+                this, request.getMsgId(), request.getConversationId(), tenantId, feedbackType));
 
         return Result.ok();
     }

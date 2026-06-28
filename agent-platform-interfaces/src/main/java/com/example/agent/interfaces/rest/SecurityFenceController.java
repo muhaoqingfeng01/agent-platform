@@ -1,11 +1,17 @@
 package com.example.agent.interfaces.rest;
 
 import com.example.agent.application.security.SecurityFenceApplicationService;
-import com.example.agent.application.security.dto.CreateSensitiveWordRequest;
+import com.example.agent.application.security.dto.SensitiveWordCreateCommand;
 import com.example.agent.application.security.dto.SecurityEventResponse;
 import com.example.agent.application.security.dto.SensitiveWordResponse;
-import com.example.agent.application.security.dto.UpdateSensitiveWordRequest;
+import com.example.agent.application.security.dto.SensitiveWordUpdateCommand;
 import com.example.agent.common.result.Result;
+import com.example.agent.interfaces.dto.request.security.SensitiveWordCreateRequest;
+import com.example.agent.interfaces.dto.request.security.SensitiveWordUpdateRequest;
+import com.example.agent.interfaces.dto.request.security.SensitiveWordListRequest;
+import com.example.agent.interfaces.dto.request.security.SensitiveWordGetRequest;
+import com.example.agent.interfaces.dto.request.security.SecurityEventListRequest;
+import com.example.agent.interfaces.dto.request.security.SecurityEventListByConversationRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -30,13 +36,11 @@ public class SecurityFenceController {
 
     private final SecurityFenceApplicationService securityService;
 
-    // ==================== 敏感词管理 ====================
-
-    @PostMapping("/sensitive-words")
+    @PostMapping("/sensitive-words/create")
     @Operation(summary = "创建敏感词规则")
     public Result<SensitiveWordResponse> create(
-            @Valid @RequestBody com.example.agent.interfaces.dto.request.security.CreateSensitiveWordRequest request) {
-        CreateSensitiveWordRequest appReq = CreateSensitiveWordRequest.builder()
+            @Valid @RequestBody SensitiveWordCreateRequest request) {
+        SensitiveWordCreateCommand appReq = SensitiveWordCreateCommand.builder()
                 .word(request.getWord())
                 .matchType(request.getMatchType())
                 .category(request.getCategory())
@@ -46,66 +50,57 @@ public class SecurityFenceController {
         return Result.ok(securityService.createSensitiveWord(appReq));
     }
 
-    @PutMapping("/sensitive-words/{id}")
+    @PostMapping("/sensitive-words/update")
     @Operation(summary = "更新敏感词规则")
     public Result<SensitiveWordResponse> update(
-            @PathVariable Long id,
-            @Valid @RequestBody com.example.agent.interfaces.dto.request.security.UpdateSensitiveWordRequest request) {
-        UpdateSensitiveWordRequest appReq = UpdateSensitiveWordRequest.builder()
+            @Valid @RequestBody SensitiveWordUpdateRequest request) {
+        SensitiveWordUpdateCommand appReq = SensitiveWordUpdateCommand.builder()
                 .word(request.getWord())
                 .matchType(request.getMatchType())
                 .category(request.getCategory())
                 .severity(request.getSeverity())
                 .action(request.getAction())
                 .build();
-        return Result.ok(securityService.updateSensitiveWord(id, appReq));
+        return Result.ok(securityService.updateSensitiveWord(request.getId(), appReq));
     }
 
-    @GetMapping("/sensitive-words")
+    @PostMapping("/sensitive-words/list")
     @Operation(summary = "敏感词规则列表")
-    public Result<List<SensitiveWordResponse>> list(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        List<SensitiveWordResponse> list = securityService.listSensitiveWords(page, size);
-        return Result.ok(list);
+    public Result<List<SensitiveWordResponse>> list(@RequestBody SensitiveWordListRequest request) {
+        return Result.ok(securityService.listSensitiveWords(request.getPage(), request.getSize()));
     }
 
-    @GetMapping("/sensitive-words/{id}")
+    @PostMapping("/sensitive-words/get")
     @Operation(summary = "敏感词规则详情")
-    public Result<SensitiveWordResponse> getById(@PathVariable Long id) {
-        return Result.ok(securityService.getSensitiveWord(id));
+    public Result<SensitiveWordResponse> getById(@Valid @RequestBody SensitiveWordGetRequest request) {
+        return Result.ok(securityService.getSensitiveWord(request.getId()));
     }
 
-    @PutMapping("/sensitive-words/{id}/toggle-status")
+    @PostMapping("/sensitive-words/toggle-status")
     @Operation(summary = "启用/禁用敏感词规则")
-    public Result<Void> toggleStatus(@PathVariable Long id) {
-        securityService.toggleSensitiveWordStatus(id);
+    public Result<Void> toggleStatus(@Valid @RequestBody SensitiveWordGetRequest request) {
+        securityService.toggleSensitiveWordStatus(request.getId());
         return Result.ok();
     }
 
-    @DeleteMapping("/sensitive-words/{id}")
+    @PostMapping("/sensitive-words/delete")
     @Operation(summary = "删除敏感词规则")
-    public Result<Void> delete(@PathVariable Long id) {
-        securityService.deleteSensitiveWord(id);
+    public Result<Void> delete(@Valid @RequestBody SensitiveWordGetRequest request) {
+        securityService.deleteSensitiveWord(request.getId());
         return Result.ok();
     }
 
-    // ==================== 安全事件查询 ====================
-
-    @GetMapping("/events")
+    @PostMapping("/events/list")
     @Operation(summary = "安全事件列表")
-    public Result<List<SecurityEventResponse>> listEvents(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return Result.ok(securityService.listSecurityEvents(page, size));
+    public Result<List<SecurityEventResponse>> listEvents(@RequestBody SecurityEventListRequest request) {
+        return Result.ok(securityService.listSecurityEvents(request.getPage(), request.getSize()));
     }
 
-    @GetMapping("/events/conversation/{conversationId}")
+    @PostMapping("/events/by-conversation")
     @Operation(summary = "按会话查询安全事件")
     public Result<List<SecurityEventResponse>> listEventsByConversation(
-            @PathVariable String conversationId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return Result.ok(securityService.listSecurityEventsByConversation(conversationId, page, size));
+            @Valid @RequestBody SecurityEventListByConversationRequest request) {
+        return Result.ok(securityService.listSecurityEventsByConversation(
+                request.getConversationId(), request.getPage(), request.getSize()));
     }
 }

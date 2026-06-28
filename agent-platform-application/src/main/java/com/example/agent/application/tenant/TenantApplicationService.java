@@ -27,7 +27,7 @@ public class TenantApplicationService {
     private final TenantRepository tenantRepository;
 
     @Transactional
-    public TenantResponse createTenant(CreateTenantRequest request) {
+    public TenantResponse createTenant(TenantCreateCommand request) {
         log.info("[Tenant] 创建: tenantId={}, name={}", request.getTenantId(), request.getName());
         if (tenantRepository.findByTenantId(request.getTenantId()).isPresent()) {
             throw new BusinessException(409, "租户标识已存在: " + request.getTenantId());
@@ -56,7 +56,7 @@ public class TenantApplicationService {
     }
 
     @Transactional
-    public TenantResponse updateTenant(Long id, UpdateTenantRequest request) {
+    public TenantResponse updateTenant(Long id, TenantUpdateCommand request) {
         log.info("[Tenant] 更新: id={}", id);
         Tenant tenant = tenantRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "租户不存在: " + id));
@@ -73,7 +73,7 @@ public class TenantApplicationService {
     }
 
     @Transactional
-    public TenantResponse toggleStatus(Long id, UpdateTenantStatusRequest request) {
+    public TenantResponse toggleStatus(Long id, TenantUpdateStatusCommand request) {
         log.info("[Tenant] 状态变更: id={}, status={}", id, request.getStatus());
         Tenant tenant = tenantRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "租户不存在: " + id));

@@ -7,10 +7,20 @@ import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.helper.ResultCheckHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.domain.knowledge.entity.DocumentChunk;
-import com.example.agent.interfaces.dto.request.knowledge.*;
+import com.example.agent.interfaces.dto.request.document.DocumentListRequest;
+import com.example.agent.interfaces.dto.request.document.DocumentGetRequest;
+import com.example.agent.interfaces.dto.request.document.DocumentUploadRequest;
+import com.example.agent.interfaces.dto.request.document.DocumentDownloadRequest;
+import com.example.agent.interfaces.dto.request.document.DocumentListChunksRequest;
+import com.example.agent.interfaces.dto.request.document.DocumentPrecisionOverrideRequest;
+import com.example.agent.interfaces.dto.request.document.DocumentDeleteRequest;
+import com.example.agent.interfaces.dto.request.document.DocumentParseRequest;
+import com.example.agent.interfaces.dto.request.document.DocumentBatchParseRequest;
+import com.example.agent.interfaces.dto.request.document.DocumentDeprecateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -38,52 +48,45 @@ public class DocumentController {
 
     private final DocumentApplicationService docService;
 
-    @PostMapping("/knowledge-bases/{knowledgeId}/documents")
+    @PostMapping("/knowledge-bases/documents/upload")
     @SaCheckPermission("doc:upload")
     @Operation(summary = "上传文档（multipart/form-data，自动存 MinIO）")
     public Result<DocumentDTO> upload(
-            @PathVariable String knowledgeId,
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "chunk_strategy", required = false) String chunkStrategy,
-            @RequestParam(value = "chunk_size", required = false) Integer chunkSize,
-            @RequestParam(value = "chunk_overlap", required = false) Integer chunkOverlap,
-            @RequestParam(value = "chunk_config", required = false) String chunkConfig) {
+            @RequestPart("metadata") @Valid DocumentUploadRequest request,
+            @RequestPart("file") MultipartFile file) {
 
         return ResultCheckHelper.wrap(() -> {
-            DocumentDTO doc = docService.uploadFile(knowledgeId, file, chunkStrategy, chunkConfig);
+            DocumentDTO doc = docService.uploadFile(request.getKnowledgeId(), file, request.getChunkStrategy(), request.getChunkConfig());
             return Result.ok(doc);
         }, "文档上传", file.getOriginalFilename());
     }
 
-    @GetMapping("/documents")
+    @PostMapping("/documents/list")
     @SaCheckPermission("doc:read")
     @Operation(summary = "文档列表（按知识库）")
-    public Result<PageResponse<DocumentDTO>> list(
-            @RequestParam String knowledgeId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return Result.ok(docService.listByKnowledgeId(knowledgeId, page, size));
+    public Result<PageResponse<DocumentDTO>> list(@RequestBody DocumentListRequest request) {
+        return Result.ok(docService.listByKnowledgeId(request.getKnowledgeId(), request.getPage(), request.getSize()));
     }
 
-    @GetMapping("/documents/{documentId}")
+    @PostMapping("/documents/get")
     @SaCheckPermission("doc:read")
     @Operation(summary = "文档详情")
-    public Result<DocumentDTO> getById(@PathVariable String documentId) {
-        return Result.ok(docService.getDocument(documentId));
+    public Result<DocumentDTO> getById(@Valid @RequestBody DocumentGetRequest request) {
+        return Result.ok(docService.getDocument(request.getDocumentId()));
     }
 
-    @GetMapping("/documents/{documentId}/status")
+    @PostMapping("/documents/status")
     @SaCheckPermission("doc:read")
     @Operation(summary = "查询文档处理状态")
-    public Result<String> getStatus(@PathVariable String documentId) {
-        return Result.ok(docService.getDocumentStatus(documentId).name());
+    public Result<String> getStatus(@Valid @RequestBody DocumentGetRequest request) {
+        return Result.ok(docService.getDocumentStatus(request.getDocumentId()).name());
     }
 
-    @GetMapping("/documents/{documentId}/download")
+    @PostMapping("/documents/download")
     @SaCheckPermission("doc:read")
     @Operation(summary = "下载原始文档（MinIO 流式代理）")
-    public void download(@PathVariable String documentId, HttpServletResponse response) throws IOException {
-        DocumentDTO doc = docService.getDocument(documentId);
+    public void download(@Valid @RequestBody DocumentDownloadRequest request, HttpServletResponse response) throws IOException {
+        DocumentDTO doc = docService.getDocument(request.getDocumentId());
 
         response.setContentType("application/octet-stream");
         String encodedFilename = URLEncoder.encode(doc.getFilename(), StandardCharsets.UTF_8)
@@ -91,65 +94,58 @@ public class DocumentController {
         response.setHeader("Content-Disposition",
                 "attachment; filename*=UTF-8''" + encodedFilename);
 
-        try (InputStream is = docService.downloadDocumentFile(documentId)) {
+        try (InputStream is = docService.downloadDocumentFile(request.getDocumentId())) {
             is.transferTo(response.getOutputStream());
             response.flushBuffer();
         }
     }
 
-    @GetMapping("/documents/{documentId}/chunks")
+    @PostMapping("/documents/chunks")
     @SaCheckPermission("doc:read")
     @Operation(summary = "查询文档切片列表")
-    public Result<Map<String, Object>> listChunks(
-            @PathVariable String documentId,
-            @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(defaultValue = "50") int limit) {
-        List<DocumentChunk> chunks = docService.listChunks(documentId, offset, limit);
-        int total = docService.countChunks(documentId);
+    public Result<Map<String, Object>> listChunks(@Valid @RequestBody DocumentListChunksRequest request) {
+        List<DocumentChunk> chunks = docService.listChunks(request.getDocumentId(), request.getOffset(), request.getLimit());
+        int total = docService.countChunks(request.getDocumentId());
         return Result.ok(Map.of("total", total, "chunks", chunks));
     }
 
-    @PutMapping("/documents/{documentId}/precision-override")
+    @PostMapping("/documents/precision-override")
     @SaCheckPermission("doc:update")
     @Operation(summary = "设置文档级精度参数覆盖")
-    public Result<Void> setPrecisionOverride(@PathVariable String documentId,
-                                              @RequestBody SetPrecisionOverrideRequest request) {
-        docService.setPrecisionOverride(documentId,
+    public Result<Void> setPrecisionOverride(@Valid @RequestBody DocumentPrecisionOverrideRequest request) {
+        docService.setPrecisionOverride(request.getDocumentId(),
                 request.getSearchParamsOverrideJson(), request.getMultiStageOverrideJson());
         return Result.ok();
     }
 
-    @DeleteMapping("/documents/{documentId}")
+    @PostMapping("/documents/delete")
     @SaCheckPermission("doc:delete")
     @Operation(summary = "删除文档（含 MinIO + Milvus + MySQL，KB 创建者权限）")
-    public Result<Void> delete(@PathVariable String documentId) {
-        docService.deleteDocument(documentId);
+    public Result<Void> delete(@Valid @RequestBody DocumentDeleteRequest request) {
+        docService.deleteDocument(request.getDocumentId());
         return Result.ok();
     }
 
-    // ========== V1.4.0 新增: 解析触发 + 弃用 ==========
-
-    @PostMapping("/documents/{documentId}/parse")
+    @PostMapping("/documents/parse")
     @SaCheckPermission("doc:update")
     @Operation(summary = "手动触发文档异步解析（PENDING_PARSE/FAILED → 异步管线）")
-    public Result<DocumentDTO> triggerParse(@PathVariable String documentId) {
-        return Result.ok(docService.triggerParse(documentId));
+    public Result<DocumentDTO> triggerParse(@Valid @RequestBody DocumentParseRequest request) {
+        return Result.ok(docService.triggerParse(request.getDocumentId()));
     }
 
-    @PostMapping("/knowledge-bases/{knowledgeId}/documents/batch-parse")
+    @PostMapping("/documents/batch-parse")
     @SaCheckPermission("doc:update")
     @Operation(summary = "批量触发文档解析")
-    public Result<Map<String, Object>> batchParse(@PathVariable String knowledgeId,
-                                                   @RequestBody Map<String, List<String>> body) {
-        List<String> documentIds = body.getOrDefault("documentIds", List.of());
-        int triggered = docService.batchTriggerParse(knowledgeId, documentIds);
+    public Result<Map<String, Object>> batchParse(@Valid @RequestBody DocumentBatchParseRequest request) {
+        List<String> documentIds = request.getDocumentIds() != null ? request.getDocumentIds() : List.of();
+        int triggered = docService.batchTriggerParse(request.getKnowledgeId(), documentIds);
         return Result.ok(Map.of("triggered", triggered, "total", documentIds.size()));
     }
 
-    @PostMapping("/documents/{documentId}/deprecate")
+    @PostMapping("/documents/deprecate")
     @SaCheckPermission("doc:update")
     @Operation(summary = "弃用文档（删除 Milvus 向量，保留 MinIO 文件和元数据）")
-    public Result<DocumentDTO> deprecate(@PathVariable String documentId) {
-        return Result.ok(docService.deprecateDocument(documentId));
+    public Result<DocumentDTO> deprecate(@Valid @RequestBody DocumentDeprecateRequest request) {
+        return Result.ok(docService.deprecateDocument(request.getDocumentId()));
     }
 }

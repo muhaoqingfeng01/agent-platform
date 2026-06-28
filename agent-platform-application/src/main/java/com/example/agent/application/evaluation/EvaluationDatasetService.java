@@ -23,7 +23,7 @@ public class EvaluationDatasetService {
     private final EvaluationDatasetRepository datasetRepository;
 
     @Transactional
-    public DatasetResponse create(CreateDatasetRequest request) {
+    public DatasetResponse create(DatasetCreateCommand request) {
         Long tenantId = TenantContext.getCurrentTenantId();
         String datasetId = IdGenerator.generate("ds");
 
@@ -59,7 +59,7 @@ public class EvaluationDatasetService {
     // ==================== Items ====================
 
     @Transactional
-    public ItemResponse addItem(String datasetId, AddItemRequest request) {
+    public ItemResponse addItem(String datasetId, DatasetAddItemCommand request) {
         EvaluationDatasetItem item = EvaluationDatasetItem.builder()
                 .datasetId(datasetId).question(request.getQuestion())
                 .expectedAnswer(request.getExpectedAnswer())

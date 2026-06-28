@@ -43,7 +43,7 @@ public class PermissionApplicationService {
     }
 
     @Transactional
-    public PermissionResponse createPermission(CreatePermissionRequest request) {
+    public PermissionResponse createPermission(PermissionCreateCommand request) {
         log.info("[Permission] 创建: permissionCode={}", request.getPermissionCode());
         Permission permission = Permission.builder()
                 .permissionCode(request.getPermissionCode())
@@ -72,7 +72,7 @@ public class PermissionApplicationService {
      * 全部成功或全部回滚；跳过与已有 permission_code 重复的记录（由 DB 唯一索引兜底）。
      */
     @Transactional
-    public List<PermissionResponse> batchImport(BatchImportPermissionRequest request) {
+    public List<PermissionResponse> batchImport(PermissionBatchImportCommand request) {
         log.info("[Permission] 批量导入: count={}", request.getPermissions().size());
         LocalDateTime now = LocalDateTime.now();
         List<Permission> permissions = request.getPermissions().stream()

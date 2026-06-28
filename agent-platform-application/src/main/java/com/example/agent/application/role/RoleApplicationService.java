@@ -25,7 +25,7 @@ public class RoleApplicationService {
     private final RoleRepository roleRepository;
 
     @Transactional
-    public RoleResponse createRole(CreateRoleRequest request) {
+    public RoleResponse createRole(RoleCreateCommand request) {
         log.info("[Role] 创建: roleCode={}, tenantId={}", request.getRoleCode(), request.getTenantId());
         Role role = Role.builder()
                 .tenantId(request.getTenantId()).roleCode(request.getRoleCode())
@@ -43,7 +43,7 @@ public class RoleApplicationService {
     }
 
     @Transactional
-    public RoleResponse updateRole(Long id, UpdateRoleRequest request) {
+    public RoleResponse updateRole(Long id, RoleUpdateCommand request) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "角色不存在: " + id));
         role = Role.builder()
@@ -65,7 +65,7 @@ public class RoleApplicationService {
     }
 
     @Transactional
-    public void assignRoleToUser(Long roleId, AssignRoleToUserRequest request) {
+    public void assignRoleToUser(Long roleId, RoleAssignToUserCommand request) {
         log.info("[Role] 分配角色给用户: roleId={}, userId={}", roleId, request.getUserId());
         if (roleRepository.findById(roleId).isEmpty()) {
             throw new BusinessException(404, "角色不存在: " + roleId);
@@ -81,7 +81,7 @@ public class RoleApplicationService {
     }
 
     @Transactional
-    public void assignPermissionToRole(Long roleId, AssignPermissionToRoleRequest request) {
+    public void assignPermissionToRole(Long roleId, RoleAssignPermissionCommand request) {
         log.info("[Role] 分配权限给角色: roleId={}, permissionId={}", roleId, request.getPermissionId());
         if (roleRepository.findById(roleId).isEmpty()) {
             throw new BusinessException(404, "角色不存在: " + roleId);

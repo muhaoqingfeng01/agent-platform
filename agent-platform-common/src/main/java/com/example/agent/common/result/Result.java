@@ -38,9 +38,15 @@ public class Result<T> implements Serializable {
     /** 时间戳 */
     private long timestamp;
 
+    /** 等待指令，要求客户端等待几秒后再执行 */
+    private int await;
+
+    /** 执行时间（毫秒） */
+    private int executionTime;
+
     // ==================== 私有构造器 ====================
 
-    private Result() {
+    public Result() {
         this.timestamp = System.currentTimeMillis();
     }
 

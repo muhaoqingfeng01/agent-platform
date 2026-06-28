@@ -3,7 +3,6 @@ package com.example.agent.interfaces.rest;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.task.DagExecutionService;
 import com.example.agent.application.task.TaskPlanningService;
-import com.example.agent.application.task.handler.ActionHandler;
 import com.example.agent.application.task.handler.ActionHandlerRegistry;
 import com.example.agent.common.result.Result;
 import com.example.agent.domain.task.entity.TaskExecution;
@@ -11,9 +10,10 @@ import com.example.agent.domain.task.entity.TaskStepExecution;
 import com.example.agent.domain.task.repository.TaskExecutionRepository;
 import com.example.agent.domain.task.repository.TaskStepExecutionRepository;
 import com.example.agent.domain.task.service.DagParser;
-import com.example.agent.interfaces.dto.request.task.CancelTaskRequest;
-import com.example.agent.interfaces.dto.request.task.CreateTaskPlanRequest;
-import com.example.agent.interfaces.dto.request.task.ExecuteTaskRequest;
+import com.example.agent.interfaces.dto.request.task.TaskCreatePlanRequest;
+import com.example.agent.interfaces.dto.request.task.TaskExecuteRequest;
+import com.example.agent.interfaces.dto.request.task.TaskCancelRequest;
+import com.example.agent.interfaces.dto.request.task.TaskExecutionGetRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -48,14 +48,12 @@ public class TaskController {
     @PostMapping("/plan")
     @SaCheckPermission("task:create")
     @Operation(summary = "规划任务", description = "调用 LLM 将用户意图拆解为 DAG 步骤序列")
-    public Result<Map<String, Object>> plan(@Valid @RequestBody CreateTaskPlanRequest request) {
+    public Result<Map<String, Object>> plan(@Valid @RequestBody TaskCreatePlanRequest request) {
         TaskPlanningService.PlanRequest planReq = new TaskPlanningService.PlanRequest();
         planReq.setUserIntent(request.getUserIntent());
         planReq.setConversationId(request.getConversationId());
         planReq.setAgentId(request.getAgentId());
-
         TaskPlanningService.PlanResult result = planningService.plan(planReq);
-
         return Result.ok(Map.of(
                 "executionId", result.getExecutionId(),
                 "totalSteps", result.getTotalSteps(),
@@ -67,14 +65,11 @@ public class TaskController {
     @PostMapping("/execute")
     @SaCheckPermission("task:execute")
     @Operation(summary = "执行任务", description = "根据已规划的执行计划启动 DAG 并行执行")
-    public Result<Map<String, String>> execute(@Valid @RequestBody ExecuteTaskRequest request) {
+    public Result<Map<String, String>> execute(@Valid @RequestBody TaskExecuteRequest request) {
         TaskExecution execution = executionRepository.findByExecutionId(request.getExecutionId())
                 .orElseThrow(() -> new com.example.agent.common.exception.BusinessException(404,
                         "执行记录不存在: " + request.getExecutionId()));
-
-        // 重新解析 DAG 图
         var graph = dagParser.parse(execution.getPlanJson());
-
         if (request.isAsync()) {
             executionService.execute(graph, request.getExecutionId(), execution.getConversationId());
             return Result.ok(Map.of(
@@ -83,7 +78,6 @@ public class TaskController {
                     "message", "任务已提交异步执行"
             ));
         } else {
-            // 同步执行（阻塞等待结果）
             executionService.execute(graph, request.getExecutionId(), execution.getConversationId());
             TaskExecution updated = executionRepository.findByExecutionId(request.getExecutionId()).orElse(execution);
             return Result.ok(Map.of(
@@ -93,22 +87,22 @@ public class TaskController {
         }
     }
 
-    @GetMapping("/{executionId}/status")
+    @PostMapping("/status")
     @SaCheckPermission("task:read")
     @Operation(summary = "查询执行状态", description = "获取任务执行的当前进度和各步骤状态")
-    public Result<DagExecutionService.ExecutionStatusResponse> status(@PathVariable String executionId) {
-        TaskExecution execution = executionRepository.findByExecutionId(executionId)
+    public Result<DagExecutionService.ExecutionStatusResponse> status(@Valid @RequestBody TaskExecutionGetRequest request) {
+        TaskExecution execution = executionRepository.findByExecutionId(request.getExecutionId())
                 .orElseThrow(() -> new com.example.agent.common.exception.BusinessException(404,
-                        "执行记录不存在: " + executionId));
-        List<TaskStepExecution> steps = stepExecutionRepository.findByExecutionId(executionId);
+                        "执行记录不存在: " + request.getExecutionId()));
+        List<TaskStepExecution> steps = stepExecutionRepository.findByExecutionId(request.getExecutionId());
         return Result.ok(DagExecutionService.ExecutionStatusResponse.from(execution, steps));
     }
 
-    @GetMapping("/{executionId}/plan")
+    @PostMapping("/plan/get")
     @SaCheckPermission("task:read")
     @Operation(summary = "查询执行计划", description = "获取已规划的任务 DAG 结构")
-    public Result<Map<String, Object>> getPlan(@PathVariable String executionId) {
-        TaskPlanningService.PlanResult result = planningService.getPlan(executionId);
+    public Result<Map<String, Object>> getPlan(@Valid @RequestBody TaskExecutionGetRequest request) {
+        TaskPlanningService.PlanResult result = planningService.getPlan(request.getExecutionId());
         return Result.ok(Map.of(
                 "executionId", result.getExecutionId(),
                 "totalSteps", result.getTotalSteps(),
@@ -120,7 +114,7 @@ public class TaskController {
     @PostMapping("/cancel")
     @SaCheckPermission("task:execute")
     @Operation(summary = "取消执行", description = "取消正在执行或等待中的任务")
-    public Result<Map<String, String>> cancel(@Valid @RequestBody CancelTaskRequest request) {
+    public Result<Map<String, String>> cancel(@Valid @RequestBody TaskCancelRequest request) {
         executionService.cancel(request.getExecutionId());
         return Result.ok(Map.of(
                 "executionId", request.getExecutionId(),
@@ -129,7 +123,7 @@ public class TaskController {
         ));
     }
 
-    @GetMapping("/handlers")
+    @PostMapping("/handlers")
     @SaCheckPermission("task:read")
     @Operation(summary = "可用动作列表", description = "获取所有已注册的 ActionHandler 及其参数 Schema")
     public Result<List<Map<String, Object>>> listHandlers() {

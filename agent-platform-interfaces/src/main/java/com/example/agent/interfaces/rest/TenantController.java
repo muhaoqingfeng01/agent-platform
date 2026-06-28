@@ -4,12 +4,13 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import com.example.agent.application.tenant.TenantApplicationService;
 import com.example.agent.common.result.Result;
-import com.example.agent.application.tenant.CreateTenantRequest;
-import com.example.agent.application.tenant.UpdateTenantRequest;
-import com.example.agent.application.tenant.UpdateTenantStatusRequest;
+import com.example.agent.application.tenant.TenantCreateCommand;
 import com.example.agent.application.tenant.TenantResponse;
+import com.example.agent.interfaces.dto.request.tenant.TenantListRequest;
+import com.example.agent.interfaces.dto.request.tenant.TenantGetRequest;
+import com.example.agent.interfaces.dto.request.tenant.TenantUpdateRequest;
+import com.example.agent.interfaces.dto.request.tenant.TenantToggleStatusRequest;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -19,10 +20,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 /**
- * 租户管理 Controller — 纯粹 HTTP 适配层，业务逻辑委托给 {@link TenantApplicationService}.
+ * 租户管理 Controller — 纯粹 HTTP 适配层.
  *
  * @author Agent Platform Team
  * @since 1.0.0
@@ -36,59 +35,60 @@ public class TenantController {
 
     private final TenantApplicationService tenantService;
 
-    @PostMapping
+    @PostMapping("/create")
     @SaCheckPermission("tenant:write")
     @Operation(summary = "创建租户")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "创建成功"),
             @ApiResponse(responseCode = "409", description = "租户标识已存在", content = @Content)
     })
-    public Result<TenantResponse> create(@Valid @RequestBody CreateTenantRequest request) {
+    public Result<TenantResponse> create(@Valid @RequestBody TenantCreateCommand request) {
         return Result.ok(tenantService.createTenant(request));
     }
 
-    @GetMapping
+    @PostMapping("/list")
     @SaCheckPermission("tenant:read")
     @Operation(summary = "租户列表")
-    public Result<List<TenantResponse>> list(
-            @Parameter(description = "页码（从 0 开始）") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "每页数量") @RequestParam(defaultValue = "20") int size) {
-        return Result.ok(tenantService.listTenants(page, size));
+    public Result<java.util.List<TenantResponse>> list(@RequestBody TenantListRequest request) {
+        return Result.ok(tenantService.listTenants(request.getPage(), request.getSize()));
     }
 
-    @GetMapping("/{id}")
+    @PostMapping("/get")
     @SaCheckPermission("tenant:read")
     @Operation(summary = "租户详情")
     @ApiResponses(@ApiResponse(responseCode = "404", description = "租户不存在", content = @Content))
-    public Result<TenantResponse> get(
-            @Parameter(description = "租户主键 ID") @PathVariable Long id) {
-        return Result.ok(tenantService.getTenant(id));
+    public Result<TenantResponse> get(@Valid @RequestBody TenantGetRequest request) {
+        return Result.ok(tenantService.getTenant(request.getId()));
     }
 
-    @PutMapping("/{id}")
+    @PostMapping("/update")
     @SaCheckPermission("tenant:write")
     @Operation(summary = "更新租户")
-    public Result<TenantResponse> update(
-            @Parameter(description = "租户主键 ID") @PathVariable Long id,
-            @Valid @RequestBody UpdateTenantRequest request) {
-        return Result.ok(tenantService.updateTenant(id, request));
+    public Result<TenantResponse> update(@Valid @RequestBody TenantUpdateRequest request) {
+        com.example.agent.application.tenant.TenantUpdateCommand updateReq =
+                new com.example.agent.application.tenant.TenantUpdateCommand();
+        updateReq.setTenantId(request.getTenantId());
+        updateReq.setName(request.getName());
+        updateReq.setTier(request.getTier());
+        updateReq.setConfigJson(request.getConfigJson());
+        return Result.ok(tenantService.updateTenant(request.getTenantId(), updateReq));
     }
 
-    @PutMapping("/{id}/status")
+    @PostMapping("/toggle-status")
     @SaCheckRole("TENANT_ADMIN")
     @Operation(summary = "启停租户")
-    public Result<TenantResponse> toggleStatus(
-            @Parameter(description = "租户主键 ID") @PathVariable Long id,
-            @Valid @RequestBody UpdateTenantStatusRequest request) {
-        return Result.ok(tenantService.toggleStatus(id, request));
+    public Result<TenantResponse> toggleStatus(@Valid @RequestBody TenantToggleStatusRequest request) {
+        com.example.agent.application.tenant.TenantUpdateStatusCommand statusReq =
+                new com.example.agent.application.tenant.TenantUpdateStatusCommand();
+        statusReq.setStatus(request.getStatus());
+        return Result.ok(tenantService.toggleStatus(request.getId(), statusReq));
     }
 
-    @DeleteMapping("/{id}")
+    @PostMapping("/delete")
     @SaCheckRole("TENANT_ADMIN")
     @Operation(summary = "删除租户（逻辑删除）")
-    public Result<Void> delete(
-            @Parameter(description = "租户主键 ID") @PathVariable Long id) {
-        tenantService.deleteTenant(id);
+    public Result<Void> delete(@Valid @RequestBody TenantGetRequest request) {
+        tenantService.deleteTenant(request.getId());
         return Result.ok();
     }
 }

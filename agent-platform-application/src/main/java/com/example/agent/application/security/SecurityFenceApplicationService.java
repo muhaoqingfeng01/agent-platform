@@ -1,9 +1,9 @@
 package com.example.agent.application.security;
 
-import com.example.agent.application.security.dto.CreateSensitiveWordRequest;
+import com.example.agent.application.security.dto.SensitiveWordCreateCommand;
 import com.example.agent.application.security.dto.SecurityEventResponse;
 import com.example.agent.application.security.dto.SensitiveWordResponse;
-import com.example.agent.application.security.dto.UpdateSensitiveWordRequest;
+import com.example.agent.application.security.dto.SensitiveWordUpdateCommand;
 import com.example.agent.application.security.filter.FilterContext;
 import com.example.agent.application.security.filter.FilterResult;
 import com.example.agent.application.security.filter.InputFilter;
@@ -132,7 +132,7 @@ public class SecurityFenceApplicationService {
     // ==================== 敏感词管理 ====================
 
     @Transactional
-    public SensitiveWordResponse createSensitiveWord(CreateSensitiveWordRequest request) {
+    public SensitiveWordResponse createSensitiveWord(SensitiveWordCreateCommand request) {
         SensitiveWord word = SensitiveWord.builder()
                 .tenantId(TenantContext.getCurrentTenantId())
                 .word(request.getWord())
@@ -153,7 +153,7 @@ public class SecurityFenceApplicationService {
     }
 
     @Transactional
-    public SensitiveWordResponse updateSensitiveWord(Long id, UpdateSensitiveWordRequest request) {
+    public SensitiveWordResponse updateSensitiveWord(Long id, SensitiveWordUpdateCommand request) {
         SensitiveWord word = sensitiveWordRepository.findById(id)
                 .orElseThrow(() -> new com.example.agent.common.exception.ResourceNotFoundException("敏感词规则不存在: " + id));
 

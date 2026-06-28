@@ -1,7 +1,7 @@
 package com.example.agent.application.approval;
 
 import com.example.agent.application.approval.dto.ApprovalWorkflowResponse;
-import com.example.agent.application.approval.dto.CreateApprovalRequest;
+import com.example.agent.application.approval.dto.ApprovalCreateCommand;
 import com.example.agent.application.task.DagExecutionService;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.common.exception.ResourceNotFoundException;
@@ -61,7 +61,7 @@ public class ApprovalWorkflowApplicationService {
      * @return 审批工单
      */
     @Transactional
-    public ApprovalWorkflowResponse createApproval(CreateApprovalRequest request) {
+    public ApprovalWorkflowResponse createApproval(ApprovalCreateCommand request) {
         Long tenantId = TenantContext.getCurrentTenantId();
         String requesterId = TenantContext.getCurrentUserId();
 

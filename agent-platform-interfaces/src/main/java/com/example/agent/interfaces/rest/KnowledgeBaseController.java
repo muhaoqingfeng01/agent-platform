@@ -7,7 +7,12 @@ import com.example.agent.application.knowledge.dto.KnowledgeBaseDTO;
 import com.example.agent.application.knowledge.dto.PrecisionConfigDTO;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.result.Result;
-import com.example.agent.interfaces.dto.request.knowledge.*;
+import com.example.agent.interfaces.dto.request.knowledge.KnowledgeBaseCreateRequest;
+import com.example.agent.interfaces.dto.request.knowledge.KnowledgeBaseListRequest;
+import com.example.agent.interfaces.dto.request.knowledge.KnowledgeBaseGetRequest;
+import com.example.agent.interfaces.dto.request.knowledge.KnowledgeBaseUpdateRequest;
+import com.example.agent.interfaces.dto.request.knowledge.KnowledgeBaseUpdateChunkConfigRequest;
+import com.example.agent.interfaces.dto.request.knowledge.KnowledgeBaseSetPrecisionConfigRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -33,97 +38,92 @@ public class KnowledgeBaseController {
     private final KnowledgeBaseApplicationService kbService;
     private final PrecisionConfigApplicationService precisionService;
 
-    @PostMapping
+    @PostMapping("/create")
     @SaCheckPermission("kb:create")
     @Operation(summary = "创建知识库")
-    public Result<KnowledgeBaseDTO> create(@Valid @RequestBody CreateKnowledgeBaseRequest request) {
+    public Result<KnowledgeBaseDTO> create(@Valid @RequestBody KnowledgeBaseCreateRequest request) {
         return Result.ok(kbService.create(request.getName(), request.getDescription(), request.getEmbeddingModel()));
     }
 
-    @GetMapping
+    @PostMapping("/list")
     @SaCheckPermission("kb:read")
     @Operation(summary = "知识库列表")
-    public Result<PageResponse<KnowledgeBaseDTO>> list(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return Result.ok(kbService.list(page, size));
+    public Result<PageResponse<KnowledgeBaseDTO>> list(@RequestBody KnowledgeBaseListRequest request) {
+        return Result.ok(kbService.list(request.getPage(), request.getSize()));
     }
 
-    @GetMapping("/{knowledgeId}")
+    @PostMapping("/get")
     @SaCheckPermission("kb:read")
     @Operation(summary = "知识库详情")
-    public Result<KnowledgeBaseDTO> getById(@PathVariable String knowledgeId) {
-        return Result.ok(kbService.getByKnowledgeId(knowledgeId));
+    public Result<KnowledgeBaseDTO> getById(@Valid @RequestBody KnowledgeBaseGetRequest request) {
+        return Result.ok(kbService.getByKnowledgeId(request.getKnowledgeId()));
     }
 
-    @PutMapping("/{knowledgeId}")
+    @PostMapping("/update")
     @SaCheckPermission("kb:update")
     @Operation(summary = "更新知识库名称/描述")
-    public Result<Void> update(@PathVariable String knowledgeId,
-                               @Valid @RequestBody UpdateKnowledgeBaseRequest request) {
-        kbService.update(knowledgeId, request.getName(), request.getDescription());
+    public Result<Void> update(@Valid @RequestBody KnowledgeBaseUpdateRequest request) {
+        kbService.update(request.getKnowledgeId(), request.getName(), request.getDescription());
         return Result.ok();
     }
 
-    @PutMapping("/{knowledgeId}/chunk-config")
+    @PostMapping("/update-chunk-config")
     @SaCheckPermission("kb:update")
     @Operation(summary = "设置知识库默认切片策略")
-    public Result<Void> updateChunkConfig(@PathVariable String knowledgeId,
-                                          @Valid @RequestBody UpdateChunkConfigRequest request) {
-        kbService.updateChunkStrategy(knowledgeId,
+    public Result<Void> updateChunkConfig(@Valid @RequestBody KnowledgeBaseUpdateChunkConfigRequest request) {
+        kbService.updateChunkStrategy(request.getKnowledgeId(),
                 com.example.agent.domain.knowledge.valueobject.ChunkStrategy.fromCode(request.getDefaultChunkStrategy()),
                 request.getChunkConfigJson());
         return Result.ok();
     }
 
-    @PutMapping("/{knowledgeId}/precision-config")
+    @PostMapping("/set-precision-config")
     @SaCheckPermission("kb:update")
     @Operation(summary = "设置知识库检索精度参数")
-    public Result<Void> setPrecisionConfig(@PathVariable String knowledgeId,
-                                           @Valid @RequestBody SetPrecisionConfigRequest request) {
-        precisionService.setPrecisionConfig(knowledgeId, toDTO(request));
+    public Result<Void> setPrecisionConfig(@Valid @RequestBody KnowledgeBaseSetPrecisionConfigRequest request) {
+        precisionService.setPrecisionConfig(request.getKnowledgeId(), toDTO(request));
         return Result.ok();
     }
 
-    @GetMapping("/{knowledgeId}/precision-config/resolved")
+    @PostMapping("/precision-config/resolved")
     @SaCheckPermission("kb:read")
     @Operation(summary = "查询知识库当前生效的完整精度配置")
-    public Result<PrecisionConfigDTO> getResolvedConfig(@PathVariable String knowledgeId) {
-        return Result.ok(precisionService.getResolvedConfig(knowledgeId));
+    public Result<PrecisionConfigDTO> getResolvedConfig(@Valid @RequestBody KnowledgeBaseGetRequest request) {
+        return Result.ok(precisionService.getResolvedConfig(request.getKnowledgeId()));
     }
 
-    @PutMapping("/{knowledgeId}/enable")
+    @PostMapping("/enable")
     @SaCheckPermission("kb:update")
     @Operation(summary = "启用知识库")
-    public Result<Void> enable(@PathVariable String knowledgeId) {
-        kbService.enable(knowledgeId);
+    public Result<Void> enable(@Valid @RequestBody KnowledgeBaseGetRequest request) {
+        kbService.enable(request.getKnowledgeId());
         return Result.ok();
     }
 
-    @PutMapping("/{knowledgeId}/disable")
+    @PostMapping("/disable")
     @SaCheckPermission("kb:update")
     @Operation(summary = "弃用知识库")
-    public Result<Void> disable(@PathVariable String knowledgeId) {
-        kbService.disable(knowledgeId);
+    public Result<Void> disable(@Valid @RequestBody KnowledgeBaseGetRequest request) {
+        kbService.disable(request.getKnowledgeId());
         return Result.ok();
     }
 
-    @DeleteMapping("/{knowledgeId}")
+    @PostMapping("/delete")
     @SaCheckPermission("kb:delete")
     @Operation(summary = "级联删除知识库（先弃用后删除）")
-    public Result<Void> delete(@PathVariable String knowledgeId) {
-        kbService.deleteWithCascade(knowledgeId);
+    public Result<Void> delete(@Valid @RequestBody KnowledgeBaseGetRequest request) {
+        kbService.deleteWithCascade(request.getKnowledgeId());
         return Result.ok();
     }
 
-    @GetMapping("/{knowledgeId}/stats")
+    @PostMapping("/stats")
     @SaCheckPermission("kb:read")
     @Operation(summary = "知识库文档统计")
-    public Result<Map<String, Long>> getStats(@PathVariable String knowledgeId) {
-        return Result.ok(kbService.getStats(knowledgeId));
+    public Result<Map<String, Long>> getStats(@Valid @RequestBody KnowledgeBaseGetRequest request) {
+        return Result.ok(kbService.getStats(request.getKnowledgeId()));
     }
 
-    private PrecisionConfigDTO toDTO(SetPrecisionConfigRequest req) {
+    private PrecisionConfigDTO toDTO(KnowledgeBaseSetPrecisionConfigRequest req) {
         return PrecisionConfigDTO.builder()
                 .indexType(req.getIndexType())
                 .indexParams(req.getIndexParams())

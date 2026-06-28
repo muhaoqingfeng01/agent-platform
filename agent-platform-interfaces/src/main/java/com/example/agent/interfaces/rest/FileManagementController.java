@@ -7,14 +7,16 @@ import com.example.agent.application.knowledge.dto.DocumentDTO;
 import com.example.agent.application.knowledge.dto.KnowledgeBaseDTO;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.result.Result;
+import com.example.agent.interfaces.dto.request.filemgmt.FileListRequest;
+import com.example.agent.interfaces.dto.request.filemgmt.FileSummaryRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -33,16 +35,12 @@ public class FileManagementController {
     private final DocumentApplicationService docService;
     private final KnowledgeBaseApplicationService kbService;
 
-    @GetMapping("/{knowledgeId}/files")
+    @PostMapping("/files/list")
     @SaCheckPermission("doc:read")
     @Operation(summary = "文件管理列表（含状态标签、操作权限）")
-    public Result<Map<String, Object>> listFiles(
-            @PathVariable String knowledgeId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
-
-        KnowledgeBaseDTO kb = kbService.getByKnowledgeId(knowledgeId);
-        PageResponse<DocumentDTO> docs = docService.listByKnowledgeId(knowledgeId, page, size);
+    public Result<Map<String, Object>> listFiles(@Valid @RequestBody FileListRequest request) {
+        KnowledgeBaseDTO kb = kbService.getByKnowledgeId(request.getKnowledgeId());
+        PageResponse<DocumentDTO> docs = docService.listByKnowledgeId(request.getKnowledgeId(), request.getPage(), request.getSize());
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("kbInfo", Map.of(
@@ -59,10 +57,10 @@ public class FileManagementController {
         return Result.ok(result);
     }
 
-    @GetMapping("/{knowledgeId}/files/summary")
+    @PostMapping("/files/summary")
     @SaCheckPermission("doc:read")
     @Operation(summary = "文件状态汇总")
-    public Result<Map<String, Long>> summary(@PathVariable String knowledgeId) {
-        return Result.ok(kbService.getStats(knowledgeId));
+    public Result<Map<String, Long>> summary(@Valid @RequestBody FileSummaryRequest request) {
+        return Result.ok(kbService.getStats(request.getKnowledgeId()));
     }
 }

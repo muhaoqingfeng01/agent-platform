@@ -87,7 +87,7 @@ public class ToolApplicationService {
      * @return 创建后的工具详情
      */
     @Transactional
-    public ToolResponse create(CreateToolRequest request) {
+    public ToolResponse create(ToolCreateCommand request) {
         Long tenantId = TenantContext.getCurrentTenantId();
         log.info("[Tool] 创建工具: name={}, type={}, tenantId={}", request.getName(), request.getToolType(), tenantId);
 
@@ -193,7 +193,7 @@ public class ToolApplicationService {
      * @return 更新后的工具详情
      */
     @Transactional
-    public ToolResponse update(String toolId, UpdateToolRequest request) {
+    public ToolResponse update(String toolId, ToolUpdateCommand request) {
         Long tenantId = TenantContext.getCurrentTenantId();
         log.info("[Tool] 编辑工具: toolId={}", toolId);
 
@@ -490,7 +490,7 @@ public class ToolApplicationService {
      * @param request 创建工具请求
      * @return AuthConfig 值对象（可能为 null）
      */
-    private AuthConfig buildAuthConfig(CreateToolRequest request) {
+    private AuthConfig buildAuthConfig(ToolCreateCommand request) {
         if (request.getAuthType() == null || request.getAuthType().isBlank()
                 || "NONE".equalsIgnoreCase(request.getAuthType())) {
             return null;
@@ -508,7 +508,7 @@ public class ToolApplicationService {
      * @param request 更新请求
      * @return true 表示有认证字段需要更新
      */
-    private boolean hasAuthUpdate(UpdateToolRequest request) {
+    private boolean hasAuthUpdate(ToolUpdateCommand request) {
         return request.getAuthType() != null
                 || request.getApiKey() != null
                 || request.getToken() != null;

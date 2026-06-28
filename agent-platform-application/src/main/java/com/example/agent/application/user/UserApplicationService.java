@@ -35,7 +35,7 @@ public class UserApplicationService {
     private final PasswordService passwordService;
 
     @Transactional
-    public UserResponse register(CreateUserRequest request) {
+    public UserResponse register(UserCreateCommand request) {
         log.info("[User] 注册: tenantId={}, username={}", request.getTenantId(), request.getUsername());
 
         // 1. 校验租户存在且状态为 ACTIVE
@@ -95,7 +95,7 @@ public class UserApplicationService {
     }
 
     @Transactional
-    public UserResponse updateUser(Long id, UpdateUserRequest request) {
+    public UserResponse updateUser(Long id, UserUpdateCommand request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "用户不存在: " + id));
         user = User.builder()
@@ -111,7 +111,7 @@ public class UserApplicationService {
     }
 
     @Transactional
-    public UserResponse toggleStatus(Long id, UpdateUserStatusRequest request) {
+    public UserResponse toggleStatus(Long id, UserUpdateStatusCommand request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "用户不存在: " + id));
         user = User.builder()
@@ -127,7 +127,7 @@ public class UserApplicationService {
     }
 
     @Transactional
-    public void changePassword(Long id, ChangePasswordRequest request) {
+    public void changePassword(Long id, UserChangePasswordCommand request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "用户不存在: " + id));
         if (!passwordService.matches(request.getOldPassword(), user.getPasswordHash())) {
