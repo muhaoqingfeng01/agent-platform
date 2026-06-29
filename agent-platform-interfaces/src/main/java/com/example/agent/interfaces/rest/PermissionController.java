@@ -3,6 +3,7 @@ package com.example.agent.interfaces.rest;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.permission.PermissionApplicationService;
 import com.example.agent.common.dto.PageResponse;
+import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.application.permission.PermissionCreateCommand;
 import com.example.agent.application.permission.PermissionBatchImportCommand;
@@ -37,14 +38,16 @@ public class PermissionController {
     @SaCheckPermission("user:read")
     @Operation(summary = "分页查询权限列表")
     public Result<PageResponse<PermissionResponse>> list(@RequestBody PermissionListRequest request) {
-        return Result.ok(permissionService.listPermissionsPaginated(request.getPage(), request.getSize()));
+        return ResultRespHelper.responseInvoke("PermissionController.list", request, (req) ->
+                permissionService.listPermissionsPaginated(req.getPage(), req.getSize()));
     }
 
     @PostMapping("/create")
     @SaCheckPermission("user:write")
     @Operation(summary = "创建单个权限")
     public Result<PermissionResponse> create(@Valid @RequestBody PermissionCreateCommand request) {
-        return Result.ok(permissionService.createPermission(request));
+        return ResultRespHelper.responseInvoke("PermissionController.create", request, (req) ->
+                permissionService.createPermission(req));
     }
 
     @PostMapping("/delete")
@@ -52,8 +55,10 @@ public class PermissionController {
     @Operation(summary = "级联删除权限",
             description = "事务内依次删除 t_role_permission 关联 → 逻辑删除 t_permission")
     public Result<Void> delete(@Valid @RequestBody PermissionDeleteRequest request) {
-        permissionService.deletePermissionCascade(request.getId());
-        return Result.ok();
+        return ResultRespHelper.responseInvoke("PermissionController.delete", request, (req) -> {
+            permissionService.deletePermissionCascade(req.getId());
+            return null;
+        });
     }
 
     @PostMapping("/import")
@@ -62,6 +67,7 @@ public class PermissionController {
             description = "JSON 数组上传；事务保证原子性，全部成功或全部回滚")
     public Result<List<PermissionResponse>> batchImport(
             @Valid @RequestBody PermissionBatchImportCommand request) {
-        return Result.ok(permissionService.batchImport(request));
+        return ResultRespHelper.responseInvoke("PermissionController.batchImport", request, (req) ->
+                permissionService.batchImport(req));
     }
 }

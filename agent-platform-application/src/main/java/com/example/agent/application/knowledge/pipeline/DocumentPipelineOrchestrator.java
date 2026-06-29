@@ -7,6 +7,7 @@ import com.example.agent.domain.knowledge.repository.DocumentChunkRepository;
 import com.example.agent.domain.knowledge.repository.DocumentRepository;
 import com.example.agent.domain.knowledge.repository.KnowledgeBaseRepository;
 import com.example.agent.domain.knowledge.service.*;
+import com.example.agent.domain.knowledge.valueobject.ChunkStrategy;
 import com.example.agent.domain.knowledge.valueobject.DocumentStatus;
 import com.example.agent.application.knowledge.strategy.ChunkStrategyFactory;
 import lombok.RequiredArgsConstructor;
@@ -70,22 +71,22 @@ public class DocumentPipelineOrchestrator {
     }
 
     public List<ChunkStrategyService.ChunkResult> chunkDocument(Document doc, String text) {
-        String strategyCode = resolveStrategy(doc);
-        ChunkStrategyService strategy = strategyFactory.getStrategy(strategyCode);
+        ChunkStrategy chunkStrategy = resolveStrategy(doc);
+        ChunkStrategyService strategy = strategyFactory.getStrategy(chunkStrategy);
         Map<String, Object> config = resolveChunkConfig(doc);
-        log.info("[Pipeline] 使用切片策略: strategy={}, docId={}", strategyCode, doc.getDocumentId());
+        log.info("[Pipeline] 使用切片策略: chunkStrategy={}, docId={}", chunkStrategy, doc.getDocumentId());
         return strategy.split(text, config);
     }
 
-    private String resolveStrategy(Document doc) {
+    private ChunkStrategy resolveStrategy(Document doc) {
         if (doc.getChunkStrategy() != null && !doc.getChunkStrategy().isBlank()) {
-            return doc.getChunkStrategy();
+            return ChunkStrategy.fromCode(doc.getChunkStrategy());
         }
         KnowledgeBase kb = kbRepository.findByKnowledgeId(doc.getKnowledgeId()).orElse(null);
         if (kb != null && kb.getDefaultChunkStrategy() != null && !kb.getDefaultChunkStrategy().isBlank()) {
-            return kb.getDefaultChunkStrategy();
+            return ChunkStrategy.fromCode(kb.getDefaultChunkStrategy());
         }
-        return kbDomainService.resolveFallbackStrategy(doc.getFileType()).getCode();
+        return kbDomainService.resolveFallbackStrategy(doc.getFileType());
     }
 
     private Map<String, Object> resolveChunkConfig(Document doc) {

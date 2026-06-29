@@ -3,6 +3,7 @@ package com.example.agent.interfaces.rest;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.stp.StpUtil;
 import com.example.agent.application.role.RoleApplicationService;
+import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.application.role.RoleAssignPermissionCommand;
 import com.example.agent.application.role.RoleAssignToUserCommand;
@@ -42,7 +43,8 @@ public class RoleController {
     @SaCheckPermission("user:write")
     @Operation(summary = "创建角色")
     public Result<RoleResponse> create(@Valid @RequestBody RoleCreateCommand request) {
-        return Result.ok(roleService.createRole(request));
+        return ResultRespHelper.responseInvoke("RoleController.create", request, (req) ->
+                roleService.createRole(req));
     }
 
     @PostMapping("/list")
@@ -50,52 +52,62 @@ public class RoleController {
     @Operation(summary = "角色列表")
     public Result<List<RoleResponse>> list() {
         Long tenantId = TenantContext.getCurrentTenantId();
-        return Result.ok(roleService.listRoles(tenantId));
+        return ResultRespHelper.responseInvoke("RoleController.list", null, (req) ->
+                roleService.listRoles(tenantId));
     }
 
     @PostMapping("/update")
     @SaCheckPermission("user:write")
     @Operation(summary = "更新角色")
     public Result<RoleResponse> update(@Valid @RequestBody RoleUpdateRequest request) {
-        RoleUpdateCommand updateReq = new RoleUpdateCommand();
-        updateReq.setRoleName(request.getRoleName());
-        updateReq.setDescription(request.getDescription());
-        return Result.ok(roleService.updateRole(request.getId(), updateReq));
+        return ResultRespHelper.responseInvoke("RoleController.update", request, (req) -> {
+            RoleUpdateCommand updateReq = new RoleUpdateCommand();
+            updateReq.setRoleName(req.getRoleName());
+            updateReq.setDescription(req.getDescription());
+            return roleService.updateRole(req.getId(), updateReq);
+        });
     }
 
     @PostMapping("/delete")
     @SaCheckPermission("user:write")
     @Operation(summary = "删除角色")
     public Result<Void> delete(@Valid @RequestBody RoleGetRequest request) {
-        roleService.deleteRole(request.getId());
-        return Result.ok();
+        return ResultRespHelper.responseInvoke("RoleController.delete", request, (req) -> {
+            roleService.deleteRole(req.getId());
+            return null;
+        });
     }
 
     @PostMapping("/assign-user")
     @SaCheckPermission("user:write")
     @Operation(summary = "为用户分配角色", description = "将角色分配给指定用户，权限变更后强制用户下线")
     public Result<Void> assignRoleToUser(@Valid @RequestBody RoleAssignUserRequest request) {
-        RoleAssignToUserCommand assignReq = new RoleAssignToUserCommand();
-        assignReq.setUserId(request.getUserId());
-        roleService.assignRoleToUser(request.getRoleId(), assignReq);
-        StpUtil.kickout(request.getUserId());
-        return Result.ok();
+        return ResultRespHelper.responseInvoke("RoleController.assignRoleToUser", request, (req) -> {
+            RoleAssignToUserCommand assignReq = new RoleAssignToUserCommand();
+            assignReq.setUserId(req.getUserId());
+            roleService.assignRoleToUser(req.getRoleId(), assignReq);
+            StpUtil.kickout(req.getUserId());
+            return null;
+        });
     }
 
     @PostMapping("/users")
     @SaCheckPermission("user:read")
     @Operation(summary = "查看角色下的用户")
     public Result<List<String>> getUsersByRole(@Valid @RequestBody RoleGetRequest request) {
-        return Result.ok(roleService.getUsersByRole(request.getId()));
+        return ResultRespHelper.responseInvoke("RoleController.getUsersByRole", request, (req) ->
+                roleService.getUsersByRole(req.getId()));
     }
 
     @PostMapping("/assign-permission")
     @SaCheckPermission("user:write")
     @Operation(summary = "为角色分配权限")
     public Result<Void> assignPermissionToRole(@Valid @RequestBody RoleAssignPermissionRequest request) {
-        RoleAssignPermissionCommand assignReq = new RoleAssignPermissionCommand();
-        assignReq.setPermissionId(request.getPermissionId());
-        roleService.assignPermissionToRole(request.getRoleId(), assignReq);
-        return Result.ok();
+        return ResultRespHelper.responseInvoke("RoleController.assignPermissionToRole", request, (req) -> {
+            RoleAssignPermissionCommand assignReq = new RoleAssignPermissionCommand();
+            assignReq.setPermissionId(req.getPermissionId());
+            roleService.assignPermissionToRole(req.getRoleId(), assignReq);
+            return null;
+        });
     }
 }

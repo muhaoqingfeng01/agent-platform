@@ -3,6 +3,7 @@ package com.example.agent.interfaces.rest;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import com.example.agent.application.tenant.TenantApplicationService;
+import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.application.tenant.TenantCreateCommand;
 import com.example.agent.application.tenant.TenantResponse;
@@ -43,14 +44,16 @@ public class TenantController {
             @ApiResponse(responseCode = "409", description = "租户标识已存在", content = @Content)
     })
     public Result<TenantResponse> create(@Valid @RequestBody TenantCreateCommand request) {
-        return Result.ok(tenantService.createTenant(request));
+        return ResultRespHelper.responseInvoke("TenantController.create", request, (req) ->
+                tenantService.createTenant(req));
     }
 
     @PostMapping("/list")
     @SaCheckPermission("tenant:read")
     @Operation(summary = "租户列表")
     public Result<java.util.List<TenantResponse>> list(@RequestBody TenantListRequest request) {
-        return Result.ok(tenantService.listTenants(request.getPage(), request.getSize()));
+        return ResultRespHelper.responseInvoke("TenantController.list", request, (req) ->
+                tenantService.listTenants(req.getPage(), req.getSize()));
     }
 
     @PostMapping("/get")
@@ -58,37 +61,44 @@ public class TenantController {
     @Operation(summary = "租户详情")
     @ApiResponses(@ApiResponse(responseCode = "404", description = "租户不存在", content = @Content))
     public Result<TenantResponse> get(@Valid @RequestBody TenantGetRequest request) {
-        return Result.ok(tenantService.getTenant(request.getId()));
+        return ResultRespHelper.responseInvoke("TenantController.get", request, (req) ->
+                tenantService.getTenant(req.getId()));
     }
 
     @PostMapping("/update")
     @SaCheckPermission("tenant:write")
     @Operation(summary = "更新租户")
     public Result<TenantResponse> update(@Valid @RequestBody TenantUpdateRequest request) {
-        com.example.agent.application.tenant.TenantUpdateCommand updateReq =
-                new com.example.agent.application.tenant.TenantUpdateCommand();
-        updateReq.setTenantId(request.getTenantId());
-        updateReq.setName(request.getName());
-        updateReq.setTier(request.getTier());
-        updateReq.setConfigJson(request.getConfigJson());
-        return Result.ok(tenantService.updateTenant(request.getTenantId(), updateReq));
+        return ResultRespHelper.responseInvoke("TenantController.update", request, (req) -> {
+            com.example.agent.application.tenant.TenantUpdateCommand updateReq =
+                    new com.example.agent.application.tenant.TenantUpdateCommand();
+            updateReq.setTenantId(req.getTenantId());
+            updateReq.setName(req.getName());
+            updateReq.setTier(req.getTier());
+            updateReq.setConfigJson(req.getConfigJson());
+            return tenantService.updateTenant(req.getTenantId(), updateReq);
+        });
     }
 
     @PostMapping("/toggle-status")
     @SaCheckRole("TENANT_ADMIN")
     @Operation(summary = "启停租户")
     public Result<TenantResponse> toggleStatus(@Valid @RequestBody TenantToggleStatusRequest request) {
-        com.example.agent.application.tenant.TenantUpdateStatusCommand statusReq =
-                new com.example.agent.application.tenant.TenantUpdateStatusCommand();
-        statusReq.setStatus(request.getStatus());
-        return Result.ok(tenantService.toggleStatus(request.getId(), statusReq));
+        return ResultRespHelper.responseInvoke("TenantController.toggleStatus", request, (req) -> {
+            com.example.agent.application.tenant.TenantUpdateStatusCommand statusReq =
+                    new com.example.agent.application.tenant.TenantUpdateStatusCommand();
+            statusReq.setStatus(req.getStatus());
+            return tenantService.toggleStatus(req.getId(), statusReq);
+        });
     }
 
     @PostMapping("/delete")
     @SaCheckRole("TENANT_ADMIN")
     @Operation(summary = "删除租户（逻辑删除）")
     public Result<Void> delete(@Valid @RequestBody TenantGetRequest request) {
-        tenantService.deleteTenant(request.getId());
-        return Result.ok();
+        return ResultRespHelper.responseInvoke("TenantController.delete", request, (req) -> {
+            tenantService.deleteTenant(req.getId());
+            return null;
+        });
     }
 }

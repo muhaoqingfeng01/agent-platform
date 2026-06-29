@@ -4,7 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.knowledge.DocumentApplicationService;
 import com.example.agent.application.knowledge.dto.DocumentDTO;
 import com.example.agent.common.dto.PageResponse;
-import com.example.agent.common.helper.ResultCheckHelper;
+import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.domain.knowledge.entity.DocumentChunk;
 import com.example.agent.interfaces.dto.request.document.DocumentListRequest;
@@ -55,31 +55,32 @@ public class DocumentController {
             @RequestPart("metadata") @Valid DocumentUploadRequest request,
             @RequestPart("file") MultipartFile file) {
 
-        return ResultCheckHelper.wrap(() -> {
-            DocumentDTO doc = docService.uploadFile(request.getKnowledgeId(), file, request.getChunkStrategy(), request.getChunkConfig());
-            return Result.ok(doc);
-        }, "文档上传", file.getOriginalFilename());
+        return ResultRespHelper.responseInvoke("DocumentController.upload", request, (req) ->
+                docService.uploadFile(req.getKnowledgeId(), file, req.getChunkStrategy(), req.getChunkConfig()));
     }
 
     @PostMapping("/documents/list")
     @SaCheckPermission("doc:read")
     @Operation(summary = "文档列表（按知识库）")
     public Result<PageResponse<DocumentDTO>> list(@RequestBody DocumentListRequest request) {
-        return Result.ok(docService.listByKnowledgeId(request.getKnowledgeId(), request.getPage(), request.getSize()));
+        return ResultRespHelper.responseInvoke("DocumentController.list", request, (req) ->
+                docService.listByKnowledgeId(req.getKnowledgeId(), req.getPage(), req.getSize()));
     }
 
     @PostMapping("/documents/get")
     @SaCheckPermission("doc:read")
     @Operation(summary = "文档详情")
     public Result<DocumentDTO> getById(@Valid @RequestBody DocumentGetRequest request) {
-        return Result.ok(docService.getDocument(request.getDocumentId()));
+        return ResultRespHelper.responseInvoke("DocumentController.getById", request, (req) ->
+                docService.getDocument(req.getDocumentId()));
     }
 
     @PostMapping("/documents/status")
     @SaCheckPermission("doc:read")
     @Operation(summary = "查询文档处理状态")
     public Result<String> getStatus(@Valid @RequestBody DocumentGetRequest request) {
-        return Result.ok(docService.getDocumentStatus(request.getDocumentId()).name());
+        return ResultRespHelper.responseInvoke("DocumentController.getStatus", request, (req) ->
+                docService.getDocumentStatus(req.getDocumentId()).name());
     }
 
     @PostMapping("/documents/download")
@@ -104,48 +105,58 @@ public class DocumentController {
     @SaCheckPermission("doc:read")
     @Operation(summary = "查询文档切片列表")
     public Result<Map<String, Object>> listChunks(@Valid @RequestBody DocumentListChunksRequest request) {
-        List<DocumentChunk> chunks = docService.listChunks(request.getDocumentId(), request.getOffset(), request.getLimit());
-        int total = docService.countChunks(request.getDocumentId());
-        return Result.ok(Map.of("total", total, "chunks", chunks));
+        return ResultRespHelper.responseInvoke("DocumentController.listChunks", request, (req) -> {
+            List<DocumentChunk> chunks = docService.listChunks(req.getDocumentId(), req.getOffset(), req.getLimit());
+            int total = docService.countChunks(req.getDocumentId());
+            return Map.of("total", total, "chunks", chunks);
+        });
     }
 
     @PostMapping("/documents/precision-override")
     @SaCheckPermission("doc:update")
     @Operation(summary = "设置文档级精度参数覆盖")
     public Result<Void> setPrecisionOverride(@Valid @RequestBody DocumentPrecisionOverrideRequest request) {
-        docService.setPrecisionOverride(request.getDocumentId(),
-                request.getSearchParamsOverrideJson(), request.getMultiStageOverrideJson());
-        return Result.ok();
+        return ResultRespHelper.responseInvoke("DocumentController.setPrecisionOverride", request, (req) -> {
+            docService.setPrecisionOverride(req.getDocumentId(),
+                    req.getSearchParamsOverrideJson(), req.getMultiStageOverrideJson());
+            return null;
+        });
     }
 
     @PostMapping("/documents/delete")
     @SaCheckPermission("doc:delete")
     @Operation(summary = "删除文档（含 MinIO + Milvus + MySQL，KB 创建者权限）")
     public Result<Void> delete(@Valid @RequestBody DocumentDeleteRequest request) {
-        docService.deleteDocument(request.getDocumentId());
-        return Result.ok();
+        return ResultRespHelper.responseInvoke("DocumentController.delete", request, (req) -> {
+            docService.deleteDocument(req.getDocumentId());
+            return null;
+        });
     }
 
     @PostMapping("/documents/parse")
     @SaCheckPermission("doc:update")
     @Operation(summary = "手动触发文档异步解析（PENDING_PARSE/FAILED → 异步管线）")
     public Result<DocumentDTO> triggerParse(@Valid @RequestBody DocumentParseRequest request) {
-        return Result.ok(docService.triggerParse(request.getDocumentId()));
+        return ResultRespHelper.responseInvoke("DocumentController.triggerParse", request, (req) ->
+                docService.triggerParse(req.getDocumentId()));
     }
 
     @PostMapping("/documents/batch-parse")
     @SaCheckPermission("doc:update")
     @Operation(summary = "批量触发文档解析")
     public Result<Map<String, Object>> batchParse(@Valid @RequestBody DocumentBatchParseRequest request) {
-        List<String> documentIds = request.getDocumentIds() != null ? request.getDocumentIds() : List.of();
-        int triggered = docService.batchTriggerParse(request.getKnowledgeId(), documentIds);
-        return Result.ok(Map.of("triggered", triggered, "total", documentIds.size()));
+        return ResultRespHelper.responseInvoke("DocumentController.batchParse", request, (req) -> {
+            List<String> documentIds = req.getDocumentIds() != null ? req.getDocumentIds() : List.of();
+            int triggered = docService.batchTriggerParse(req.getKnowledgeId(), documentIds);
+            return Map.of("triggered", triggered, "total", documentIds.size());
+        });
     }
 
     @PostMapping("/documents/deprecate")
     @SaCheckPermission("doc:update")
     @Operation(summary = "弃用文档（删除 Milvus 向量，保留 MinIO 文件和元数据）")
     public Result<DocumentDTO> deprecate(@Valid @RequestBody DocumentDeprecateRequest request) {
-        return Result.ok(docService.deprecateDocument(request.getDocumentId()));
+        return ResultRespHelper.responseInvoke("DocumentController.deprecate", request, (req) ->
+                docService.deprecateDocument(req.getDocumentId()));
     }
 }

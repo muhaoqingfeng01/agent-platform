@@ -8,6 +8,7 @@ import com.example.agent.application.tool.dto.ToolTestResponse;
 import com.example.agent.application.tool.dto.VersionResponse;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.helper.JsonHelper;
+import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.interfaces.dto.request.tool.ToolCreateRequest;
 import com.example.agent.interfaces.dto.request.tool.ToolListRequest;
@@ -46,15 +47,16 @@ public class ToolController {
     @SaCheckPermission("tool:create")
     @Operation(summary = "注册新工具")
     public Result<ToolResponse> create(@Valid @RequestBody ToolCreateRequest request) {
-        com.example.agent.application.tool.dto.ToolCreateCommand appReq = toAppRequest(request);
-        return Result.ok(toolService.create(appReq));
+        return ResultRespHelper.responseInvoke("ToolController.create", request, (req) ->
+                toolService.create(toAppRequest(req)));
     }
 
     @PostMapping("/list")
     @SaCheckPermission("tool:read")
     @Operation(summary = "工具列表（按类型筛选）")
     public Result<PageResponse<ToolResponse>> list(@RequestBody ToolListRequest request) {
-        return Result.ok(toolService.list(request.getPage(), request.getSize(), request.getType()));
+        return ResultRespHelper.responseInvoke("ToolController.list", request, (req) ->
+                toolService.list(req.getPage(), req.getSize(), req.getType()));
     }
 
     @PostMapping("/invocations")
@@ -62,67 +64,77 @@ public class ToolController {
     @Operation(summary = "调用日志列表")
     public Result<PageResponse<ToolInvocationLogResponse>> listInvocations(
             @RequestBody ToolListInvocationRequest request) {
-        return Result.ok(toolService.listInvocations(request.getToolId(), request.getPage(), request.getSize()));
+        return ResultRespHelper.responseInvoke("ToolController.listInvocations", request, (req) ->
+                toolService.listInvocations(req.getToolId(), req.getPage(), req.getSize()));
     }
 
     @PostMapping("/get")
     @SaCheckPermission("tool:read")
     @Operation(summary = "工具详情")
     public Result<ToolResponse> getById(@Valid @RequestBody ToolGetRequest request) {
-        return Result.ok(toolService.getByToolId(request.getId()));
+        return ResultRespHelper.responseInvoke("ToolController.getById", request, (req) ->
+                toolService.getByToolId(req.getId()));
     }
 
     @PostMapping("/update")
     @SaCheckPermission("tool:update")
     @Operation(summary = "编辑工具配置")
     public Result<ToolResponse> update(@Valid @RequestBody ToolUpdateRequest request) {
-        com.example.agent.application.tool.dto.ToolUpdateCommand appReq = new com.example.agent.application.tool.dto.ToolUpdateCommand();
-        appReq.setName(request.getName());
-        appReq.setDescription(request.getDescription());
-        appReq.setToolType(request.getToolType());
-        appReq.setInputSchema(JsonHelper.toJson(request.getInputSchema()));
-        appReq.setOutputSchema(JsonHelper.toJson(request.getOutputSchema()));
-        appReq.setEndpoint(request.getEndpoint());
-        appReq.setAuthType(request.getAuthType());
-        appReq.setApiKey(request.getApiKey());
-        appReq.setToken(request.getToken());
-        appReq.setRequireApproval(request.isRequireApproval());
-        return Result.ok(toolService.update(request.getId(), appReq));
+        return ResultRespHelper.responseInvoke("ToolController.update", request, (req) -> {
+            com.example.agent.application.tool.dto.ToolUpdateCommand appReq =
+                    new com.example.agent.application.tool.dto.ToolUpdateCommand();
+            appReq.setName(req.getName());
+            appReq.setDescription(req.getDescription());
+            appReq.setToolType(req.getToolType());
+            appReq.setInputSchema(JsonHelper.toJson(req.getInputSchema()));
+            appReq.setOutputSchema(JsonHelper.toJson(req.getOutputSchema()));
+            appReq.setEndpoint(req.getEndpoint());
+            appReq.setAuthType(req.getAuthType());
+            appReq.setApiKey(req.getApiKey());
+            appReq.setToken(req.getToken());
+            appReq.setRequireApproval(req.isRequireApproval());
+            return toolService.update(req.getId(), appReq);
+        });
     }
 
     @PostMapping("/toggle-status")
     @SaCheckPermission("tool:update")
     @Operation(summary = "启停工具")
     public Result<ToolResponse> toggleStatus(@Valid @RequestBody ToolToggleStatusRequest request) {
-        return Result.ok(toolService.toggleStatus(request.getId(), request.getStatus()));
+        return ResultRespHelper.responseInvoke("ToolController.toggleStatus", request, (req) ->
+                toolService.toggleStatus(req.getId(), req.getStatus()));
     }
 
     @PostMapping("/test")
     @SaCheckPermission("tool:read")
     @Operation(summary = "测试工具调用")
     public Result<ToolTestResponse> test(@Valid @RequestBody ToolTestRequest request) {
-        return Result.ok(toolService.test(request.getId(), request.getParams()));
+        return ResultRespHelper.responseInvoke("ToolController.test", request, (req) ->
+                toolService.test(req.getId(), req.getParams()));
     }
 
     @PostMapping("/versions/list")
     @SaCheckPermission("tool:read")
     @Operation(summary = "版本历史列表")
     public Result<List<VersionResponse>> getVersionHistory(@Valid @RequestBody ToolGetRequest request) {
-        return Result.ok(toolService.getVersionHistory(request.getId()));
+        return ResultRespHelper.responseInvoke("ToolController.getVersionHistory", request, (req) ->
+                toolService.getVersionHistory(req.getId()));
     }
 
     @PostMapping("/versions/detail")
     @SaCheckPermission("tool:read")
     @Operation(summary = "版本详情")
     public Result<VersionResponse> getVersionDetail(@Valid @RequestBody ToolVersionDetailRequest request) {
-        return Result.ok(toolService.getVersionDetail(request.getId(), request.getVersion()));
+        return ResultRespHelper.responseInvoke("ToolController.getVersionDetail", request, (req) ->
+                toolService.getVersionDetail(req.getId(), req.getVersion()));
     }
 
     @PostMapping("/rollback")
     @SaCheckPermission("tool:update")
     @Operation(summary = "回滚到指定版本")
     public Result<ToolResponse> rollback(@Valid @RequestBody ToolRollbackRequest request) {
-        return Result.ok(toolService.rollback(request.getId(), request.getVersion()));
+        return ResultRespHelper.responseInvoke("ToolController.rollback", request, (req) ->
+                toolService.rollback(req.getId(), req.getVersion()));
     }
 
     // ==================== DTO 映射方法 ====================

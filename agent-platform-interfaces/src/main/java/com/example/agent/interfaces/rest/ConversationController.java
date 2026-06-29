@@ -3,6 +3,7 @@ package com.example.agent.interfaces.rest;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.conversation.ConversationApplicationService;
 import com.example.agent.common.dto.PageResponse;
+import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.domain.conversation.valueobject.ConversationStatus;
 import com.example.agent.interfaces.dto.request.conversation.ConversationCreateRequest;
@@ -37,7 +38,8 @@ public class ConversationController {
     @Operation(summary = "创建新会话")
     public Result<ConversationApplicationService.ConversationResponse> create(
             @Valid @RequestBody ConversationCreateRequest request) {
-        return Result.ok(applicationService.createConversation(toAppRequest(request)));
+        return ResultRespHelper.responseInvoke("ConversationController.create", request, (req) ->
+                applicationService.createConversation(toAppRequest(req)));
     }
 
     @PostMapping("/list")
@@ -45,7 +47,8 @@ public class ConversationController {
     @Operation(summary = "我的会话列表")
     public Result<PageResponse<ConversationApplicationService.ConversationResponse>> list(
             @RequestBody ConversationListRequest request) {
-        return Result.ok(applicationService.listConversations(request.getPage(), request.getSize()));
+        return ResultRespHelper.responseInvoke("ConversationController.list", request, (req) ->
+                applicationService.listConversations(req.getPage(), req.getSize()));
     }
 
     @PostMapping("/get")
@@ -53,32 +56,39 @@ public class ConversationController {
     @Operation(summary = "会话详情")
     public Result<ConversationApplicationService.ConversationResponse> getById(
             @Valid @RequestBody ConversationGetRequest request) {
-        return Result.ok(ConversationApplicationService.ConversationResponse.from(
-                applicationService.getConversation(request.getId())));
+        return ResultRespHelper.responseInvoke("ConversationController.getById", request, (req) ->
+                ConversationApplicationService.ConversationResponse.from(
+                        applicationService.getConversation(req.getId())));
     }
 
     @PostMapping("/update-title")
     @SaCheckPermission("conversation:update")
     @Operation(summary = "更新标题")
     public Result<Void> updateTitle(@Valid @RequestBody ConversationUpdateTitleRequest request) {
-        applicationService.updateTitle(request.getId(), request.getTitle());
-        return Result.ok();
+        return ResultRespHelper.responseInvoke("ConversationController.updateTitle", request, (req) -> {
+            applicationService.updateTitle(req.getId(), req.getTitle());
+            return null;
+        });
     }
 
     @PostMapping("/transition-status")
     @SaCheckPermission("conversation:update")
     @Operation(summary = "状态流转")
     public Result<Void> transitionStatus(@Valid @RequestBody ConversationTransitionStatusRequest request) {
-        applicationService.transitionStatus(request.getId(), ConversationStatus.valueOf(request.getTargetStatus()));
-        return Result.ok();
+        return ResultRespHelper.responseInvoke("ConversationController.transitionStatus", request, (req) -> {
+            applicationService.transitionStatus(req.getId(), ConversationStatus.valueOf(req.getTargetStatus()));
+            return null;
+        });
     }
 
     @PostMapping("/delete")
     @SaCheckPermission("conversation:delete")
     @Operation(summary = "逻辑删除")
     public Result<Void> delete(@Valid @RequestBody ConversationGetRequest request) {
-        applicationService.softDelete(request.getId());
-        return Result.ok();
+        return ResultRespHelper.responseInvoke("ConversationController.delete", request, (req) -> {
+            applicationService.softDelete(req.getId());
+            return null;
+        });
     }
 
     private ConversationApplicationService.CreateConversationRequest toAppRequest(

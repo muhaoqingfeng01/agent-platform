@@ -2,6 +2,8 @@ package com.example.agent.interfaces.rest;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.example.agent.application.security.AuthProviderFactory;
+import com.example.agent.common.exception.BusinessException;
+import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.domain.security.UserService;
 import com.example.agent.domain.security.UserView;
@@ -46,40 +48,35 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "用户名或密码错误")
     })
     public Result<LoginResponse> login(@Valid @RequestBody AuthLoginRequest request) {
-        log.info("[Auth] 用户登录请求: username={}, tenantId={}, provider={}",
-                request.getUsername(), request.getTenantId(), request.getProvider());
+        return ResultRespHelper.responseInvoke("AuthController.login", request, (req) -> {
+            UserView user;
+            if (req.getProvider() != null && !req.getProvider().isBlank()
+                    && !"LOCAL".equalsIgnoreCase(req.getProvider())) {
+                user = authProviderFactory.authenticate(
+                    req.getProvider(), req.getUsername(), req.getPassword());
+            } else {
+                user = userService.authenticate(
+                    req.getTenantId(), req.getUsername(), req.getPassword());
+            }
+            if (user == null) {
+                throw new BusinessException(401, "用户名或密码错误");
+            }
+            if (!user.isActive()) {
+                throw new BusinessException(403, "账户已停用，请联系管理员");
+            }
 
-        UserView user;
-        if (request.getProvider() != null && !request.getProvider().isBlank()
-                && !"LOCAL".equalsIgnoreCase(request.getProvider())) {
-            user = authProviderFactory.authenticate(
-                request.getProvider(), request.getUsername(), request.getPassword());
-        } else {
-            user = userService.authenticate(
-                request.getTenantId(), request.getUsername(), request.getPassword());
-        }
-        if (user == null) {
-            log.warn("[Auth] 登录失败（用户名或密码错误）: username={}", request.getUsername());
-            return Result.fail(401, "用户名或密码错误");
-        }
-        if (!user.isActive()) {
-            log.warn("[Auth] 登录失败（账户已停用）: userId={}", user.getUserId());
-            return Result.fail(403, "账户已停用，请联系管理员");
-        }
+            StpUtil.login(user.getUserId());
+            StpUtil.getSession().set("tenantId", user.getTenantId());
+            StpUtil.getSession().set("username", user.getUsername());
 
-        StpUtil.login(user.getUserId());
-        StpUtil.getSession().set("tenantId", user.getTenantId());
-        StpUtil.getSession().set("username", user.getUsername());
+            String refreshToken = UUID.randomUUID().toString();
+            stringRedisTemplate.opsForValue().set(
+                    REFRESH_KEY_PREFIX + user.getUserId(),
+                    refreshToken,
+                    REFRESH_TTL_DAYS, TimeUnit.DAYS);
 
-        String refreshToken = UUID.randomUUID().toString();
-        stringRedisTemplate.opsForValue().set(
-                REFRESH_KEY_PREFIX + user.getUserId(),
-                refreshToken,
-                REFRESH_TTL_DAYS, TimeUnit.DAYS);
-
-        LoginResponse response = new LoginResponse(StpUtil.getTokenValue(), refreshToken);
-        log.info("[Auth] 登录成功: userId={}, tenantId={}", user.getUserId(), user.getTenantId());
-        return Result.ok("登录成功", response);
+            return new LoginResponse(StpUtil.getTokenValue(), refreshToken);
+        });
     }
 
     @PostMapping("/refresh")
@@ -89,58 +86,55 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "RefreshToken 无效或已过期")
     })
     public Result<LoginResponse> refresh(@Valid @RequestBody AuthRefreshTokenRequest request) {
-        log.info("[Auth] Token 刷新请求: userId={}", request.getUserId());
+        return ResultRespHelper.responseInvoke("AuthController.refresh", request, (req) -> {
+            String storedToken = stringRedisTemplate.opsForValue()
+                    .get(REFRESH_KEY_PREFIX + req.getUserId());
+            if (storedToken == null) {
+                throw new BusinessException(401, "RefreshToken 已过期，请重新登录");
+            }
+            if (!storedToken.equals(req.getRefreshToken())) {
+                throw new BusinessException(401, "RefreshToken 无效");
+            }
 
-        String storedToken = stringRedisTemplate.opsForValue()
-                .get(REFRESH_KEY_PREFIX + request.getUserId());
-        if (storedToken == null) {
-            log.warn("[Auth] RefreshToken 不存在或已过期: userId={}", request.getUserId());
-            return Result.fail(401, "RefreshToken 已过期，请重新登录");
-        }
-        if (!storedToken.equals(request.getRefreshToken())) {
-            log.warn("[Auth] RefreshToken 不匹配: userId={}", request.getUserId());
-            return Result.fail(401, "RefreshToken 无效");
-        }
+            stringRedisTemplate.delete(REFRESH_KEY_PREFIX + req.getUserId());
+            StpUtil.login(req.getUserId());
 
-        stringRedisTemplate.delete(REFRESH_KEY_PREFIX + request.getUserId());
-        StpUtil.login(request.getUserId());
+            String newRefreshToken = UUID.randomUUID().toString();
+            stringRedisTemplate.opsForValue().set(
+                    REFRESH_KEY_PREFIX + req.getUserId(),
+                    newRefreshToken,
+                    REFRESH_TTL_DAYS, TimeUnit.DAYS);
 
-        String newRefreshToken = UUID.randomUUID().toString();
-        stringRedisTemplate.opsForValue().set(
-                REFRESH_KEY_PREFIX + request.getUserId(),
-                newRefreshToken,
-                REFRESH_TTL_DAYS, TimeUnit.DAYS);
-
-        LoginResponse response = new LoginResponse(StpUtil.getTokenValue(), newRefreshToken);
-        log.info("[Auth] Token 刷新成功: userId={}", request.getUserId());
-        return Result.ok("Token 刷新成功", response);
+            return new LoginResponse(StpUtil.getTokenValue(), newRefreshToken);
+        });
     }
 
     @PostMapping("/logout")
     @Operation(summary = "用户登出", description = "从 Redis 中删除当前 AccessToken 和 RefreshToken")
     public Result<Void> logout() {
-        String userId = null;
-        try {
-            userId = (String) StpUtil.getLoginId();
-            log.info("[Auth] 用户登出: userId={}", userId);
-        } catch (Exception e) {
-            log.debug("[Auth] 登出时无法获取 loginId（可能已过期）");
-        }
-        StpUtil.logout();
-        if (userId != null) {
-            stringRedisTemplate.delete(REFRESH_KEY_PREFIX + userId);
-        }
-        log.info("[Auth] 登出完成: userId={}", userId);
-        return Result.ok();
+        return ResultRespHelper.responseInvoke("AuthController.logout", null, (__) -> {
+            String userId = null;
+            try {
+                userId = (String) StpUtil.getLoginId();
+            } catch (Exception e) {
+                log.debug("[Auth] 登出时无法获取 loginId（可能已过期）");
+            }
+            StpUtil.logout();
+            if (userId != null) {
+                stringRedisTemplate.delete(REFRESH_KEY_PREFIX + userId);
+            }
+            return null;
+        });
     }
 
     @PostMapping("/me")
     @Operation(summary = "获取当前用户信息", description = "从 Sa-Token Session 返回登录时写入的用户上下文，需登录")
     public Result<UserInfo> currentUser() {
-        String userId = (String) StpUtil.getLoginId();
-        String username = StpUtil.getSession().getString("username");
-        Long tenantId = StpUtil.getSession().getLong("tenantId");
-        log.debug("[Auth] 查询当前用户: userId={}, tenantId={}", userId, tenantId);
-        return Result.ok(new UserInfo(userId, username, tenantId));
+        return ResultRespHelper.responseInvoke("AuthController.currentUser", null, (__) -> {
+            String userId = (String) StpUtil.getLoginId();
+            String username = StpUtil.getSession().getString("username");
+            Long tenantId = StpUtil.getSession().getLong("tenantId");
+            return new UserInfo(userId, username, tenantId);
+        });
     }
 }

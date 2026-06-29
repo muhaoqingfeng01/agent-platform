@@ -3,6 +3,7 @@ package com.example.agent.interfaces.rest;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.prompt.PromptApplicationService;
 import com.example.agent.common.dto.PageResponse;
+import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.interfaces.dto.request.prompt.PromptCreateRequest;
 import com.example.agent.interfaces.dto.request.prompt.PromptListRequest;
@@ -41,14 +42,16 @@ public class PromptController {
     @Operation(summary = "创建提示词模板（草稿）")
     public Result<PromptApplicationService.PromptResponse> create(
             @Valid @RequestBody PromptCreateRequest request) {
-        PromptApplicationService.CreatePromptRequest appReq =
-                new PromptApplicationService.CreatePromptRequest();
-        appReq.setName(request.getName());
-        appReq.setDescription(request.getDescription());
-        appReq.setTemplateText(request.getTemplateText());
-        appReq.setVariables(request.getVariables());
-        appReq.setAbTestConfig(request.getAbTestConfig());
-        return Result.ok(applicationService.createPrompt(appReq));
+        return ResultRespHelper.responseInvoke("PromptController.create", request, (req) -> {
+            PromptApplicationService.CreatePromptRequest appReq =
+                    new PromptApplicationService.CreatePromptRequest();
+            appReq.setName(req.getName());
+            appReq.setDescription(req.getDescription());
+            appReq.setTemplateText(req.getTemplateText());
+            appReq.setVariables(req.getVariables());
+            appReq.setAbTestConfig(req.getAbTestConfig());
+            return applicationService.createPrompt(appReq);
+        });
     }
 
     @PostMapping("/list")
@@ -56,93 +59,106 @@ public class PromptController {
     @Operation(summary = "提示词模板列表（分页）")
     public Result<PageResponse<PromptApplicationService.PromptResponse>> list(
             @RequestBody PromptListRequest request) {
-        return Result.ok(applicationService.listPrompts(request.getPage(), request.getSize(), request.getStatus()));
+        return ResultRespHelper.responseInvoke("PromptController.list", request, (req) ->
+                applicationService.listPrompts(req.getPage(), req.getSize(), req.getStatus()));
     }
 
     @PostMapping("/get")
     @SaCheckPermission("prompt:read")
     @Operation(summary = "模板详情")
     public Result<PromptApplicationService.PromptResponse> getById(@Valid @RequestBody PromptGetRequest request) {
-        return Result.ok(applicationService.getPrompt(request.getId()));
+        return ResultRespHelper.responseInvoke("PromptController.getById", request, (req) ->
+                applicationService.getPrompt(req.getId()));
     }
 
     @PostMapping("/update")
     @SaCheckPermission("prompt:update")
     @Operation(summary = "编辑模板（仅 DRAFT 状态可编辑）")
     public Result<PromptApplicationService.PromptResponse> update(@Valid @RequestBody PromptUpdateRequest request) {
-        PromptApplicationService.UpdatePromptRequest appReq =
-                new PromptApplicationService.UpdatePromptRequest();
-        appReq.setName(request.getName());
-        appReq.setDescription(request.getDescription());
-        appReq.setTemplateText(request.getTemplateText());
-        appReq.setVariables(request.getVariables());
-        return Result.ok(applicationService.updatePrompt(request.getId(), appReq));
+        return ResultRespHelper.responseInvoke("PromptController.update", request, (req) -> {
+            PromptApplicationService.UpdatePromptRequest appReq =
+                    new PromptApplicationService.UpdatePromptRequest();
+            appReq.setName(req.getName());
+            appReq.setDescription(req.getDescription());
+            appReq.setTemplateText(req.getTemplateText());
+            appReq.setVariables(req.getVariables());
+            return applicationService.updatePrompt(req.getId(), appReq);
+        });
     }
 
     @PostMapping("/delete")
     @SaCheckPermission("prompt:delete")
     @Operation(summary = "软删除模板")
     public Result<Void> delete(@Valid @RequestBody PromptGetRequest request) {
-        applicationService.deletePrompt(request.getId());
-        return Result.ok();
+        return ResultRespHelper.responseInvoke("PromptController.delete", request, (req) -> {
+            applicationService.deletePrompt(req.getId());
+            return null;
+        });
     }
 
     @PostMapping("/preview")
     @SaCheckPermission("prompt:read")
     @Operation(summary = "变量填充预览渲染")
     public Result<String> preview(@Valid @RequestBody PromptPreviewRenderRequest request) {
-        String rendered = applicationService.previewRender(request.getId(), request.getVariables());
-        return Result.ok(rendered);
+        return ResultRespHelper.responseInvoke("PromptController.preview", request, (req) ->
+                applicationService.previewRender(req.getId(), req.getVariables()));
     }
 
     @PostMapping("/publish")
     @SaCheckPermission("prompt:publish")
     @Operation(summary = "发布当前草稿（版本号 +1）")
     public Result<PromptApplicationService.PromptResponse> publish(@Valid @RequestBody PromptGetRequest request) {
-        return Result.ok(applicationService.publishPrompt(request.getId()));
+        return ResultRespHelper.responseInvoke("PromptController.publish", request, (req) ->
+                applicationService.publishPrompt(req.getId()));
     }
 
     @PostMapping("/rollback")
     @SaCheckPermission("prompt:publish")
     @Operation(summary = "回滚到指定版本")
     public Result<PromptApplicationService.PromptResponse> rollback(@Valid @RequestBody PromptRollbackRequest request) {
-        return Result.ok(applicationService.rollbackPrompt(request.getId(), request.getVersion()));
+        return ResultRespHelper.responseInvoke("PromptController.rollback", request, (req) ->
+                applicationService.rollbackPrompt(req.getId(), req.getVersion()));
     }
 
     @PostMapping("/archive")
     @SaCheckPermission("prompt:update")
     @Operation(summary = "归档模板")
     public Result<Void> archive(@Valid @RequestBody PromptGetRequest request) {
-        applicationService.archivePrompt(request.getId());
-        return Result.ok();
+        return ResultRespHelper.responseInvoke("PromptController.archive", request, (req) -> {
+            applicationService.archivePrompt(req.getId());
+            return null;
+        });
     }
 
     @PostMapping("/versions/list")
     @SaCheckPermission("prompt:read")
     @Operation(summary = "查看版本历史列表")
     public Result<List<PromptApplicationService.VersionResponse>> versions(@Valid @RequestBody PromptGetRequest request) {
-        return Result.ok(applicationService.getVersionHistory(request.getId()));
+        return ResultRespHelper.responseInvoke("PromptController.versions", request, (req) ->
+                applicationService.getVersionHistory(req.getId()));
     }
 
     @PostMapping("/versions/detail")
     @SaCheckPermission("prompt:read")
     @Operation(summary = "查看指定版本内容")
     public Result<PromptApplicationService.VersionResponse> versionDetail(@Valid @RequestBody PromptVersionDetailRequest request) {
-        return Result.ok(applicationService.getVersionDetail(request.getId(), request.getVersion()));
+        return ResultRespHelper.responseInvoke("PromptController.versionDetail", request, (req) ->
+                applicationService.getVersionDetail(req.getId(), req.getVersion()));
     }
 
     @PostMapping("/diff")
     @SaCheckPermission("prompt:read")
     @Operation(summary = "两个版本的差异对比")
     public Result<PromptApplicationService.DiffResponse> diff(@Valid @RequestBody PromptDiffVersionRequest request) {
-        return Result.ok(applicationService.diffVersions(request.getId(), request.getV1(), request.getV2()));
+        return ResultRespHelper.responseInvoke("PromptController.diff", request, (req) ->
+                applicationService.diffVersions(req.getId(), req.getV1(), req.getV2()));
     }
 
     @PostMapping("/render")
     @SaCheckPermission("prompt:read")
     @Operation(summary = "运行时渲染（仅已发布模板，供编排引擎调用）")
     public Result<String> runtimeRender(@Valid @RequestBody PromptPreviewRenderRequest request) {
-        String rendered = applicationService.runtimeRender(request.getId(), request.getVariables());
-        return Result.ok(rendered);
+        return ResultRespHelper.responseInvoke("PromptController.runtimeRender", request, (req) ->
+                applicationService.runtimeRender(req.getId(), req.getVariables()));
     }
 }

@@ -6,6 +6,7 @@ import com.example.agent.application.knowledge.KnowledgeBaseApplicationService;
 import com.example.agent.application.knowledge.dto.DocumentDTO;
 import com.example.agent.application.knowledge.dto.KnowledgeBaseDTO;
 import com.example.agent.common.dto.PageResponse;
+import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.interfaces.dto.request.filemgmt.FileListRequest;
 import com.example.agent.interfaces.dto.request.filemgmt.FileSummaryRequest;
@@ -39,28 +40,31 @@ public class FileManagementController {
     @SaCheckPermission("doc:read")
     @Operation(summary = "文件管理列表（含状态标签、操作权限）")
     public Result<Map<String, Object>> listFiles(@Valid @RequestBody FileListRequest request) {
-        KnowledgeBaseDTO kb = kbService.getByKnowledgeId(request.getKnowledgeId());
-        PageResponse<DocumentDTO> docs = docService.listByKnowledgeId(request.getKnowledgeId(), request.getPage(), request.getSize());
+        return ResultRespHelper.responseInvoke("FileManagementController.listFiles", request, (req) -> {
+            KnowledgeBaseDTO kb = kbService.getByKnowledgeId(req.getKnowledgeId());
+            PageResponse<DocumentDTO> docs = docService.listByKnowledgeId(req.getKnowledgeId(), req.getPage(), req.getSize());
 
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("kbInfo", Map.of(
-                "knowledgeId", kb.getKnowledgeId(),
-                "name", kb.getName(),
-                "status", kb.getStatus(),
-                "documentCount", kb.getDocumentCount()
-        ));
-        result.put("documents", docs.getRecords());
-        result.put("total", docs.getTotal());
-        result.put("page", docs.getPage());
-        result.put("size", docs.getSize());
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("kbInfo", Map.of(
+                    "knowledgeId", kb.getKnowledgeId(),
+                    "name", kb.getName(),
+                    "status", kb.getStatus(),
+                    "documentCount", kb.getDocumentCount()
+            ));
+            result.put("documents", docs.getRecords());
+            result.put("total", docs.getTotal());
+            result.put("page", docs.getPage());
+            result.put("size", docs.getSize());
 
-        return Result.ok(result);
+            return result;
+        });
     }
 
     @PostMapping("/files/summary")
     @SaCheckPermission("doc:read")
     @Operation(summary = "文件状态汇总")
     public Result<Map<String, Long>> summary(@Valid @RequestBody FileSummaryRequest request) {
-        return Result.ok(kbService.getStats(request.getKnowledgeId()));
+        return ResultRespHelper.responseInvoke("FileManagementController.summary", request, (req) ->
+                kbService.getStats(req.getKnowledgeId()));
     }
 }

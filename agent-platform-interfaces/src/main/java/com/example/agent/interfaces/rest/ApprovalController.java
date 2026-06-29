@@ -2,6 +2,7 @@ package com.example.agent.interfaces.rest;
 
 import com.example.agent.application.approval.ApprovalWorkflowApplicationService;
 import com.example.agent.application.approval.dto.ApprovalWorkflowResponse;
+import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.interfaces.dto.request.approval.ApprovalListRequest;
 import com.example.agent.interfaces.dto.request.approval.ApprovalGetRequest;
@@ -35,37 +36,42 @@ public class ApprovalController {
     @PostMapping("/list")
     @Operation(summary = "审批列表（我的待审批/我已审批/我发起的）")
     public Result<List<ApprovalWorkflowResponse>> list(@RequestBody ApprovalListRequest request) {
-        List<ApprovalWorkflowResponse> list = switch (request.getFilter()) {
-            case "my-pending" -> approvalService.listPendingByApprover(request.getApproverId(), request.getPage(), request.getSize());
-            case "my-resolved" -> approvalService.listResolvedByApprover(request.getApproverId(), request.getPage(), request.getSize());
-            case "my-requested" -> approvalService.listByRequester(request.getRequesterId(), request.getPage(), request.getSize());
-            case "by-status" -> approvalService.listByStatus(request.getStatus(), request.getPage(), request.getSize());
-            default -> approvalService.listByTenant(request.getPage(), request.getSize());
-        };
-        return Result.ok(list);
+        return ResultRespHelper.responseInvoke("ApprovalController.list", request, (req) -> {
+            return switch (req.getFilter()) {
+                case "my-pending" -> approvalService.listPendingByApprover(req.getApproverId(), req.getPage(), req.getSize());
+                case "my-resolved" -> approvalService.listResolvedByApprover(req.getApproverId(), req.getPage(), req.getSize());
+                case "my-requested" -> approvalService.listByRequester(req.getRequesterId(), req.getPage(), req.getSize());
+                case "by-status" -> approvalService.listByStatus(req.getStatus(), req.getPage(), req.getSize());
+                default -> approvalService.listByTenant(req.getPage(), req.getSize());
+            };
+        });
     }
 
     @PostMapping("/get")
     @Operation(summary = "审批详情")
     public Result<ApprovalWorkflowResponse> getById(@Valid @RequestBody ApprovalGetRequest request) {
-        return Result.ok(approvalService.getByApprovalId(request.getApprovalId()));
+        return ResultRespHelper.responseInvoke("ApprovalController.getById", request, (req) ->
+                approvalService.getByApprovalId(req.getApprovalId()));
     }
 
     @PostMapping("/approve")
     @Operation(summary = "同意审批")
     public Result<ApprovalWorkflowResponse> approve(@Valid @RequestBody ApprovalApproveRequest request) {
-        return Result.ok(approvalService.approve(request.getApprovalId(), request.getComment()));
+        return ResultRespHelper.responseInvoke("ApprovalController.approve", request, (req) ->
+                approvalService.approve(req.getApprovalId(), req.getComment()));
     }
 
     @PostMapping("/reject")
     @Operation(summary = "拒绝审批")
     public Result<ApprovalWorkflowResponse> reject(@Valid @RequestBody ApprovalRejectRequest request) {
-        return Result.ok(approvalService.reject(request.getApprovalId(), request.getReason()));
+        return ResultRespHelper.responseInvoke("ApprovalController.reject", request, (req) ->
+                approvalService.reject(req.getApprovalId(), req.getReason()));
     }
 
     @PostMapping("/stats")
     @Operation(summary = "审批统计")
     public Result<Map<String, Object>> stats() {
-        return Result.ok(approvalService.stats());
+        return ResultRespHelper.responseInvoke("ApprovalController.stats", null, (req) ->
+                approvalService.stats());
     }
 }

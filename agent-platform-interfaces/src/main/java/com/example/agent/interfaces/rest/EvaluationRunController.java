@@ -2,6 +2,7 @@ package com.example.agent.interfaces.rest;
 
 import com.example.agent.application.evaluation.EvaluationRunService;
 import com.example.agent.application.evaluation.dto.EvaluationRunResponse;
+import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.interfaces.dto.request.evaluation.DatasetGetRequest;
 import com.example.agent.interfaces.dto.request.evaluation.EvaluationGetRequest;
@@ -27,18 +28,21 @@ public class EvaluationRunController {
     @PostMapping("/run")
     @Operation(summary = "执行评测（LLM-as-Judge）")
     public Result<EvaluationRunResponse> execute(@Valid @RequestBody DatasetGetRequest request) {
-        return Result.ok(runService.execute(request.getDatasetId()));
+        return ResultRespHelper.responseInvoke("EvaluationRunController.execute", request, (req) ->
+                runService.execute(req.getDatasetId()));
     }
 
     @PostMapping("/get")
     @Operation(summary = "评测结果详情")
     public Result<EvaluationRunResponse> get(@Valid @RequestBody EvaluationGetRequest request) {
-        return Result.ok(runService.getByEvaluationId(request.getEvaluationId()));
+        return ResultRespHelper.responseInvoke("EvaluationRunController.get", request, (req) ->
+                runService.getByEvaluationId(req.getEvaluationId()));
     }
 
     @PostMapping("/list")
     @Operation(summary = "评测历史列表")
     public Result<List<EvaluationRunResponse>> list(@RequestBody EvaluationListRequest request) {
-        return Result.ok(runService.list(request.getPage(), request.getSize()));
+        return ResultRespHelper.responseInvoke("EvaluationRunController.list", request, (req) ->
+                runService.list(req.getPage(), req.getSize()));
     }
 }

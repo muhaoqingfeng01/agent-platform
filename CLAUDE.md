@@ -94,7 +94,7 @@ interfaces → application → domain ← infrastructure
 
 ## 项目定位
 
-**企业级 AI Agent 平台** — DDD 六模块 Maven 多模块项目，P0-P4 核心已全部实现（~387 Java 文件），P5 前端未开始，P6 迭代增强待执行。
+**企业级 AI Agent 平台** — DDD 六模块 Maven 多模块项目，P0-P4 核心已全部实现（508 Java 文件），P5 前端未开始，P6 迭代增强代码已实现（9 项），运维设施待部署（11 项）。
 
 - **路径**: `D:\mhqf_project\heavenly-craft-agent\agent-platform`
 - **包名**: `com.example.agent`
@@ -112,9 +112,46 @@ interfaces → application → domain ← infrastructure
 | Spring AI Alibaba | 1.1.2.0 | groupId=`com.alibaba.cloud.ai`（含 `.ai`） |
 | Spring AI | 1.1.7 | |
 | MySQL Connector | **8.0.33** | 不要用 3.0.33 或 9.x |
+| MyBatis Plus | 3.5.9 | |
+| MyBatis Spring Boot | 3.0.4 | |
+| Sa-Token | 1.39.0 | |
+| Redisson | 3.37.0 | |
+| Hutool | 5.8.32 | |
+| MapStruct | 1.6.3 | |
+| Milvus SDK | 2.6.9 | |
+| MinIO Client | 8.5.10 | |
+| Apache Tika | 2.9.2 | 文档解析 |
+| Guava | 33.3.1-jre | |
 | Maven 镜像 | `https://maven.aliyun.com/repository/public/` | |
 | 本地仓库 | `D:\tools\repository` | |
 | 编译状态 | ✅ BUILD SUCCESS（7/7 模块） | |
+
+---
+
+## 🛠️ 开发命令速查
+
+| 操作 | 命令 |
+|------|------|
+| 编译全部模块 | `mvn clean compile` |
+| 安装到本地仓库（跳过测试） | `mvn clean install -DskipTests` |
+| 打包可执行 JAR | `mvn clean package -DskipTests -pl agent-platform-bootstrap` |
+| 启动应用（dev） | `mvn spring-boot:run -pl agent-platform-bootstrap` |
+| 运行单个测试 | `mvn test -pl <module> -Dtest=<TestClass>` |
+| 查看依赖树 | `mvn dependency:tree -pl <module>` |
+
+**⚠️ 注意**: 项目无 Maven Wrapper（`mvnw`），需系统安装 Maven 3.9+。新增依赖后必须 `mvn install`，否则 bootstrap 模块解析不到传递依赖。
+
+**外部服务**: 启动前确保 MySQL(`:3306`)、Redis(`:6379`)、Milvus(`:19530`) 已运行。MinIO 和 Langfuse 为可选服务。
+
+**🔒 安全提醒**: `application.yml` 中的 API Key 和密码仅作本地开发默认值，**务必通过环境变量覆盖**生产环境配置：
+- `DEEPSEEK_API_KEY` / `EMBEDDING_API_KEY` — AI 模型密钥
+- `MYSQL_PASSWORD` / `REDIS_PASSWORD` — 数据库密码
+- `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` — 对象存储凭证
+- `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` — 可观测性密钥
+
+**Swagger**: `http://localhost:8080/swagger-ui.html` — Sa-Token Bearer 鉴权
+
+**仅 1 个测试文件**（`bootstrap/.../AgentPlatformApplicationTests.java`），无单元测试覆盖。新增功能应补充测试。
 
 ---
 
@@ -141,15 +178,15 @@ interfaces → application → domain ← infrastructure
 
 ---
 
-## 当前 Java 代码（~410 个文件，P0 + P1 + P2 + P3 + P4 + P6 核心已实现）
+## 当前 Java 代码（508 个文件，P0 + P1 + P2 + P3 + P4 + P6 核心已实现）
 
 ```
-agent-platform-bootstrap/    1 文件  ← @SpringBootApplication + @EnableAsync
-agent-platform-common/       9 文件  ← Result、6 异常、PageResponse、IdGenerator
-agent-platform-domain/     103 文件  ← 23 实体 + 23 仓储接口 + 32 值对象 + 5 安全接口 + 19 DomainService/端口
-agent-platform-application/ 105 文件  ← 19 AppService + 3 识别器 + 5 提取器 + 4 Resolver + 5 Handler + 7 切片策略 + 1 管线 + 10 Security DTO + 2 Event + ...
-agent-platform-infrastructure/ 113 文件 ← 23 PO + 23 Mapper + 23 Impl + 3 ServiceImpl + 13 Config + 4 Rag + 2 Observability + AgentMetrics + McpClientManager + HttpToolAdapter + 3 Annotation + 2 Aspect + ...
-agent-platform-interfaces/   55 文件  ← 20 Controller + 28 Request DTO + ExceptionHandler + SwaggerConfig + 4 认证 DTO
+agent-platform-bootstrap/     1 文件  ← @SpringBootApplication + @EnableAsync
+agent-platform-common/       23 文件  ← Result、6 异常、PageResponse、IdGenerator、安全异常、值对象基类
+agent-platform-domain/      117 文件  ← 23 聚合根/实体 + 23 仓储接口 + 32 值对象 + 5 安全接口 + 19 DomainService/端口
+agent-platform-application/ 118 文件  ← 19 AppService + 3 识别器 + 1 责任链 + 5 提取器 + 4 Resolver + 5 Handler + 7 切片策略 + 1 管线 + Security DTO + Event + ...
+agent-platform-infrastructure/ 126 文件 ← 23 PO + 23 Mapper + 23 Impl + ServiceImpl + Config + Rag + Observability + AgentMetrics + McpClientManager + HttpToolAdapter + Annotation + Aspect + ...
+agent-platform-interfaces/  123 文件  ← 20 Controller + ~101 Request/Response DTO + ExceptionHandler + SwaggerConfig + 认证 DTO
 ```
 
 > ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、T4 提示词管理、T5 任务规划引擎、T6 RAG 知识库、T7 MCP 工具平台、T10 安全围栏、T11 人机协同审批、T9 全链路可观测性、T12 效果评估与持续优化、**P6 迭代增强（Redis缓存/Reranker/工具版本化/心跳检测/精度监控/LDAP/SSO/Presidio）**
@@ -159,15 +196,17 @@ agent-platform-interfaces/   55 文件  ← 20 Controller + 28 Request DTO + Exc
 
 ---
 
-## 数据库（28 张表 + V1.4.0 + V1.2.2，手动管理）
+## 数据库（29 张表 + V1.5.0，手动管理）
 
 - **V1.0.0** (13张): t_tenant, t_user, t_role, t_permission, t_user_role, t_role_permission, t_agent_config, t_conversation, t_message, t_knowledge_base, t_tool_registry, t_prompt_template, t_evaluation_run
-- **V1.1.0** (15张): t_intent, t_long_term_memory, t_prompt_template_version, t_task_execution, t_task_step_execution, t_document, t_document_chunk, t_knowledge_hit_record, t_tool_invocation_log, t_sensitive_word, t_security_event, t_audit_log, t_approval_workflow, t_evaluation_dataset, t_evaluation_dataset_item, t_optimization_ticket
+- **V1.1.0** (16张): t_intent, t_long_term_memory, t_prompt_template_version, t_task_execution, t_task_step_execution, t_document, t_document_chunk, t_knowledge_hit_record, t_tool_invocation_log, t_sensitive_word, t_security_event, t_audit_log, t_approval_workflow, t_evaluation_dataset, t_evaluation_dataset_item, t_optimization_ticket
 - **V1.2.0**: 管理员种子数据 (admin/Mhqf@123456)
-- **V1.2.1**: 业务 ID 字段补充（conversation/message/intent/long_term_memory 表）
+- **V1.2.1**: 业务 ID 字段补充（conversation/message/intent/long_term_memory 表）+ 权限种子数据（44 条权限码）
 - **V1.2.2**: 🆕 T7 工具调用日志业务 ID（t_tool_invocation_log.invocation_id）
 - **V1.3.0**: T6-RAG: t_knowledge_base 14 个精度控制字段
 - **V1.4.0**: 🆕 KB 文件管理升级: created_by + 状态迁移 + chunk.deleted
+- **V1.5.0**: 🆕 T7 工具版本化: t_tool_registry 版本字段
+- 所有 SQL 位于 `docs/database/`，共 9 个迁移文件
 
 ---
 
@@ -181,15 +220,16 @@ P0(收尾✅) → P1(T3-T5✅) → P2(T6-T7✅) → P3(安全✅) → P4(观测�
 ```
 
 **P5**: 前端交互层（Web聊天/审批卡片/反馈/IM），与后端并行开发
-**P6**: 迭代优化（7 项观测增强 + Docker/K8s 部署），方案已设计
+**P6**: 迭代优化（9 项代码增强已实现：Reranker/工具版本化/Redis缓存/心跳检测/精度监控/LDAP/SSO/Presidio），11 项运维设施待部署
 
 ### ⚠️ 已知差距速览
 
 | 类别 | 数量 | 说明 |
 |------|:--:|------|
-| 代码功能缺口 | 8 项 | Reranker/精度监控/工具版本化/Redis缓存等 |
-| 运维设施缺口 | 11 项 | Grafana/OTel/ELK/AlertManager/Docker/K8s 等 |
+| 代码功能缺口 | 2 项 | P5 前端交互层、反馈聚合统计 API（P6 已补 9 项代码缺口） |
+| 运维设施缺口 | 11 项 | Grafana/OTel/ELK/AlertManager/Docker/K8s/MinIO/Presidio/LDAP 等 |
 | 方案变更 | 5 项 | 均为「简化设计」方向，详见 `docs/开发进度.md` |
+| 测试覆盖 | ⚠️ 极低 | 仅 1 个 Spring Boot 上下文测试，无业务逻辑单元测试 |
 
 ---
 
@@ -216,8 +256,12 @@ P0(收尾✅) → P1(T3-T5✅) → P2(T6-T7✅) → P3(安全✅) → P4(观测�
 
 ## 启动依赖的外部服务
 
-MySQL(`:3306`) + Redis(`:6379`) + Milvus(`:19530`) + MinIO(未配置)
+MySQL(`:3306`) + Redis(`:6379`) + Milvus(`:19530`) + MinIO(可选，文件上传)
 
-## Swagger
+## 应用入口
 
-`http://localhost:8080/swagger-ui.html` — Sa-Token Bearer 鉴权
+- 启动类: `agent-platform-bootstrap/.../AgentPlatformApplication.java`（`@EnableAsync`）
+- 默认端口: `8080`
+- Swagger: `http://localhost:8080/swagger-ui.html` — Sa-Token Bearer 鉴权
+- 健康检查: `http://localhost:8080/actuator/health`
+- Prometheus 指标: `http://localhost:8080/actuator/prometheus`

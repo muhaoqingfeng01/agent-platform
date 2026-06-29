@@ -3,6 +3,7 @@ package com.example.agent.interfaces.rest;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.stp.StpUtil;
 import com.example.agent.application.user.UserApplicationService;
+import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.application.user.UserCreateCommand;
 import com.example.agent.application.user.UserResponse;
@@ -40,7 +41,8 @@ public class UserController {
     @Operation(summary = "用户注册", description = "公开接口，新用户注册并分配默认 VIEWER 角色")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "注册成功"))
     public Result<UserResponse> register(@Valid @RequestBody UserCreateCommand request) {
-        return Result.ok(userService.register(request));
+        return ResultRespHelper.responseInvoke("UserController.register", request, (req) ->
+                userService.register(req));
     }
 
     @PostMapping("/list")
@@ -48,47 +50,55 @@ public class UserController {
     @Operation(summary = "用户列表")
     public Result<java.util.List<UserResponse>> list(@RequestBody UserListRequest request) {
         Long tenantId = TenantContext.getCurrentTenantId();
-        return Result.ok(userService.listUsers(tenantId, request.getPage(), request.getSize()));
+        return ResultRespHelper.responseInvoke("UserController.list", request, (req) ->
+                userService.listUsers(tenantId, req.getPage(), req.getSize()));
     }
 
     @PostMapping("/get")
     @SaCheckPermission("user:read")
     @Operation(summary = "用户详情")
     public Result<UserResponse> get(@Valid @RequestBody UserGetRequest request) {
-        return Result.ok(userService.getUser(request.getId()));
+        return ResultRespHelper.responseInvoke("UserController.get", request, (req) ->
+                userService.getUser(req.getId()));
     }
 
     @PostMapping("/update")
     @SaCheckPermission("user:write")
     @Operation(summary = "更新用户信息")
     public Result<UserResponse> update(@Valid @RequestBody UserUpdateRequest request) {
-        com.example.agent.application.user.UserUpdateCommand updateReq =
-                new com.example.agent.application.user.UserUpdateCommand();
-        updateReq.setId(request.getId());
-        updateReq.setEmail(request.getEmail());
-        updateReq.setPhone(request.getPhone());
-        return Result.ok(userService.updateUser(request.getId(), updateReq));
+        return ResultRespHelper.responseInvoke("UserController.update", request, (req) -> {
+            com.example.agent.application.user.UserUpdateCommand updateReq =
+                    new com.example.agent.application.user.UserUpdateCommand();
+            updateReq.setId(req.getId());
+            updateReq.setEmail(req.getEmail());
+            updateReq.setPhone(req.getPhone());
+            return userService.updateUser(req.getId(), updateReq);
+        });
     }
 
     @PostMapping("/toggle-status")
     @SaCheckPermission("user:write")
     @Operation(summary = "启停用户")
     public Result<UserResponse> toggleStatus(@Valid @RequestBody UserToggleStatusRequest request) {
-        com.example.agent.application.user.UserUpdateStatusCommand statusReq =
-                new com.example.agent.application.user.UserUpdateStatusCommand();
-        statusReq.setStatus(request.getStatus());
-        return Result.ok(userService.toggleStatus(request.getId(), statusReq));
+        return ResultRespHelper.responseInvoke("UserController.toggleStatus", request, (req) -> {
+            com.example.agent.application.user.UserUpdateStatusCommand statusReq =
+                    new com.example.agent.application.user.UserUpdateStatusCommand();
+            statusReq.setStatus(req.getStatus());
+            return userService.toggleStatus(req.getId(), statusReq);
+        });
     }
 
     @PostMapping("/change-password")
     @Operation(summary = "修改密码", description = "当前用户修改自己的密码（需验证旧密码）")
     public Result<Void> changePassword(@Valid @RequestBody UserChangePasswordRequest request) {
-        com.example.agent.application.user.UserChangePasswordCommand pwdReq =
-                new com.example.agent.application.user.UserChangePasswordCommand();
-        pwdReq.setOldPassword(request.getOldPassword());
-        pwdReq.setNewPassword(request.getNewPassword());
-        userService.changePassword(request.getId(), pwdReq);
-        StpUtil.kickout(userService.getUser(request.getId()).getUserId());
-        return Result.ok();
+        return ResultRespHelper.responseInvoke("UserController.changePassword", request, (req) -> {
+            com.example.agent.application.user.UserChangePasswordCommand pwdReq =
+                    new com.example.agent.application.user.UserChangePasswordCommand();
+            pwdReq.setOldPassword(req.getOldPassword());
+            pwdReq.setNewPassword(req.getNewPassword());
+            userService.changePassword(req.getId(), pwdReq);
+            StpUtil.kickout(userService.getUser(req.getId()).getUserId());
+            return null;
+        });
     }
 }

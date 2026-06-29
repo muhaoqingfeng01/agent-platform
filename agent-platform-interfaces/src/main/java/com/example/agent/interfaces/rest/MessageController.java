@@ -6,6 +6,7 @@ import com.example.agent.application.conversation.MessageApplicationService.Mess
 import com.example.agent.application.conversation.StreamOrchestrationService;
 import com.example.agent.application.optimization.event.MessageFeedbackEvent;
 import com.example.agent.common.dto.PageResponse;
+import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.domain.conversation.valueobject.FeedbackType;
 import com.example.agent.infrastructure.config.sse.SseEmitterFactory;
@@ -48,9 +49,9 @@ public class MessageController {
     @SaCheckPermission("conversation:send")
     @Operation(summary = "发送消息（非流式）")
     public Result<MessageResponse> sendMessage(@Valid @RequestBody MessageSendRequest request) {
-        MessageResponse userMsg = MessageResponse.from(
-                messageService.saveUserMessage(request.getConversationId(), request.getContent()));
-        return Result.ok(userMsg);
+        return ResultRespHelper.responseInvoke("MessageController.sendMessage", request, (req) ->
+                MessageResponse.from(
+                        messageService.saveUserMessage(req.getConversationId(), req.getContent())));
     }
 
     @PostMapping(value = "/api/v1/conversations/messages/stream",
@@ -70,27 +71,31 @@ public class MessageController {
     @SaCheckPermission("conversation:read")
     @Operation(summary = "历史消息列表")
     public Result<PageResponse<MessageResponse>> listMessages(@RequestBody MessageListRequest request) {
-        return Result.ok(messageService.listMessages(request.getId(), request.getPage(), request.getSize()));
+        return ResultRespHelper.responseInvoke("MessageController.listMessages", request, (req) ->
+                messageService.listMessages(req.getId(), req.getPage(), req.getSize()));
     }
 
     @PostMapping("/api/v1/conversations/messages/before")
     @SaCheckPermission("conversation:read")
     @Operation(summary = "加载更早的消息")
     public Result<List<MessageResponse>> loadBefore(@Valid @RequestBody MessageLoadBeforeRequest request) {
-        return Result.ok(messageService.loadMessagesBefore(request.getId(), request.getBefore(), 50));
+        return ResultRespHelper.responseInvoke("MessageController.loadBefore", request, (req) ->
+                messageService.loadMessagesBefore(req.getId(), req.getBefore(), 50));
     }
 
     @PostMapping("/api/v1/conversations/messages/feedback")
     @SaCheckPermission("conversation:feedback")
     @Operation(summary = "消息反馈")
     public Result<Void> feedback(@Valid @RequestBody MessageFeedbackRequest request) {
-        FeedbackType feedbackType = FeedbackType.fromCode(request.getFeedback());
-        messageService.updateFeedback(request.getMsgId(), feedbackType);
+        return ResultRespHelper.responseInvoke("MessageController.feedback", request, (req) -> {
+            FeedbackType feedbackType = FeedbackType.fromCode(req.getFeedback());
+            messageService.updateFeedback(req.getMsgId(), feedbackType);
 
-        Long tenantId = TenantContext.getCurrentTenantId();
-        eventPublisher.publishEvent(new MessageFeedbackEvent(
-                this, request.getMsgId(), request.getConversationId(), tenantId, feedbackType));
+            Long tenantId = TenantContext.getCurrentTenantId();
+            eventPublisher.publishEvent(new MessageFeedbackEvent(
+                    this, req.getMsgId(), req.getConversationId(), tenantId, feedbackType));
 
-        return Result.ok();
+            return null;
+        });
     }
 }

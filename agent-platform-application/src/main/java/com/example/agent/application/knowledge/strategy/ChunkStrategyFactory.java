@@ -2,12 +2,15 @@ package com.example.agent.application.knowledge.strategy;
 
 import com.example.agent.domain.knowledge.service.ChunkStrategyService;
 import com.example.agent.domain.knowledge.valueobject.ChunkStrategy;
+import com.google.common.collect.Maps;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 切片策略工厂 — 根据策略枚举选择对应实现.
@@ -17,39 +20,35 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-public class ChunkStrategyFactory {
+@RequiredArgsConstructor
+public class ChunkStrategyFactory implements InitializingBean {
 
-    private final Map<String, ChunkStrategyService> strategyMap;
+    private static final Map<ChunkStrategy, ChunkStrategyService> strategyMap = Maps.newConcurrentMap();
 
-    /** Spring 自动注入所有 ChunkStrategyService 实现 */
-    public ChunkStrategyFactory(List<ChunkStrategyService> strategies) {
-        this.strategyMap = strategies.stream()
-                .collect(Collectors.toMap(ChunkStrategyService::getStrategyCode, s -> s));
-        log.info("[ChunkStrategyFactory] 初始化完成，加载策略数量: {}", this.strategyMap.size());
+    private final List<ChunkStrategyService> strategies;
+
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        if (CollectionUtils.isEmpty(strategies)) {
+            log.warn("[ChunkStrategyFactory] 未发现任何 ChunkStrategyService 实现");
+        }
+        strategies.forEach(service ->
+                {
+                    String strategyCode = service.getStrategyCode();
+                    ChunkStrategy chunkStrategy = ChunkStrategy.fromCode(strategyCode);
+                    strategyMap.put(chunkStrategy, service);
+                }
+        );
     }
 
     /**
      * 根据策略编码获取实现.
      */
     public ChunkStrategyService getStrategy(ChunkStrategy strategy) {
-        return getStrategy(strategy.getCode());
+        return strategyMap.get(strategy);
     }
 
-    /**
-     * 根据策略字符串获取实现.
-     */
-    public ChunkStrategyService getStrategy(String strategyCode) {
-        ChunkStrategyService service = strategyMap.get(strategyCode);
-        if (service == null) {
-            throw new IllegalArgumentException("未找到切片策略: " + strategyCode);
-        }
-        return service;
-    }
 
-    /**
-     * 获取所有可用策略.
-     */
-    public List<String> getAvailableStrategies() {
-        return List.copyOf(strategyMap.keySet());
-    }
+
 }
