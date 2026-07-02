@@ -2,10 +2,13 @@ package com.example.agent.application.knowledge.strategy;
 
 import com.example.agent.domain.knowledge.service.ChunkStrategyService;
 import com.example.agent.domain.knowledge.service.EmbeddingServiceClient;
+import com.example.agent.domain.knowledge.valueobject.ChunkStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 语义切片策略 — 基于 embedding 相似度检测语义断点.
@@ -24,7 +27,7 @@ public class SemanticStrategy implements ChunkStrategyService {
     }
 
     @Override
-    public String getStrategyCode() { return "semantic"; }
+    public ChunkStrategy getStrategyCode() { return ChunkStrategy.SEMANTIC; }
 
     @Override
     public List<ChunkResult> split(String text, Map<String, Object> config) {

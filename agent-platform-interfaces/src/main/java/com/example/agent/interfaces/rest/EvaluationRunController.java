@@ -1,6 +1,7 @@
 package com.example.agent.interfaces.rest;
 
 import com.example.agent.application.evaluation.EvaluationRunService;
+import com.example.agent.application.evaluation.dto.EvaluationRunListResponse;
 import com.example.agent.application.evaluation.dto.EvaluationRunResponse;
 import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
@@ -41,8 +42,10 @@ public class EvaluationRunController {
 
     @PostMapping("/list")
     @Operation(summary = "评测历史列表")
-    public Result<List<EvaluationRunResponse>> list(@RequestBody EvaluationListRequest request) {
+    public Result<EvaluationRunListResponse> list(@RequestBody EvaluationListRequest request) {
         return ResultRespHelper.responseInvoke("EvaluationRunController.list", request, (req) ->
-                runService.list(req.getPage(), req.getSize()));
+                EvaluationRunListResponse.builder()
+                        .records(runService.list(req.getPage(), req.getSize()))
+                        .build());
     }
 }

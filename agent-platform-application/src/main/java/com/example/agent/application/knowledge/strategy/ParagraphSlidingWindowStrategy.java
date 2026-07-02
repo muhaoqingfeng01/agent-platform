@@ -1,6 +1,7 @@
 package com.example.agent.application.knowledge.strategy;
 
 import com.example.agent.domain.knowledge.service.ChunkStrategyService;
+import com.example.agent.domain.knowledge.valueobject.ChunkStrategy;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -20,7 +21,7 @@ import java.util.*;
 public class ParagraphSlidingWindowStrategy implements ChunkStrategyService {
 
     @Override
-    public String getStrategyCode() { return "paragraph_sliding_window"; }
+    public ChunkStrategy getStrategyCode() { return ChunkStrategy.PARAGRAPH; }
 
     @Override
     public List<ChunkResult> split(String text, Map<String, Object> config) {

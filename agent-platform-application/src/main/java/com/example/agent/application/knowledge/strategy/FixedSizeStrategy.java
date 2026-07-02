@@ -1,6 +1,7 @@
 package com.example.agent.application.knowledge.strategy;
 
 import com.example.agent.domain.knowledge.service.ChunkStrategyService;
+import com.example.agent.domain.knowledge.valueobject.ChunkStrategy;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -17,7 +18,7 @@ import java.util.*;
 public class FixedSizeStrategy implements ChunkStrategyService {
 
     @Override
-    public String getStrategyCode() { return "fixed_size"; }
+    public ChunkStrategy getStrategyCode() { return ChunkStrategy.FIXED_SIZE; }
 
     @Override
     public List<ChunkResult> split(String text, Map<String, Object> config) {

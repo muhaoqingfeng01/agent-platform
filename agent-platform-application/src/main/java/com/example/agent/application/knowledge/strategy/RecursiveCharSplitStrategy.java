@@ -1,6 +1,7 @@
 package com.example.agent.application.knowledge.strategy;
 
 import com.example.agent.domain.knowledge.service.ChunkStrategyService;
+import com.example.agent.domain.knowledge.valueobject.ChunkStrategy;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -23,7 +24,7 @@ public class RecursiveCharSplitStrategy implements ChunkStrategyService {
     );
 
     @Override
-    public String getStrategyCode() { return "recursive_char_split"; }
+    public ChunkStrategy getStrategyCode() { return ChunkStrategy.RECURSIVE_CHAR_SPLIT; }
 
     @Override
     public List<ChunkResult> split(String text, Map<String, Object> config) {

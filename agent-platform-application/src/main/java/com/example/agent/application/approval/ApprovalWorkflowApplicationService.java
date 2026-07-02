@@ -1,5 +1,6 @@
 package com.example.agent.application.approval;
 
+import com.example.agent.application.approval.dto.ApprovalStatsResponse;
 import com.example.agent.application.approval.dto.ApprovalWorkflowResponse;
 import com.example.agent.application.approval.dto.ApprovalCreateCommand;
 import com.example.agent.application.task.DagExecutionService;
@@ -218,15 +219,15 @@ public class ApprovalWorkflowApplicationService {
     }
 
     /** 审批统计 */
-    public Map<String, Object> stats() {
+    public ApprovalStatsResponse stats() {
         Long tenantId = TenantContext.getCurrentTenantId();
-        Map<String, Object> stats = new LinkedHashMap<>();
-        stats.put("pending", approvalRepository.countByStatus(tenantId, ApprovalStatus.PENDING.name()));
-        stats.put("approved", approvalRepository.countByStatus(tenantId, ApprovalStatus.APPROVED.name()));
-        stats.put("rejected", approvalRepository.countByStatus(tenantId, ApprovalStatus.REJECTED.name()));
-        stats.put("timeout", approvalRepository.countByStatus(tenantId, ApprovalStatus.TIMEOUT.name()));
-        stats.put("total", approvalRepository.countByTenant(tenantId));
-        return stats;
+        return ApprovalStatsResponse.builder()
+                .pending(approvalRepository.countByStatus(tenantId, ApprovalStatus.PENDING.name()))
+                .approved(approvalRepository.countByStatus(tenantId, ApprovalStatus.APPROVED.name()))
+                .rejected(approvalRepository.countByStatus(tenantId, ApprovalStatus.REJECTED.name()))
+                .timeout(approvalRepository.countByStatus(tenantId, ApprovalStatus.TIMEOUT.name()))
+                .total(approvalRepository.countByTenant(tenantId))
+                .build();
     }
 
     // ==================== 私有方法 ====================

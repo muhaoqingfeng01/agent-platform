@@ -175,6 +175,13 @@ interfaces → application → domain ← infrastructure
     - 所有枚举强制包含 `fromCode(String code)` 工厂方法，通过 `e.code.equalsIgnoreCase(code)` 比较
     - Repository 中 toDomain 用 `Xxx.fromCode(po.getXxx())`，toPO 用 `entity.getXxx().getCode()`
     - 同类型枚举比较用 `==` 直接比较；String→枚举用 `fromCode()`；枚举→String 用 `getCode()`
+14. **🔴 Controller 禁止直接返回 Map/List（强制）** — Controller 层所有返回值必须封装为强类型 Response DTO
+    - **禁止** `Result<Map<String, Object>>`、`Result<Map<String, Long>>` 等 — 必须封装为 Response DTO
+    - **禁止** `Result<List<XxxResponse>>`、`Result<List<String>>` 等 — 必须封装为 `XxxListResponse` 对象（含 `records` 属性）
+    - Response DTO 放在 **application 层** `dto/` 包中（`application/.../dto/XxxResponse.java`）
+    - 若 ApplicationService 方法返回裸 Map/List，**一并改为返回 Response DTO**，从源头杜绝
+    - DTO 使用 `@Data` + `@Builder` + `@NoArgsConstructor` + `@AllArgsConstructor` + `@Schema`
+    - 这确保：编译期类型安全、Swagger 自动生成字段文档、后续扩展字段无需破坏性变更
 
 ---
 

@@ -1,6 +1,7 @@
 package com.example.agent.application.knowledge.strategy;
 
 import com.example.agent.domain.knowledge.service.ChunkStrategyService;
+import com.example.agent.domain.knowledge.valueobject.ChunkStrategy;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -19,7 +20,7 @@ import java.util.*;
 public class MarkdownHeaderAwareStrategy implements ChunkStrategyService {
 
     @Override
-    public String getStrategyCode() { return "markdown_header_aware"; }
+    public ChunkStrategy getStrategyCode() { return ChunkStrategy.MARKDOWN_HEADER_AWARE; }
 
     @Override
     public List<ChunkResult> split(String text, Map<String, Object> config) {

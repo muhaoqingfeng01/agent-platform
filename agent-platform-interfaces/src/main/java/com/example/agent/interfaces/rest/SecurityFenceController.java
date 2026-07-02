@@ -2,7 +2,9 @@ package com.example.agent.interfaces.rest;
 
 import com.example.agent.application.security.SecurityFenceApplicationService;
 import com.example.agent.application.security.dto.SensitiveWordCreateCommand;
+import com.example.agent.application.security.dto.SecurityEventListResponse;
 import com.example.agent.application.security.dto.SecurityEventResponse;
+import com.example.agent.application.security.dto.SensitiveWordListResponse;
 import com.example.agent.application.security.dto.SensitiveWordResponse;
 import com.example.agent.application.security.dto.SensitiveWordUpdateCommand;
 import com.example.agent.common.helper.ResultRespHelper;
@@ -71,9 +73,11 @@ public class SecurityFenceController {
 
     @PostMapping("/sensitive-words/list")
     @Operation(summary = "敏感词规则列表")
-    public Result<List<SensitiveWordResponse>> list(@RequestBody SensitiveWordListRequest request) {
+    public Result<SensitiveWordListResponse> list(@RequestBody SensitiveWordListRequest request) {
         return ResultRespHelper.responseInvoke("SecurityFenceController.list", request, (req) ->
-                securityService.listSensitiveWords(req.getPage(), req.getSize()));
+                SensitiveWordListResponse.builder()
+                        .records(securityService.listSensitiveWords(req.getPage(), req.getSize()))
+                        .build());
     }
 
     @PostMapping("/sensitive-words/get")
@@ -103,16 +107,20 @@ public class SecurityFenceController {
 
     @PostMapping("/events/list")
     @Operation(summary = "安全事件列表")
-    public Result<List<SecurityEventResponse>> listEvents(@RequestBody SecurityEventListRequest request) {
+    public Result<SecurityEventListResponse> listEvents(@RequestBody SecurityEventListRequest request) {
         return ResultRespHelper.responseInvoke("SecurityFenceController.listEvents", request, (req) ->
-                securityService.listSecurityEvents(req.getPage(), req.getSize()));
+                SecurityEventListResponse.builder()
+                        .records(securityService.listSecurityEvents(req.getPage(), req.getSize()))
+                        .build());
     }
 
     @PostMapping("/events/by-conversation")
     @Operation(summary = "按会话查询安全事件")
-    public Result<List<SecurityEventResponse>> listEventsByConversation(
+    public Result<SecurityEventListResponse> listEventsByConversation(
             @Valid @RequestBody SecurityEventListByConversationRequest request) {
         return ResultRespHelper.responseInvoke("SecurityFenceController.listEventsByConversation", request, (req) ->
-                securityService.listSecurityEventsByConversation(req.getConversationId(), req.getPage(), req.getSize()));
+                SecurityEventListResponse.builder()
+                        .records(securityService.listSecurityEventsByConversation(req.getConversationId(), req.getPage(), req.getSize()))
+                        .build());
     }
 }

@@ -2,9 +2,14 @@ package com.example.agent.application.knowledge;
 
 import com.example.agent.application.knowledge.dto.DocumentDTO;
 import com.example.agent.application.knowledge.pipeline.DocumentPipelineOrchestrator;
+import com.example.agent.application.knowledge.task.DocumentParsePayload;
+import com.example.agent.application.knowledge.task.DocumentParseTaskHandler;
+import com.example.agent.application.task.TaskCenterService;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.common.exception.ResourceNotFoundException;
+import com.example.agent.common.lock.DistributeLock;
+import com.example.agent.common.lock.LockEnum;
 import com.example.agent.common.util.IdGenerator;
 import com.example.agent.domain.knowledge.entity.Document;
 import com.example.agent.domain.knowledge.entity.DocumentChunk;
@@ -14,6 +19,7 @@ import com.example.agent.domain.knowledge.repository.KnowledgeBaseRepository;
 import com.example.agent.domain.knowledge.service.DocumentLifecycleDomainService;
 import com.example.agent.domain.knowledge.service.KnowledgeBaseDomainService;
 import com.example.agent.domain.knowledge.service.MilvusStoreClient;
+import com.example.agent.domain.knowledge.valueobject.ChunkStrategy;
 import com.example.agent.domain.knowledge.valueobject.DocumentStatus;
 import com.example.agent.infrastructure.config.storage.MinioConfig;
 import com.example.agent.infrastructure.context.TenantContext;
@@ -50,6 +56,7 @@ public class DocumentApplicationService {
     private final KnowledgeBaseDomainService domainService;
     private final DocumentLifecycleDomainService lifecycleService;
     private final DocumentPipelineOrchestrator pipelineOrchestrator;
+    private final TaskCenterService taskCenterService;
     private final MilvusStoreClient milvusStore;
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
@@ -123,7 +130,7 @@ public class DocumentApplicationService {
                     .status(DocumentStatus.PENDING_PARSE)
                     .uploadedBy(userId)
                     .uploadedAt(LocalDateTime.now())
-                    .chunkStrategy(chunkStrategy)
+                    .chunkStrategy(normalizeChunkStrategy(chunkStrategy))
                     .chunkConfigJson(chunkConfigJson)
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
@@ -216,6 +223,7 @@ public class DocumentApplicationService {
      * 手动触发异步解析.
      */
     @Transactional
+    @DistributeLock(keyPattern = LockEnum.DOCUMENT_MUTEX, keyValue = {"[0]"}, waitSeconds = 5)
     public DocumentDTO triggerParse(String documentId) {
         Document doc = documentRepository.findByDocumentId(documentId)
                 .orElseThrow(() -> new ResourceNotFoundException("文档", documentId));
@@ -226,12 +234,18 @@ public class DocumentApplicationService {
                 .orElseThrow(() -> new ResourceNotFoundException("知识库", doc.getKnowledgeId()));
         domainService.assertKbEnabled(kb);
 
-        // 重置为 PENDING_PARSE 然后触发
+        // 重置为 PENDING_PARSE 然后触发（窄更新，仅改状态列）
         doc.updateStatus(DocumentStatus.PENDING_PARSE);
-        documentRepository.update(doc);
+        documentRepository.updateStatus(documentId, DocumentStatus.PENDING_PARSE);
 
-        pipelineOrchestrator.processAsync(documentId);
-        log.info("[Document] 手动触发解析: docId={}", documentId);
+        // 提交到通用任务中心（异步执行 + 超时控制 + 可重试）
+        taskCenterService.submit(
+                DocumentParseTaskHandler.TASK_TYPE,
+                documentId,
+                new DocumentParsePayload(documentId, doc.getKnowledgeId()),
+                TenantContext.getCurrentTenantId());
+
+        log.info("[Document] 手动触发解析（已提交任务中心）: docId={}", documentId);
         return DocumentDTO.from(doc);
     }
 
@@ -246,8 +260,13 @@ public class DocumentApplicationService {
                 Document doc = documentRepository.findByDocumentId(docId).orElse(null);
                 if (doc != null && doc.getKnowledgeId().equals(knowledgeId) && doc.isParseable()) {
                     doc.updateStatus(DocumentStatus.PENDING_PARSE);
-                    documentRepository.update(doc);
-                    pipelineOrchestrator.processAsync(docId);
+                    documentRepository.updateStatus(docId, DocumentStatus.PENDING_PARSE);
+
+                    taskCenterService.submit(
+                            DocumentParseTaskHandler.TASK_TYPE,
+                            docId,
+                            new DocumentParsePayload(docId, doc.getKnowledgeId()),
+                            TenantContext.getCurrentTenantId());
                     triggered++;
                 }
             } catch (Exception e) {
@@ -262,6 +281,7 @@ public class DocumentApplicationService {
      * 弃用文档 — 删除 Milvus 向量，保留元数据和 MinIO 文件.
      */
     @Transactional
+    @DistributeLock(keyPattern = LockEnum.DOCUMENT_MUTEX, keyValue = {"[0]"}, waitSeconds = 5)
     public DocumentDTO deprecateDocument(String documentId) {
         Document doc = documentRepository.findByDocumentId(documentId)
                 .orElseThrow(() -> new ResourceNotFoundException("文档", documentId));
@@ -292,6 +312,7 @@ public class DocumentApplicationService {
     }
 
     @Transactional
+    @DistributeLock(keyPattern = LockEnum.DOCUMENT_MUTEX, keyValue = {"[0]"}, waitSeconds = 5)
     public void deleteDocument(String documentId) {
         Document doc = documentRepository.findByDocumentId(documentId)
                 .orElseThrow(() -> new ResourceNotFoundException("文档", documentId));
@@ -344,6 +365,23 @@ public class DocumentApplicationService {
     }
 
     // ========== 内部工具方法 ==========
+
+    /**
+     * 规范化切片策略字符串为 ChunkStrategy 的 canonical code.
+     * <p>
+     * 前端可能传入枚举 name（如 "FIXED_SIZE"）或 code（如 "fixed_size"），
+     * 统一转为小写下划线 code 格式存入数据库，避免后续 fromCode 匹配不一致.
+     */
+    private String normalizeChunkStrategy(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return ChunkStrategy.fromCode(raw).getCode();
+        } catch (IllegalArgumentException e) {
+            // 无法识别的策略值 — 保持原样，后续 resolveStrategy 会 fallback
+            log.warn("[Document] 无法识别的切片策略: '{}'，保持原值", raw);
+            return raw;
+        }
+    }
 
     private String getFileType(String filename) {
         if (filename == null) return "UNKNOWN";

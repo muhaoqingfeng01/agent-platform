@@ -4,6 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.knowledge.KnowledgeBaseApplicationService;
 import com.example.agent.application.knowledge.PrecisionConfigApplicationService;
 import com.example.agent.application.knowledge.dto.KnowledgeBaseDTO;
+import com.example.agent.application.knowledge.dto.KnowledgeBaseStatsResponse;
 import com.example.agent.application.knowledge.dto.PrecisionConfigDTO;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.helper.ResultRespHelper;
@@ -20,8 +21,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 /**
  * 知识库管理 Controller.
@@ -136,7 +135,7 @@ public class KnowledgeBaseController {
     @PostMapping("/stats")
     @SaCheckPermission("kb:read")
     @Operation(summary = "知识库文档统计")
-    public Result<Map<String, Long>> getStats(@Valid @RequestBody KnowledgeBaseGetRequest request) {
+    public Result<KnowledgeBaseStatsResponse> getStats(@Valid @RequestBody KnowledgeBaseGetRequest request) {
         return ResultRespHelper.responseInvoke("KnowledgeBaseController.getStats", request, (req) ->
                 kbService.getStats(req.getKnowledgeId()));
     }

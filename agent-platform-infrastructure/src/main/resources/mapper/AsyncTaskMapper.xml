@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.AsyncTaskMapper">
+
+    <resultMap id="AsyncTaskPOMap" type="com.example.agent.infrastructure.persistence.po.AsyncTaskPO">
+        <id     column="id"             property="id"/>
+        <result column="task_id"        property="taskId"/>
+        <result column="task_type"      property="taskType"/>
+        <result column="biz_id"         property="bizId"/>
+        <result column="tenant_id"      property="tenantId"/>
+        <result column="status"         property="status"/>
+        <result column="payload_json"   property="payloadJson"/>
+        <result column="result_json"    property="resultJson"/>
+        <result column="timeout_at"     property="timeoutAt"/>
+        <result column="retry_count"    property="retryCount"/>
+        <result column="max_retries"    property="maxRetries"/>
+        <result column="error_message"  property="errorMessage"/>
+        <result column="started_at"     property="startedAt"/>
+        <result column="finished_at"    property="finishedAt"/>
+        <result column="created_at"     property="createdAt"/>
+        <result column="updated_at"     property="updatedAt"/>
+        <result column="deleted"        property="deleted"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_async_task
+            (task_id, task_type, biz_id, tenant_id, status,
+             payload_json, result_json, timeout_at,
+             retry_count, max_retries, error_message,
+             started_at, finished_at, created_at, updated_at)
+        VALUES
+            (#{taskId}, #{taskType}, #{bizId}, #{tenantId}, #{status},
+             #{payloadJson}, #{resultJson}, #{timeoutAt},
+             #{retryCount}, #{maxRetries}, #{errorMessage},
+             #{startedAt}, #{finishedAt}, NOW(), NOW())
+    </insert>
+
+    <update id="update">
+        UPDATE t_async_task
+        SET status        = #{status},
+            result_json   = #{resultJson},
+            error_message = #{errorMessage},
+            retry_count   = #{retryCount},
+            timeout_at    = #{timeoutAt},
+            started_at    = #{startedAt},
+            finished_at   = #{finishedAt},
+            updated_at    = NOW()
+        WHERE task_id = #{taskId} AND deleted = 0
+    </update>
+
+    <!-- CAS 更新状态：仅当前状态为 expected 时才更新 -->
+    <update id="updateStatusIfExpected">
+        UPDATE t_async_task
+        SET status        = #{target},
+            result_json   = #{resultJson},
+            error_message = #{errorMessage},
+            finished_at   = NOW(),
+            updated_at    = NOW()
+        WHERE task_id     = #{taskId}
+          AND status      = #{expected}
+          AND deleted     = 0
+    </update>
+
+    <update id="incrementRetryAndReset">
+        UPDATE t_async_task
+        SET status        = #{submittedCode},
+            retry_count   = retry_count + 1,
+            result_json   = NULL,
+            error_message = NULL,
+            started_at    = NULL,
+            finished_at   = NULL,
+            updated_at    = NOW()
+        WHERE task_id     = #{taskId}
+          AND deleted     = 0
+    </update>
+
+    <select id="selectByTaskId" resultMap="AsyncTaskPOMap">
+        SELECT *
+        FROM t_async_task
+        WHERE task_id = #{taskId} AND deleted = 0
+    </select>
+
+    <select id="selectTimeoutRunning" resultMap="AsyncTaskPOMap">
+        SELECT *
+        FROM t_async_task
+        WHERE status    = #{runningCode}
+          AND timeout_at <![CDATA[ < ]]> #{now}
+          AND deleted    = 0
+        ORDER BY timeout_at ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectStaleSubmitted" resultMap="AsyncTaskPOMap">
+        SELECT *
+        FROM t_async_task
+        WHERE status    = #{submittedCode}
+          AND created_at <![CDATA[ < ]]> #{before}
+          AND deleted    = 0
+        ORDER BY created_at ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="countActiveByTypeAndBiz" resultType="int">
+        SELECT COUNT(*)
+        FROM t_async_task
+        WHERE task_type = #{taskType}
+          AND biz_id    = #{bizId}
+          AND status   IN
+          <foreach collection="activeCodes" item="code" open="(" separator="," close=")">
+              #{code}
+          </foreach>
+          AND deleted   = 0
+    </select>
+
+</mapper>

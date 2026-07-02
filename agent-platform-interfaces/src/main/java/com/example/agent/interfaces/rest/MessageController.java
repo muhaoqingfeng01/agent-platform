@@ -2,6 +2,7 @@ package com.example.agent.interfaces.rest;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.conversation.MessageApplicationService;
+import com.example.agent.application.conversation.MessageListResponse;
 import com.example.agent.application.conversation.MessageApplicationService.MessageResponse;
 import com.example.agent.application.conversation.StreamOrchestrationService;
 import com.example.agent.application.optimization.event.MessageFeedbackEvent;
@@ -78,9 +79,11 @@ public class MessageController {
     @PostMapping("/api/v1/conversations/messages/before")
     @SaCheckPermission("conversation:read")
     @Operation(summary = "加载更早的消息")
-    public Result<List<MessageResponse>> loadBefore(@Valid @RequestBody MessageLoadBeforeRequest request) {
+    public Result<MessageListResponse> loadBefore(@Valid @RequestBody MessageLoadBeforeRequest request) {
         return ResultRespHelper.responseInvoke("MessageController.loadBefore", request, (req) ->
-                messageService.loadMessagesBefore(req.getId(), req.getBefore(), 50));
+                MessageListResponse.builder()
+                        .records(messageService.loadMessagesBefore(req.getId(), req.getBefore(), 50))
+                        .build());
     }
 
     @PostMapping("/api/v1/conversations/messages/feedback")

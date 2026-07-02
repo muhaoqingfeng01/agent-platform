@@ -1,6 +1,7 @@
 package com.example.agent.application.knowledge;
 
 import com.example.agent.application.knowledge.dto.PrecisionConfigDTO;
+import com.example.agent.application.knowledge.dto.StrategyPresetResponse;
 import com.example.agent.common.exception.ResourceNotFoundException;
 import com.example.agent.domain.knowledge.entity.KnowledgeBase;
 import com.example.agent.domain.knowledge.repository.KnowledgeBaseRepository;
@@ -80,8 +81,8 @@ public class PrecisionConfigApplicationService {
     /**
      * 获取所有可用策略预设.
      */
-    public List<Map<String, Object>> listStrategyPresets() {
-        List<Map<String, Object>> presets = new ArrayList<>();
+    public List<StrategyPresetResponse> listStrategyPresets() {
+        List<StrategyPresetResponse> presets = new ArrayList<>();
         presets.add(buildPreset("precise", "高精度 — 医疗/法律/金融场景",
                 Map.of("nprobe_ratio", 0.25, "topK", 30, "similarity_threshold", 0.65,
                         "consistency_level", "STRONG", "timeout_ms", 10000)));
@@ -100,20 +101,20 @@ public class PrecisionConfigApplicationService {
         return presets;
     }
 
-    private Map<String, Object> buildPreset(String name, String desc, Map<String, Object> searchParams) {
-        Map<String, Object> preset = new LinkedHashMap<>();
-        preset.put("strategy_name", name);
-        preset.put("description", desc);
-        preset.put("search_params", searchParams);
-        preset.put("multi_stage_params", Map.of(
-                "enable_reranker", false,
-                "enable_rrf_fusion", true,
-                "rrf_k", 60,
-                "fusion_top_n", 5,
-                "vector_weight", 0.5,
-                "keyword_weight", 0.5
-        ));
-        return preset;
+    private StrategyPresetResponse buildPreset(String name, String desc, Map<String, Object> searchParams) {
+        return StrategyPresetResponse.builder()
+                .strategyName(name)
+                .description(desc)
+                .searchParams(searchParams)
+                .multiStageParams(Map.of(
+                        "enable_reranker", false,
+                        "enable_rrf_fusion", true,
+                        "rrf_k", 60,
+                        "fusion_top_n", 5,
+                        "vector_weight", 0.5,
+                        "keyword_weight", 0.5
+                ))
+                .build();
     }
 
     // ========== JSON 工具方法 ==========

@@ -34,12 +34,6 @@ public class DocumentLifecycleDomainService {
     /** 仅 PENDING_PARSE / FAILED / DEPRECATED 可删除（PARSED 必须先弃用再删除） */
     public void assertCanDelete(Document doc) {
         if (doc == null) throw new IllegalArgumentException("文档不存在");
-        if (doc.getStatus() == DocumentStatus.PARSING
-            || doc.getStatus() == DocumentStatus.CHUNKING
-            || doc.getStatus() == DocumentStatus.EMBEDDING) {
-            throw new IllegalStateException(
-                "文档正在处理中，不可删除，当前状态: " + doc.getStatus().getDesc());
-        }
         if (doc.getStatus() == DocumentStatus.PARSED) {
             throw new IllegalStateException(
                 "已解析的文档必须先弃用（删除向量）再删除，当前状态: " + doc.getStatus().getDesc());

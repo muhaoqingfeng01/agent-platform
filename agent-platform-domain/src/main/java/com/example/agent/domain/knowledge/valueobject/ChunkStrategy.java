@@ -14,7 +14,7 @@ import lombok.Getter;
 public enum ChunkStrategy {
 
     /** 段落 + 滑动窗口切片 — 通用长文档（PDF/DOCX） */
-    PARAGRAPH_SLIDING_WINDOW("paragraph_sliding_window", "段落+滑动窗口"),
+    PARAGRAPH("paragraph", "段落+滑动窗口"),
 
     /** 固定长度切片 — 规范文档/API/CSV */
     FIXED_SIZE("fixed_size", "固定长度"),

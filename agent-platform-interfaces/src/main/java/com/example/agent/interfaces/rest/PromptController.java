@@ -2,6 +2,7 @@ package com.example.agent.interfaces.rest;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.prompt.PromptApplicationService;
+import com.example.agent.application.prompt.PromptVersionListResponse;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
@@ -133,9 +134,11 @@ public class PromptController {
     @PostMapping("/versions/list")
     @SaCheckPermission("prompt:read")
     @Operation(summary = "查看版本历史列表")
-    public Result<List<PromptApplicationService.VersionResponse>> versions(@Valid @RequestBody PromptGetRequest request) {
+    public Result<PromptVersionListResponse> versions(@Valid @RequestBody PromptGetRequest request) {
         return ResultRespHelper.responseInvoke("PromptController.versions", request, (req) ->
-                applicationService.getVersionHistory(req.getId()));
+                PromptVersionListResponse.builder()
+                        .records(applicationService.getVersionHistory(req.getId()))
+                        .build());
     }
 
     @PostMapping("/versions/detail")

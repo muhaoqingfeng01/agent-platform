@@ -4,6 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Agent Platform - Enterprise AI Agent Platform
@@ -21,6 +22,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
  * @since 1.0.0
  */
 @EnableAsync
+@EnableScheduling
 @SpringBootApplication(scanBasePackages = "com.example.agent")
 @ConfigurationPropertiesScan(basePackages = "com.example.agent")
 public class AgentPlatformApplication {

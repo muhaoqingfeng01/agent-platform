@@ -49,7 +49,7 @@ public class KnowledgeBaseDomainService {
     public ChunkStrategy resolveFallbackStrategy(String fileType) {
         if (fileType == null) return ChunkStrategy.RECURSIVE_CHAR_SPLIT;
         return switch (fileType.toUpperCase()) {
-            case "PDF", "DOCX" -> ChunkStrategy.PARAGRAPH_SLIDING_WINDOW;
+            case "PDF", "DOCX" -> ChunkStrategy.PARAGRAPH;
             case "MD" -> ChunkStrategy.MARKDOWN_HEADER_AWARE;
             case "HTML" -> ChunkStrategy.MARKDOWN_HEADER_AWARE;
             case "CSV" -> ChunkStrategy.FIXED_SIZE;

@@ -35,8 +35,7 @@ public class ChunkStrategyFactory implements InitializingBean {
         }
         strategies.forEach(service ->
                 {
-                    String strategyCode = service.getStrategyCode();
-                    ChunkStrategy chunkStrategy = ChunkStrategy.fromCode(strategyCode);
+                    ChunkStrategy chunkStrategy = service.getStrategyCode();
                     strategyMap.put(chunkStrategy, service);
                 }
         );

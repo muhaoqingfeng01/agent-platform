@@ -2,6 +2,8 @@ package com.example.agent.interfaces.rest;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.knowledge.DocumentApplicationService;
+import com.example.agent.application.knowledge.dto.BatchParseResponse;
+import com.example.agent.application.knowledge.dto.DocumentChunkListResponse;
 import com.example.agent.application.knowledge.dto.DocumentDTO;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.helper.ResultRespHelper;
@@ -31,7 +33,6 @@ import java.io.InputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 文档管理 Controller — 上传/查询/下载/删除.
@@ -104,11 +105,14 @@ public class DocumentController {
     @PostMapping("/documents/chunks")
     @SaCheckPermission("doc:read")
     @Operation(summary = "查询文档切片列表")
-    public Result<Map<String, Object>> listChunks(@Valid @RequestBody DocumentListChunksRequest request) {
+    public Result<DocumentChunkListResponse> listChunks(@Valid @RequestBody DocumentListChunksRequest request) {
         return ResultRespHelper.responseInvoke("DocumentController.listChunks", request, (req) -> {
             List<DocumentChunk> chunks = docService.listChunks(req.getDocumentId(), req.getOffset(), req.getLimit());
             int total = docService.countChunks(req.getDocumentId());
-            return Map.of("total", total, "chunks", chunks);
+            return DocumentChunkListResponse.builder()
+                    .total(total)
+                    .chunks(chunks)
+                    .build();
         });
     }
 
@@ -144,11 +148,14 @@ public class DocumentController {
     @PostMapping("/documents/batch-parse")
     @SaCheckPermission("doc:update")
     @Operation(summary = "批量触发文档解析")
-    public Result<Map<String, Object>> batchParse(@Valid @RequestBody DocumentBatchParseRequest request) {
+    public Result<BatchParseResponse> batchParse(@Valid @RequestBody DocumentBatchParseRequest request) {
         return ResultRespHelper.responseInvoke("DocumentController.batchParse", request, (req) -> {
             List<String> documentIds = req.getDocumentIds() != null ? req.getDocumentIds() : List.of();
             int triggered = docService.batchTriggerParse(req.getKnowledgeId(), documentIds);
-            return Map.of("triggered", triggered, "total", documentIds.size());
+            return BatchParseResponse.builder()
+                    .triggered(triggered)
+                    .total(documentIds.size())
+                    .build();
         });
     }
 

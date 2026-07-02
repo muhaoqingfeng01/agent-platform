@@ -1,6 +1,8 @@
 package com.example.agent.interfaces.rest;
 
 import com.example.agent.application.approval.ApprovalWorkflowApplicationService;
+import com.example.agent.application.approval.dto.ApprovalListResponse;
+import com.example.agent.application.approval.dto.ApprovalStatsResponse;
 import com.example.agent.application.approval.dto.ApprovalWorkflowResponse;
 import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
@@ -16,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 审批工单管理控制器 — 人机协同审批的 REST API.
@@ -35,15 +36,16 @@ public class ApprovalController {
 
     @PostMapping("/list")
     @Operation(summary = "审批列表（我的待审批/我已审批/我发起的）")
-    public Result<List<ApprovalWorkflowResponse>> list(@RequestBody ApprovalListRequest request) {
+    public Result<ApprovalListResponse> list(@RequestBody ApprovalListRequest request) {
         return ResultRespHelper.responseInvoke("ApprovalController.list", request, (req) -> {
-            return switch (req.getFilter()) {
+            List<ApprovalWorkflowResponse> records = switch (req.getFilter()) {
                 case "my-pending" -> approvalService.listPendingByApprover(req.getApproverId(), req.getPage(), req.getSize());
                 case "my-resolved" -> approvalService.listResolvedByApprover(req.getApproverId(), req.getPage(), req.getSize());
                 case "my-requested" -> approvalService.listByRequester(req.getRequesterId(), req.getPage(), req.getSize());
                 case "by-status" -> approvalService.listByStatus(req.getStatus(), req.getPage(), req.getSize());
                 default -> approvalService.listByTenant(req.getPage(), req.getSize());
             };
+            return ApprovalListResponse.builder().records(records).build();
         });
     }
 
@@ -70,7 +72,7 @@ public class ApprovalController {
 
     @PostMapping("/stats")
     @Operation(summary = "审批统计")
-    public Result<Map<String, Object>> stats() {
+    public Result<ApprovalStatsResponse> stats() {
         return ResultRespHelper.responseInvoke("ApprovalController.stats", null, (req) ->
                 approvalService.stats());
     }

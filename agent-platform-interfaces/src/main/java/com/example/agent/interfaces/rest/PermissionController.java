@@ -7,6 +7,7 @@ import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.application.permission.PermissionCreateCommand;
 import com.example.agent.application.permission.PermissionBatchImportCommand;
+import com.example.agent.application.permission.PermissionImportResponse;
 import com.example.agent.application.permission.PermissionResponse;
 import com.example.agent.interfaces.dto.request.permission.PermissionDeleteRequest;
 import com.example.agent.interfaces.dto.request.permission.PermissionListRequest;
@@ -65,9 +66,11 @@ public class PermissionController {
     @SaCheckPermission("user:write")
     @Operation(summary = "批量导入权限",
             description = "JSON 数组上传；事务保证原子性，全部成功或全部回滚")
-    public Result<List<PermissionResponse>> batchImport(
+    public Result<PermissionImportResponse> batchImport(
             @Valid @RequestBody PermissionBatchImportCommand request) {
         return ResultRespHelper.responseInvoke("PermissionController.batchImport", request, (req) ->
-                permissionService.batchImport(req));
+                PermissionImportResponse.builder()
+                        .records(permissionService.batchImport(req))
+                        .build());
     }
 }

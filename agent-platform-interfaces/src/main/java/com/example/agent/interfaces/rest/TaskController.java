@@ -3,6 +3,12 @@ package com.example.agent.interfaces.rest;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.task.DagExecutionService;
 import com.example.agent.application.task.TaskPlanningService;
+import com.example.agent.application.task.dto.ActionHandlerListResponse;
+import com.example.agent.application.task.dto.ActionHandlerResponse;
+import com.example.agent.application.task.dto.TaskCancelResponse;
+import com.example.agent.application.task.dto.TaskExecuteResponse;
+import com.example.agent.application.task.dto.TaskPlanDetailResponse;
+import com.example.agent.application.task.dto.TaskPlanResponse;
 import com.example.agent.application.task.handler.ActionHandlerRegistry;
 import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
@@ -22,9 +28,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 任务规划与执行 Controller — 纯粹 HTTP 适配层.
@@ -49,26 +53,26 @@ public class TaskController {
     @PostMapping("/plan")
     @SaCheckPermission("task:create")
     @Operation(summary = "规划任务", description = "调用 LLM 将用户意图拆解为 DAG 步骤序列")
-    public Result<Map<String, Object>> plan(@Valid @RequestBody TaskCreatePlanRequest request) {
+    public Result<TaskPlanResponse> plan(@Valid @RequestBody TaskCreatePlanRequest request) {
         return ResultRespHelper.responseInvoke("TaskController.plan", request, (req) -> {
             TaskPlanningService.PlanRequest planReq = new TaskPlanningService.PlanRequest();
             planReq.setUserIntent(req.getUserIntent());
             planReq.setConversationId(req.getConversationId());
             planReq.setAgentId(req.getAgentId());
             TaskPlanningService.PlanResult result = planningService.plan(planReq);
-            return Map.of(
-                    "executionId", result.getExecutionId(),
-                    "totalSteps", result.getTotalSteps(),
-                    "levels", result.getLevels(),
-                    "message", "任务规划完成，共 " + result.getTotalSteps() + " 步，分 " + result.getLevels() + " 层执行"
-            );
+            return TaskPlanResponse.builder()
+                    .executionId(result.getExecutionId())
+                    .totalSteps(result.getTotalSteps())
+                    .levels(result.getLevels())
+                    .message("任务规划完成，共 " + result.getTotalSteps() + " 步，分 " + result.getLevels() + " 层执行")
+                    .build();
         });
     }
 
     @PostMapping("/execute")
     @SaCheckPermission("task:execute")
     @Operation(summary = "执行任务", description = "根据已规划的执行计划启动 DAG 并行执行")
-    public Result<Map<String, String>> execute(@Valid @RequestBody TaskExecuteRequest request) {
+    public Result<TaskExecuteResponse> execute(@Valid @RequestBody TaskExecuteRequest request) {
         return ResultRespHelper.responseInvoke("TaskController.execute", request, (req) -> {
             TaskExecution execution = executionRepository.findByExecutionId(req.getExecutionId())
                     .orElseThrow(() -> new com.example.agent.common.exception.BusinessException(404,
@@ -76,18 +80,18 @@ public class TaskController {
             var graph = dagParser.parse(execution.getPlanJson());
             if (req.isAsync()) {
                 executionService.execute(graph, req.getExecutionId(), execution.getConversationId());
-                return Map.of(
-                        "executionId", req.getExecutionId(),
-                        "status", "RUNNING",
-                        "message", "任务已提交异步执行"
-                );
+                return TaskExecuteResponse.builder()
+                        .executionId(req.getExecutionId())
+                        .status("RUNNING")
+                        .message("任务已提交异步执行")
+                        .build();
             } else {
                 executionService.execute(graph, req.getExecutionId(), execution.getConversationId());
                 TaskExecution updated = executionRepository.findByExecutionId(req.getExecutionId()).orElse(execution);
-                return Map.of(
-                        "executionId", req.getExecutionId(),
-                        "status", updated.getStatus().name()
-                );
+                return TaskExecuteResponse.builder()
+                        .executionId(req.getExecutionId())
+                        .status(updated.getStatus().name())
+                        .build();
             }
         });
     }
@@ -108,48 +112,48 @@ public class TaskController {
     @PostMapping("/plan/get")
     @SaCheckPermission("task:read")
     @Operation(summary = "查询执行计划", description = "获取已规划的任务 DAG 结构")
-    public Result<Map<String, Object>> getPlan(@Valid @RequestBody TaskExecutionGetRequest request) {
+    public Result<TaskPlanDetailResponse> getPlan(@Valid @RequestBody TaskExecutionGetRequest request) {
         return ResultRespHelper.responseInvoke("TaskController.getPlan", request, (req) -> {
             TaskPlanningService.PlanResult result = planningService.getPlan(req.getExecutionId());
-            return Map.of(
-                    "executionId", result.getExecutionId(),
-                    "totalSteps", result.getTotalSteps(),
-                    "levels", result.getLevels(),
-                    "nodes", result.getGraph().getNodes()
-            );
+            return TaskPlanDetailResponse.builder()
+                    .executionId(result.getExecutionId())
+                    .totalSteps(result.getTotalSteps())
+                    .levels(result.getLevels())
+                    .nodes(result.getGraph().getNodes())
+                    .build();
         });
     }
 
     @PostMapping("/cancel")
     @SaCheckPermission("task:execute")
     @Operation(summary = "取消执行", description = "取消正在执行或等待中的任务")
-    public Result<Map<String, String>> cancel(@Valid @RequestBody TaskCancelRequest request) {
+    public Result<TaskCancelResponse> cancel(@Valid @RequestBody TaskCancelRequest request) {
         return ResultRespHelper.responseInvoke("TaskController.cancel", request, (req) -> {
             executionService.cancel(req.getExecutionId());
-            return Map.of(
-                    "executionId", req.getExecutionId(),
-                    "status", "CANCELLED",
-                    "message", "任务已取消"
-            );
+            return TaskCancelResponse.builder()
+                    .executionId(req.getExecutionId())
+                    .status("CANCELLED")
+                    .message("任务已取消")
+                    .build();
         });
     }
 
     @PostMapping("/handlers")
     @SaCheckPermission("task:read")
     @Operation(summary = "可用动作列表", description = "获取所有已注册的 ActionHandler 及其参数 Schema")
-    public Result<List<Map<String, Object>>> listHandlers() {
+    public Result<ActionHandlerListResponse> listHandlers() {
         return ResultRespHelper.responseInvoke("TaskController.listHandlers", null, (req) ->
-                handlerRegistry.getAllHandlers().stream()
-                        .map(h -> {
-                            Map<String, Object> info = new LinkedHashMap<>();
-                            info.put("action", h.getActionType());
-                            info.put("description", h.getDescription());
-                            info.put("paramsSchema", h.getParamsSchema());
-                            info.put("highRisk", h.isHighRisk());
-                            info.put("maxRetries", h.maxRetries());
-                            info.put("timeoutMs", h.timeoutMs());
-                            return info;
-                        })
-                        .toList());
+                ActionHandlerListResponse.builder()
+                        .records(handlerRegistry.getAllHandlers().stream()
+                                .map(h -> ActionHandlerResponse.builder()
+                                        .action(h.getActionType())
+                                        .description(h.getDescription())
+                                        .paramsSchema(h.getParamsSchema())
+                                        .highRisk(h.isHighRisk())
+                                        .maxRetries(h.maxRetries())
+                                        .timeoutMs(h.timeoutMs())
+                                        .build())
+                                .toList())
+                        .build());
     }
 }

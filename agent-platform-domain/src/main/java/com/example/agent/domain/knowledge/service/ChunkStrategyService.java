@@ -1,5 +1,7 @@
 package com.example.agent.domain.knowledge.service;
 
+import com.example.agent.domain.knowledge.valueobject.ChunkStrategy;
+
 import java.util.List;
 import java.util.Map;
 
@@ -14,8 +16,8 @@ import java.util.Map;
  */
 public interface ChunkStrategyService {
 
-    /** 策略名称 */
-    String getStrategyCode();
+    /** 策略编码 */
+    ChunkStrategy getStrategyCode();
 
     /** 执行切分 */
     List<ChunkResult> split(String text, Map<String, Object> config);

@@ -9,7 +9,9 @@ import com.example.agent.application.role.RoleAssignPermissionCommand;
 import com.example.agent.application.role.RoleAssignToUserCommand;
 import com.example.agent.application.role.RoleCreateCommand;
 import com.example.agent.application.role.RoleUpdateCommand;
+import com.example.agent.application.role.RoleListResponse;
 import com.example.agent.application.role.RoleResponse;
+import com.example.agent.application.role.RoleUserListResponse;
 import com.example.agent.infrastructure.context.TenantContext;
 import com.example.agent.interfaces.dto.request.role.RoleGetRequest;
 import com.example.agent.interfaces.dto.request.role.RoleUpdateRequest;
@@ -50,10 +52,12 @@ public class RoleController {
     @PostMapping("/list")
     @SaCheckPermission("user:read")
     @Operation(summary = "角色列表")
-    public Result<List<RoleResponse>> list() {
+    public Result<RoleListResponse> list() {
         Long tenantId = TenantContext.getCurrentTenantId();
         return ResultRespHelper.responseInvoke("RoleController.list", null, (req) ->
-                roleService.listRoles(tenantId));
+                RoleListResponse.builder()
+                        .records(roleService.listRoles(tenantId))
+                        .build());
     }
 
     @PostMapping("/update")
@@ -94,9 +98,11 @@ public class RoleController {
     @PostMapping("/users")
     @SaCheckPermission("user:read")
     @Operation(summary = "查看角色下的用户")
-    public Result<List<String>> getUsersByRole(@Valid @RequestBody RoleGetRequest request) {
+    public Result<RoleUserListResponse> getUsersByRole(@Valid @RequestBody RoleGetRequest request) {
         return ResultRespHelper.responseInvoke("RoleController.getUsersByRole", request, (req) ->
-                roleService.getUsersByRole(req.getId()));
+                RoleUserListResponse.builder()
+                        .records(roleService.getUsersByRole(req.getId()))
+                        .build());
     }
 
     @PostMapping("/assign-permission")

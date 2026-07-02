@@ -35,9 +35,11 @@ public class EvaluationDatasetController {
 
     @PostMapping("/list")
     @Operation(summary = "数据集列表")
-    public Result<List<DatasetResponse>> list(@RequestBody EvaluationListRequest request) {
+    public Result<DatasetListResponse> list(@RequestBody EvaluationListRequest request) {
         return ResultRespHelper.responseInvoke("EvaluationDatasetController.list", request, (req) ->
-                datasetService.list(req.getPage(), req.getSize()));
+                DatasetListResponse.builder()
+                        .records(datasetService.list(req.getPage(), req.getSize()))
+                        .build());
     }
 
     @PostMapping("/get")
@@ -65,9 +67,11 @@ public class EvaluationDatasetController {
 
     @PostMapping("/items/list")
     @Operation(summary = "样本列表")
-    public Result<List<ItemResponse>> listItems(@Valid @RequestBody DatasetGetRequest request) {
+    public Result<ItemListResponse> listItems(@Valid @RequestBody DatasetGetRequest request) {
         return ResultRespHelper.responseInvoke("EvaluationDatasetController.listItems", request, (req) ->
-                datasetService.listItems(req.getDatasetId()));
+                ItemListResponse.builder()
+                        .records(datasetService.listItems(req.getDatasetId()))
+                        .build());
     }
 
     @PostMapping("/items/delete")

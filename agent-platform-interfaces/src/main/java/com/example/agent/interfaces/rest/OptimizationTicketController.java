@@ -31,10 +31,12 @@ public class OptimizationTicketController {
 
     @PostMapping("/list")
     @Operation(summary = "工单列表")
-    public Result<List<OptimizationTicketResponse>> list(@RequestBody TicketListRequest request) {
+    public Result<OptimizationTicketListResponse> list(@RequestBody TicketListRequest request) {
         Long tenantId = TenantContext.getCurrentTenantId();
         return ResultRespHelper.responseInvoke("OptimizationTicketController.list", request, (req) ->
-                ticketService.list(tenantId, req.getPage(), req.getSize()));
+                OptimizationTicketListResponse.builder()
+                        .records(ticketService.list(tenantId, req.getPage(), req.getSize()))
+                        .build());
     }
 
     @PostMapping("/get")

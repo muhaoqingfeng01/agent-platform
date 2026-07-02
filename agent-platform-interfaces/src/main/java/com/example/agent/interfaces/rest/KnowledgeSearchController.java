@@ -5,6 +5,9 @@ import com.example.agent.application.knowledge.HybridSearchApplicationService;
 import com.example.agent.application.knowledge.PrecisionConfigApplicationService;
 import com.example.agent.application.knowledge.dto.HitRecordDTO;
 import com.example.agent.application.knowledge.dto.SearchResultDTO;
+import com.example.agent.application.knowledge.dto.HitRecordListResponse;
+import com.example.agent.application.knowledge.dto.StrategyPresetListResponse;
+import com.example.agent.application.knowledge.dto.StrategyPresetResponse;
 import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.interfaces.dto.request.knowledge.KnowledgeHitFeedbackRequest;
@@ -18,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 知识检索 Controller — 混合检索 + 命中记录 + 人工标注.
@@ -47,9 +49,11 @@ public class KnowledgeSearchController {
     @PostMapping("/hits/list")
     @SaCheckPermission("kb:read")
     @Operation(summary = "命中记录列表")
-    public Result<List<HitRecordDTO>> listHits(@RequestBody KnowledgeListHitsRequest request) {
+    public Result<HitRecordListResponse> listHits(@RequestBody KnowledgeListHitsRequest request) {
         return ResultRespHelper.responseInvoke("KnowledgeSearchController.listHits", request, (req) ->
-                searchService.listHits(req.getConversationId(), req.getPage(), req.getSize()));
+                HitRecordListResponse.builder()
+                        .records(searchService.listHits(req.getConversationId(), req.getPage(), req.getSize()))
+                        .build());
     }
 
     @PostMapping("/hits/feedback")
@@ -65,8 +69,10 @@ public class KnowledgeSearchController {
     @PostMapping("/precision-strategies")
     @SaCheckPermission("kb:read")
     @Operation(summary = "查询可用检索策略预设列表")
-    public Result<List<Map<String, Object>>> listStrategies() {
+    public Result<StrategyPresetListResponse> listStrategies() {
         return ResultRespHelper.responseInvoke("KnowledgeSearchController.listStrategies", null, (req) ->
-                precisionService.listStrategyPresets());
+                StrategyPresetListResponse.builder()
+                        .records(precisionService.listStrategyPresets())
+                        .build());
     }
 }

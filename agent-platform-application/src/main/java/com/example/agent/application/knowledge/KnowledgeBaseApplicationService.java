@@ -56,7 +56,7 @@ public class KnowledgeBaseApplicationService {
                 .documentCount(0)
                 .status(KnowledgeBaseStatus.ENABLED)
                 .createdBy(TenantContext.getCurrentUserId())
-                .defaultChunkStrategy(ChunkStrategy.PARAGRAPH_SLIDING_WINDOW.getCode())
+                .defaultChunkStrategy(ChunkStrategy.PARAGRAPH.getCode())
                 .indexType(IndexType.IVF_FLAT)
                 .searchStrategy(SearchStrategy.BALANCED.getCode())
                 .createdAt(LocalDateTime.now())
@@ -182,17 +182,20 @@ public class KnowledgeBaseApplicationService {
     /**
      * 获取知识库文档统计（按状态分组）.
      */
-    public Map<String, Long> getStats(String knowledgeId) {
+    public KnowledgeBaseStatsResponse getStats(String knowledgeId) {
         KnowledgeBase kb = kbRepository.findByKnowledgeId(knowledgeId)
                 .orElseThrow(() -> new ResourceNotFoundException("知识库", knowledgeId));
         domainService.assertTenantAccess(kb, TenantContext.getCurrentTenantId());
 
-        Map<String, Long> stats = new LinkedHashMap<>();
-        for (DocumentStatus status : DocumentStatus.values()) {
-            long count = documentRepository.countByKnowledgeIdAndStatus(knowledgeId, status);
-            stats.put(status.name(), count);
-        }
-        stats.put("total", documentRepository.countByKnowledgeId(knowledgeId));
-        return stats;
+        return KnowledgeBaseStatsResponse.builder()
+                .pendingParse(documentRepository.countByKnowledgeIdAndStatus(knowledgeId, DocumentStatus.PENDING_PARSE))
+                .parsing(documentRepository.countByKnowledgeIdAndStatus(knowledgeId, DocumentStatus.PARSING))
+                .chunking(documentRepository.countByKnowledgeIdAndStatus(knowledgeId, DocumentStatus.CHUNKING))
+                .embedding(documentRepository.countByKnowledgeIdAndStatus(knowledgeId, DocumentStatus.EMBEDDING))
+                .parsed(documentRepository.countByKnowledgeIdAndStatus(knowledgeId, DocumentStatus.PARSED))
+                .deprecated(documentRepository.countByKnowledgeIdAndStatus(knowledgeId, DocumentStatus.DEPRECATED))
+                .failed(documentRepository.countByKnowledgeIdAndStatus(knowledgeId, DocumentStatus.FAILED))
+                .total(documentRepository.countByKnowledgeId(knowledgeId))
+                .build();
     }
 }

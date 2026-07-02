@@ -5,6 +5,7 @@ import com.example.agent.application.tool.ToolApplicationService;
 import com.example.agent.application.tool.dto.ToolInvocationLogResponse;
 import com.example.agent.application.tool.dto.ToolResponse;
 import com.example.agent.application.tool.dto.ToolTestResponse;
+import com.example.agent.application.tool.dto.VersionListResponse;
 import com.example.agent.application.tool.dto.VersionResponse;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.helper.JsonHelper;
@@ -116,9 +117,11 @@ public class ToolController {
     @PostMapping("/versions/list")
     @SaCheckPermission("tool:read")
     @Operation(summary = "版本历史列表")
-    public Result<List<VersionResponse>> getVersionHistory(@Valid @RequestBody ToolGetRequest request) {
+    public Result<VersionListResponse> getVersionHistory(@Valid @RequestBody ToolGetRequest request) {
         return ResultRespHelper.responseInvoke("ToolController.getVersionHistory", request, (req) ->
-                toolService.getVersionHistory(req.getId()));
+                VersionListResponse.builder()
+                        .records(toolService.getVersionHistory(req.getId()))
+                        .build());
     }
 
     @PostMapping("/versions/detail")

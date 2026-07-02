@@ -7,6 +7,10 @@ public enum LockEnum {
 
 
     CONVERSATION_STATUS_TRANSITION("conversation", "status_transition_%s"),
+
+    // ========== 文档操作锁 ==========
+    /** 文档互斥锁 — 解析/弃用/删除同一文档时互斥，同一时间仅允许一个操作执行 */
+    DOCUMENT_MUTEX("document", "doc_mutex_%s"),
     ;
     /**
      * 锁分类
