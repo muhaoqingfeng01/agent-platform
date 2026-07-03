@@ -1,13 +1,13 @@
 package com.example.agent.application.task;
 
 import com.example.agent.common.exception.TaskTimeoutException;
+import com.example.agent.common.util.MdcContext;
 import com.example.agent.common.util.IdGenerator;
 import com.example.agent.domain.task.entity.AsyncTask;
 import com.example.agent.domain.task.repository.AsyncTaskRepository;
 import com.example.agent.domain.task.service.TaskHandler;
 import com.example.agent.domain.task.valueobject.AsyncTaskStatus;
 import com.example.agent.domain.task.valueobject.TaskResult;
-import com.example.agent.infrastructure.context.TenantContext;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -59,9 +59,8 @@ public class TaskCenterService {
      * @param bizId    业务主体 ID（防重用）
      * @param payload  业务参数
      * @param tenantId 租户 ID
-     * @return 任务 ID
      */
-    public String submit(String taskType, String bizId, Object payload, Long tenantId) {
+    public void submit(String taskType, String bizId, Object payload, Long tenantId) {
         // 1. 防重：同类型 + 同业务主体不允许重复提交
         int activeCount = taskRepository.countActiveByTypeAndBiz(taskType, bizId);
         if (activeCount > 0) {
@@ -93,22 +92,22 @@ public class TaskCenterService {
 
         taskRepository.save(task);
 
-        // 4. 事务提交后入队执行
+        // 4. 事务提交后入队执行（MdcContext.wrap 捕获当前线程的 traceId 等诊断上下文）
+        Runnable wrappedTask = MdcContext.wrap(() -> executeTask(taskId));
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(
                     new TransactionSynchronization() {
                         @Override
                         public void afterCommit() {
-                            taskExecutor.submit(() -> executeTask(taskId));
+                            taskExecutor.submit(wrappedTask);
                         }
                     });
         } else {
-            taskExecutor.submit(() -> executeTask(taskId));
+            taskExecutor.submit(wrappedTask);
         }
 
         log.info("[TaskCenter] 任务已提交: taskId={}, taskType={}, bizId={}, timeoutSeconds={}",
                 taskId, taskType, bizId, timeoutSeconds);
-        return taskId;
     }
 
     /**
@@ -137,7 +136,7 @@ public class TaskCenterService {
                 .build();
         taskRepository.update(withTimeout);
 
-        taskExecutor.submit(() -> executeTask(taskId));
+        taskExecutor.submit(MdcContext.wrap(() -> executeTask(taskId)));
         log.info("[TaskCenter] 任务重试已提交: taskId={}, retryCount={}", taskId, updated.getRetryCount());
     }
 
@@ -160,7 +159,7 @@ public class TaskCenterService {
             return;
         }
 
-        TaskHandler<T> handler = (TaskHandler<T>) handlerRegistry.getHandler(task.getTaskType());
+        TaskHandler<T> handler = handlerRegistry.getHandler(task.getTaskType());
         T payload = gson.fromJson(task.getPayloadJson(), handler.getPayloadType());
         long deadlineMs = System.currentTimeMillis() + handler.getTimeoutSeconds() * 1000L;
 
@@ -201,7 +200,12 @@ public class TaskCenterService {
                 } catch (Exception callbackEx) {
                     log.error("[TaskCenter] onFailure 回调异常: taskId={}", taskId, callbackEx);
                 }
+            } else {
+                // CAS 冲突：任务可能已被超时扫描器抢占
+                log.warn("[TaskCenter] 任务状态更新失败（CAS冲突），可能已被超时扫描器处理: taskId={}", taskId);
             }
+
+            // ★ worker 线程中不向上 re-throw（线程池会吞掉），但状态已持久化为 FAILED
         }
     }
 

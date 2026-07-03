@@ -341,7 +341,8 @@ public class DocumentApplicationService {
                     .object(doc.getMinioPath())
                     .build());
         } catch (Exception e) {
-            log.warn("[MinIO] 文件删除失败: path={}", doc.getMinioPath(), e);
+            log.error("[MinIO] 文件删除失败: path={}", doc.getMinioPath(), e);
+            throw new BusinessException(500, "文件删除失败: " + doc.getMinioPath(), e);
         }
 
         // 删除切片 + 文档
@@ -413,8 +414,8 @@ public class DocumentApplicationService {
             byte[] hash = md.digest(file.getBytes());
             return HexFormat.of().formatHex(hash);
         } catch (Exception e) {
-            log.warn("[Document] SHA256 计算失败: {}", e.getMessage());
-            return "sha256_error_" + System.currentTimeMillis();
+            log.error("[Document] SHA256 计算失败: fileName={}", file.getOriginalFilename(), e);
+            throw new BusinessException(500, "文件 SHA256 计算失败", e);
         }
     }
 }

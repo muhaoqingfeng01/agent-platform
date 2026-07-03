@@ -182,6 +182,18 @@ interfaces → application → domain ← infrastructure
     - 若 ApplicationService 方法返回裸 Map/List，**一并改为返回 Response DTO**，从源头杜绝
     - DTO 使用 `@Data` + `@Builder` + `@NoArgsConstructor` + `@AllArgsConstructor` + `@Schema`
     - 这确保：编译期类型安全、Swagger 自动生成字段文档、后续扩展字段无需破坏性变更
+15. **🔴 业务处理层 catch 异常后必须向上 re-throw，禁止吞掉异常（强制）**
+    - 应用层 Service / DomainService 的 catch 块，完成日志记录 + 状态更新后**必须重新抛出**
+    - 正确模式: `catch (Exception e) { log.error("...", e); throw new BusinessException(500, "...", e); }`
+    - **禁止** `catch (Exception e) { log.error("...", e); }` 后无声返回 — 这会隐藏真实故障，导致上层状态不一致
+    - **例外**（可 fail-open，但必须 `log.warn` 或更高级别）: 审计日志写入、WebSocket 推送、可观测性埋点上报、定时任务逐条扫描（单条失败不影响后续）
+    - 业务参数校验使用 `BizAssert` 工具类替代散落的 `if-check + throw`:
+      ```java
+      BizAssert.notNull(user, 404, ExceptionMessages.USER_NOT_FOUND + userId);
+      BizAssert.isReached(DocumentStatus.PARSED, doc.getStatus(), 400, "文档必须先解析完成才能切片");
+      BizAssert.hasText(name, 400, ExceptionMessages.VALIDATION_ERROR + "名称不能为空");
+      ```
+    - `BizAssert` 位于 `common/exception/BizAssert.java`，对标 `org.springframework.util.Assert`
 
 ---
 
@@ -189,7 +201,7 @@ interfaces → application → domain ← infrastructure
 
 ```
 agent-platform-bootstrap/     1 文件  ← @SpringBootApplication + @EnableAsync
-agent-platform-common/       23 文件  ← Result、6 异常、PageResponse、IdGenerator、安全异常、值对象基类
+agent-platform-common/       24 文件  ← Result、6 异常、BizAssert、PageResponse、IdGenerator、安全异常、值对象基类
 agent-platform-domain/      117 文件  ← 23 聚合根/实体 + 23 仓储接口 + 32 值对象 + 5 安全接口 + 19 DomainService/端口
 agent-platform-application/ 118 文件  ← 19 AppService + 3 识别器 + 1 责任链 + 5 提取器 + 4 Resolver + 5 Handler + 7 切片策略 + 1 管线 + Security DTO + Event + ...
 agent-platform-infrastructure/ 126 文件 ← 23 PO + 23 Mapper + 23 Impl + ServiceImpl + Config + Rag + Observability + AgentMetrics + McpClientManager + HttpToolAdapter + Annotation + Aspect + ...

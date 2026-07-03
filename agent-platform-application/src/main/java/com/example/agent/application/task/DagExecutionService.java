@@ -5,6 +5,7 @@ import com.example.agent.application.task.handler.ActionHandlerRegistry;
 import com.example.agent.application.task.retry.RetryPolicy;
 import com.example.agent.application.task.retry.TimeoutController;
 import com.example.agent.common.exception.BusinessException;
+import com.example.agent.common.util.MdcContext;
 import com.example.agent.domain.task.entity.TaskExecution;
 import com.example.agent.domain.task.entity.TaskStepExecution;
 import com.example.agent.domain.task.repository.TaskExecutionRepository;
@@ -17,9 +18,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,26 +37,28 @@ import java.util.concurrent.Executors;
  *
  * <p>负责按拓扑层级调度 DAG 节点执行、进度推送、失败处理。
  * <p>每层内节点并行执行，层间串行等待。
+ * <p>MDC 上下文（traceId 等）通过 {@link MdcContext} 显式传播，
+ * 因为 Spring 6.1 的 {@code ThreadPoolTaskExecutor.execute/submit} 不经过 {@code TaskDecorator}。
  *
  * @author Agent Platform Team
  * @since 1.0.0
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class DagExecutionService {
 
     private final ActionHandlerRegistry handlerRegistry;
     private final TaskExecutionRepository executionRepository;
     private final TaskStepExecutionRepository stepExecutionRepository;
     private final ConversationWebSocketHandler wsHandler;
+    private final ThreadPoolTaskExecutor asyncTaskExecutor;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * 线程池 — JDK 17 下使用固定线程池模拟并行.
+     * DAG 节点并行执行线程池 — JDK 17 下使用固定线程池模拟并行.
      * <p>Java 21+ 可替换为 {@code Executors.newVirtualThreadPerTaskExecutor()}
      */
-    private final ExecutorService executor = Executors.newFixedThreadPool(
+    private final ExecutorService nodeExecutor = Executors.newFixedThreadPool(
             Math.max(4, Runtime.getRuntime().availableProcessors() * 2),
             r -> {
                 Thread t = new Thread(r, "dag-executor");
@@ -63,15 +66,35 @@ public class DagExecutionService {
                 return t;
             });
 
+    public DagExecutionService(ActionHandlerRegistry handlerRegistry,
+                               TaskExecutionRepository executionRepository,
+                               TaskStepExecutionRepository stepExecutionRepository,
+                               ConversationWebSocketHandler wsHandler,
+                               @Qualifier("asyncTaskExecutor") ThreadPoolTaskExecutor asyncTaskExecutor) {
+        this.handlerRegistry = handlerRegistry;
+        this.executionRepository = executionRepository;
+        this.stepExecutionRepository = stepExecutionRepository;
+        this.wsHandler = wsHandler;
+        this.asyncTaskExecutor = asyncTaskExecutor;
+    }
+
     /**
-     * 异步执行 DAG 任务.
+     * 异步执行 DAG 任务 — 通过 {@link MdcContext#wrap(Runnable)} 传播 MDC.
      *
-     * @param graph         已解析的 DAG 图
-     * @param executionId   执行 ID
+     * @param graph          已解析的 DAG 图
+     * @param executionId    执行 ID
      * @param conversationId 会话 ID（用于 WebSocket 推送）
      */
-    @Async
     public void execute(DagGraph graph, String executionId, String conversationId) {
+        // 在调用线程（HTTP 线程）上捕获 MDC，通过 MdcContext.wrap() 传播到工作线程
+        asyncTaskExecutor.submit(MdcContext.wrap(() ->
+                executeInternal(graph, executionId, conversationId)));
+    }
+
+    /**
+     * 内部执行逻辑 — 运行在 asyncTaskExecutor 线程上，MDC 已由 MdcContext.wrap() 恢复.
+     */
+    private void executeInternal(DagGraph graph, String executionId, String conversationId) {
         log.info("[DagExec] 开始执行: executionId={}, nodes={}, levels={}",
                 executionId, graph.size(),
                 graph.getTopologicalLevels() != null ? graph.getTopologicalLevels().size() : 0);
@@ -173,13 +196,19 @@ public class DagExecutionService {
 
         } catch (Exception e) {
             log.error("[DagExec] 执行异常: executionId={}", executionId, e);
-            executionRepository.markFailed(executionId, null, "执行异常: " + e.getMessage());
+            try {
+                executionRepository.markFailed(executionId, null, "执行异常: " + e.getMessage());
+            } catch (Exception dbEx) {
+                log.error("[DagExec] 标记失败状态时数据库异常: executionId={}", executionId, dbEx);
+            }
             pushProgress(conversationId, executionId, null, ExecutionStatus.FAILED.name(), 0, graph.size());
+            throw new BusinessException(500, "DAG 执行异常: " + executionId, e);
         }
     }
 
     /**
      * 异步执行单个节点 — 等待依赖完成 → 执行 → 重试 → 超时控制.
+     * <p>MDC 通过 {@link MdcContext#wrapFn(java.util.function.Function)} 传播到节点线程.
      */
     private CompletableFuture<StepResult> executeNodeAsync(
             TaskNode node,
@@ -205,7 +234,9 @@ public class DagExecutionService {
             depsFuture = CompletableFuture.allOf(depFutures);
         }
 
-        return depsFuture.thenApplyAsync(v -> {
+        // MdcContext.wrapFn() 在调用线程（asyncTaskExecutor 线程）上捕获 MDC，
+        // 在节点执行线程（dag-executor 线程）上恢复 MDC
+        return depsFuture.thenApplyAsync(MdcContext.wrapFn(v -> {
             // 检查依赖是否全部成功
             for (String depId : node.getDep()) {
                 try {
@@ -226,7 +257,7 @@ public class DagExecutionService {
 
             // 执行当前节点
             return executeNode(node, executionId, conversationId);
-        }, executor);
+        }), nodeExecutor);
     }
 
     /**

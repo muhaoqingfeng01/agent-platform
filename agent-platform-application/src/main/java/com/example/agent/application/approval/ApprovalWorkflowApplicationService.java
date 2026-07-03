@@ -129,6 +129,7 @@ public class ApprovalWorkflowApplicationService {
             dagExecutor.resumeExecution(approval.getExecutionId());
         } catch (Exception e) {
             log.error("[Approval] 恢复执行失败: executionId={}", approval.getExecutionId(), e);
+            throw new BusinessException(500, "恢复执行失败: " + approval.getExecutionId(), e);
         }
 
         // 推送审批结果
@@ -162,6 +163,7 @@ public class ApprovalWorkflowApplicationService {
             dagExecutor.cancelExecution(approval.getExecutionId(), "审批拒绝: " + reason);
         } catch (Exception e) {
             log.error("[Approval] 取消执行失败: executionId={}", approval.getExecutionId(), e);
+            throw new BusinessException(500, "取消执行失败: " + approval.getExecutionId(), e);
         }
 
         // 推送审批结果

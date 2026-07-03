@@ -1,5 +1,7 @@
 package com.example.agent.application.knowledge.pipeline;
 
+import com.example.agent.common.exception.BizAssert;
+import com.example.agent.common.exception.BusinessException;
 import com.example.agent.common.exception.TaskTimeoutException;
 import com.example.agent.common.lock.DistributeLockService;
 import com.example.agent.common.lock.LockEnum;
@@ -22,6 +24,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
+import org.springframework.util.Assert;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -60,7 +63,8 @@ public class DocumentPipelineOrchestrator {
                 return null;
             });
         } catch (RuntimeException e) {
-            log.info("[Pipeline] 文档正在执行其他操作（解析/弃用/删除），跳过: docId={}", documentId);
+            log.error("[Pipeline] 文档处理失败（分布式锁异常）: docId={}", documentId, e);
+            throw new BusinessException(500, "文档处理失败: " + documentId, e);
         }
     }
 
@@ -79,8 +83,6 @@ public class DocumentPipelineOrchestrator {
 
     /**
      * 实际文档处理逻辑（在分布式锁保护下执行）.
-     *
-     * @param deadlineMs 截止时间毫秒值，null 表示无超时
      */
     private void doProcess(String documentId) {
         doProcess(documentId, null);
@@ -90,13 +92,6 @@ public class DocumentPipelineOrchestrator {
         try {
             Document doc = documentRepository.findByDocumentId(documentId)
                     .orElseThrow(() -> new IllegalArgumentException("文档不存在: " + documentId));
-
-            if (!doc.isParseable()) {
-                log.info("[Pipeline] 文档状态不可解析，跳过: docId={}, status={}", documentId,
-                        doc.getStatus() != null ? doc.getStatus().getDesc() : null);
-                return;
-            }
-
             // Step 1: 文本提取
             String text = textExtractor.extractText(doc);
             log.info("[Pipeline] 文档解析完成: docId={}, textLen={}", documentId, text.length());
@@ -125,8 +120,20 @@ public class DocumentPipelineOrchestrator {
             throw e;
         } catch (Exception e) {
             log.error("[Pipeline] 文档处理失败: docId={}", documentId, e);
-            updateStatusImmediate(documentId, DocumentStatus.FAILED);
-            documentRepository.updateErrorMessage(documentId, e.getMessage());
+            // ★ 先尽力标记失败状态（即使失败也不影响异常传播）
+            try {
+                updateStatusImmediate(documentId, DocumentStatus.FAILED);
+            } catch (Exception statusEx) {
+                log.error("[Pipeline] 更新文档失败状态异常: docId={}", documentId, statusEx);
+            }
+            try {
+                documentRepository.updateErrorMessage(documentId,
+                        e.getMessage() != null ? e.getMessage() : "未知错误");
+            } catch (Exception errEx) {
+                log.error("[Pipeline] 更新文档错误信息异常: docId={}", documentId, errEx);
+            }
+            // ★ 必须 re-throw，让 TaskCenter 感知失败，避免任务被错误标记为 COMPLETED
+            throw new RuntimeException("文档处理失败: " + documentId, e);
         }
     }
 
@@ -219,6 +226,7 @@ public class DocumentPipelineOrchestrator {
             float[] testVector = embeddingClient.embed("test");
             return testVector.length;
         } catch (Exception e) {
+            log.error("[Pipeline] 获取 Embedding 维度失败，回退到 1536", e);
             return 1536;
         }
     }
