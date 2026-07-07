@@ -31,12 +31,12 @@ public class DocumentLifecycleDomainService {
         }
     }
 
-    /** 仅 PENDING_PARSE / FAILED / DEPRECATED 可删除（PARSED 必须先弃用再删除） */
+    /** 仅处理中的文档（PARSING/CHUNKING/EMBEDDING）不可删除；PARSED 可自动清理向量后删除 */
     public void assertCanDelete(Document doc) {
         if (doc == null) throw new IllegalArgumentException("文档不存在");
-        if (doc.getStatus() == DocumentStatus.PARSED) {
+        if (doc.isProcessing()) {
             throw new IllegalStateException(
-                "已解析的文档必须先弃用（删除向量）再删除，当前状态: " + doc.getStatus().getDesc());
+                "文档正在处理中，请等待处理完成或失败后再删除，当前状态: " + doc.getStatus().getDesc());
         }
     }
 

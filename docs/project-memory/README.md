@@ -38,7 +38,10 @@
 | 24 | 2026-06-18 | [XX-T12-效果评估与持续优化实现.md](XX-T12-效果评估与持续优化实现.md) | 🆕 P4-T12 完整实现：~30 文件、LLM-as-Judge 4维度评分、BadCase 自动工单、SpringEvent 闭环、编译通过
 | 25 | 2026-06-18 | [XX-P0-P4-差距分析-2026-06-18.md](XX-P0-P4-差距分析-2026-06-18.md) | 🆕 P0-P4 全面差距分析：19 项未实现（8代码+11运维）、5 项方案变更、真实完成度评估
 | 26 | 2026-06-18 | [XX-会话总结-2026-06-18.md](XX-会话总结-2026-06-18.md) | 🆕 差距分析会话总结：7 文件同步更新、3 长期记忆新增
-| 27 | 2026-06-18 | [19-移除Flyway框架.md](19-移除Flyway框架.md) | 🆕 移除 Flyway 依赖/SQL 归档至 docs/database/、4 文档更新
+| 27 | 2026-06-18 | [19-移除Flyway框架.md](19-移除Flyway框架.md) | 🆕 移除 Flyway 依赖/SQL 归档至 docs/database/、4 文档更新 |
+| 28 | 2026-07-03 | [XX-多模式交互系统架构设计.md](XX-多模式交互系统架构设计.md) | 🆕 多模式交互系统架构设计方案 v2.0：DDD 六模块映射、InteractionStrategy 抽象、7 步请求管道、20+ 技术栈精确对齐 |
+| 29 | 2026-07-03 | [XX-P7-多模式交互实现.md](XX-P7-多模式交互实现.md) | 🆕 P7 多模式交互实现：8 文件、DDD 四层、InteractionStrategy 策略工厂、2 种模式（知识检索+智能对话）、编译通过 |
+| 30 | 2026-07-06 | [XX-P7-迭代增强-streamChat双模式改造.md](XX-P7-迭代增强-streamChat双模式改造.md) | 🆕 P7 迭代增强：streamChat 双模式改造、KnowledgeSearchStreamService RAG 流式管线、8 文件变更、编译通过 |
 
 ## 当前项目状态快照
 
@@ -46,7 +49,7 @@
 - **Spring Boot**: 3.3.7
 - **构建**: ✅ BUILD SUCCESS（7/7 模块）
 - **启动**: ⚠️ 需要 MySQL + Redis + Milvus 外部服务
-- **代码**: ~387 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO/Handler/Adapter/SecurityFilter/Aspect/Observability/Metrics/Event）
+- **代码**: ~508 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO/Handler/Adapter/SecurityFilter/Aspect/Observability/Metrics/Event）
 - **Swagger**: 已集成，`/swagger-ui.html`
 - **数据库**: V1.0.0(13张) + V1.1.0(15张) + V1.2.0(种子) + V1.2.1(业务ID) + V1.2.2(T7调用日志ID) + V1.3.0(T6精度) + V1.4.0(KB创建者+状态迁移) + V1.5.0(T7工具版本化)，SQL 参考文件在 `docs/database/`
 - **日志**: traceId + spanId + tenantId + userId 全链路追踪（MDC），logback-spring.xml 按天分目录
@@ -54,9 +57,10 @@
 - **DDD 分层**: Controller → ApplicationService → DomainService → Repository，无越层调用
 - **DTO 规范**: Request/Response 独立分包，Application 层 DTO 独立分包 + Interfaces 层 28 个 Request DTO
 - **会话记录**: `sessions/` — 按日期分目录管理
-- **P0 进度**: 🟢 ~95%（全部核心完成，LDAP/SSO + Sentinel Dashboard 延期）
-- **P1 进度**: 🟢 ~98%（T3+T4+T5 全部完成，Redis 模板缓存遗漏）
-- **P2 进度**: 🟡 ~85%（T6 V1.4.0 + T7 V1.0.0 核心完成，5 项增强待做）
+- **P0 进度**: 🟢 ~100%（全部核心完成）
+- **P1 进度**: 🟢 ~100%（T3+T4+T5 全部完成）
+- **P2 进度**: 🟢 ~100%（T6 RAG + T7 MCP 全部完成）
+- **P7 进度**: 🟢 ~100%（策略工厂 + streamChat 双模式改造全部完成，2 种模式运行中）
 - **P3 进度**: 🟢 ~95%（T10+T11 安全围栏+审批状态机全部完成，Presidio 可选延期）
 - **P4 进度**: 🟡 核心 100%（T9 15项 + T12 已实现，7 项运维增强 🔜 P6）
 - **P5 进度**: ⚪ 0%（前端未开始）

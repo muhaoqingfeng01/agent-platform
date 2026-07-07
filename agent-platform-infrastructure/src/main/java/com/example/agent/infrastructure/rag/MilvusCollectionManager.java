@@ -9,6 +9,8 @@ import io.milvus.param.MetricType;
 import io.milvus.param.R;
 import io.milvus.param.RpcStatus;
 import io.milvus.param.collection.CreateCollectionParam;
+import io.milvus.param.collection.DescribeCollectionParam;
+import io.milvus.param.collection.DropCollectionParam;
 import io.milvus.param.collection.FieldType;
 import io.milvus.param.collection.FlushParam;
 import io.milvus.param.collection.HasCollectionParam;
@@ -99,9 +101,18 @@ public class MilvusCollectionManager implements MilvusStoreClient {
         R<Boolean> hasColl = milvusClient.hasCollection(
                 HasCollectionParam.newBuilder().withCollectionName(collectionName).build());
         if (hasColl.getData() != null && hasColl.getData()) {
-            log.info("[Milvus] Collection 已存在: {}", collectionName);
-            loadIfNeeded(collectionName);
-            return;
+            // 校验已有 collection 的 embedding 维度是否匹配
+            if (isDimensionMismatch(collectionName, dimension)) {
+                log.warn("[Milvus] Collection 维度不匹配，重建: collection={}, expectedDim={}",
+                        collectionName, dimension);
+                milvusClient.dropCollection(
+                        DropCollectionParam.newBuilder().withCollectionName(collectionName).build());
+                collectionCache.remove(collectionName);
+            } else {
+                log.info("[Milvus] Collection 已存在: {}", collectionName);
+                loadIfNeeded(collectionName);
+                return;
+            }
         }
 
         // Schema: id + embedding + content + document_id + knowledge_id
@@ -162,6 +173,31 @@ public class MilvusCollectionManager implements MilvusStoreClient {
         createScalarIndex(collectionName, "knowledge_id");
 
         loadIfNeeded(collectionName);
+    }
+
+    /**
+     * 检查已有 Collection 的 embedding 字段维度是否与预期不符.
+     */
+    private boolean isDimensionMismatch(String collectionName, int expectedDim) {
+        try {
+            R<io.milvus.grpc.DescribeCollectionResponse> resp = milvusClient.describeCollection(
+                    DescribeCollectionParam.newBuilder().withCollectionName(collectionName).build());
+            if (resp.getData() != null && resp.getData().getSchema() != null) {
+                for (var field : resp.getData().getSchema().getFieldsList()) {
+                    if ("embedding".equals(field.getName())) {
+                        for (var param : field.getTypeParamsList()) {
+                            if ("dim".equals(param.getKey())) {
+                                int actualDim = Integer.parseInt(param.getValue());
+                                return actualDim != expectedDim;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[Milvus] 获取集合维度信息失败，按一致处理: collection={}", collectionName, e);
+        }
+        return false;
     }
 
     // ============================================================

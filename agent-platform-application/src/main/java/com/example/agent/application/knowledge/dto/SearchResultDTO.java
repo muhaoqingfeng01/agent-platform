@@ -32,10 +32,11 @@ public class SearchResultDTO {
         private BigDecimal keywordScore;
         private int rankPosition;
         private String chunkMetadata;
-        // ★ 新增: 文档溯源字段
+        // ★ 文档溯源字段
         private String documentFilename;
         private String documentFileType;
         private String documentAccessUrl;
+        private String documentPreviewUrl;
         private Long documentUploadedAt;
     }
 
@@ -47,6 +48,7 @@ public class SearchResultDTO {
         private String fileType;
         private long fileSize;
         private String accessUrl;
+        private String previewUrl;
         private Long uploadedAt;
     }
 }

@@ -86,20 +86,67 @@ public class DocumentController {
 
     @PostMapping("/documents/download")
     @SaCheckPermission("doc:read")
-    @Operation(summary = "下载原始文档（MinIO 流式代理）")
+    @Operation(summary = "下载原始文档（POST，MinIO 流式代理）")
     public void download(@Valid @RequestBody DocumentDownloadRequest request, HttpServletResponse response) throws IOException {
-        DocumentDTO doc = docService.getDocument(request.getDocumentId());
+        doDownload(request.getDocumentId(), false, response);
+    }
 
-        response.setContentType("application/octet-stream");
+    @GetMapping("/documents/{documentId}/download")
+    @SaCheckPermission("doc:read")
+    @Operation(summary = "下载原始文档（GET，浏览器友好，可直接作为链接）")
+    public void downloadByPath(@PathVariable String documentId, HttpServletResponse response) throws IOException {
+        doDownload(documentId, false, response);
+    }
+
+    @GetMapping("/documents/{documentId}/preview")
+    @SaCheckPermission("doc:read")
+    @Operation(summary = "预览文档（GET，Content-Disposition: inline，浏览器内嵌展示）")
+    public void previewByPath(@PathVariable String documentId, HttpServletResponse response) throws IOException {
+        doDownload(documentId, true, response);
+    }
+
+    /**
+     * 统一文档下载/预览逻辑.
+     *
+     * @param documentId 文档 ID
+     * @param inline     true = 内嵌预览（Content-Disposition: inline），false = 下载
+     */
+    private void doDownload(String documentId, boolean inline, HttpServletResponse response) throws IOException {
+        DocumentDTO doc = docService.getDocument(documentId);
+
+        String contentType = resolveContentType(doc.getFileType(), doc.getFilename());
+        response.setContentType(contentType);
+
         String encodedFilename = URLEncoder.encode(doc.getFilename(), StandardCharsets.UTF_8)
                 .replaceAll("\\+", "%20");
+        String disposition = inline ? "inline" : "attachment";
         response.setHeader("Content-Disposition",
-                "attachment; filename*=UTF-8''" + encodedFilename);
+                disposition + "; filename*=UTF-8''" + encodedFilename);
 
-        try (InputStream is = docService.downloadDocumentFile(request.getDocumentId())) {
+        try (InputStream is = docService.downloadDocumentFile(documentId)) {
             is.transferTo(response.getOutputStream());
             response.flushBuffer();
         }
+    }
+
+    /**
+     * 解析 MIME 类型 — 优先根据文件扩展名推断，回退使用原始 fileType.
+     */
+    private String resolveContentType(String fileType, String filename) {
+        if (filename != null) {
+            String lower = filename.toLowerCase();
+            if (lower.endsWith(".pdf")) return "application/pdf";
+            if (lower.endsWith(".png")) return "image/png";
+            if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+            if (lower.endsWith(".gif")) return "image/gif";
+            if (lower.endsWith(".svg")) return "image/svg+xml";
+            if (lower.endsWith(".txt") || lower.endsWith(".md")) return "text/plain; charset=UTF-8";
+            if (lower.endsWith(".html") || lower.endsWith(".htm")) return "text/html; charset=UTF-8";
+            if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            if (lower.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            if (lower.endsWith(".pptx")) return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+        }
+        return fileType != null ? fileType : "application/octet-stream";
     }
 
     @PostMapping("/documents/chunks")

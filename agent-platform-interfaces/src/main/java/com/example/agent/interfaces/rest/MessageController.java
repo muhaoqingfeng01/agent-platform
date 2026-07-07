@@ -4,7 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.conversation.MessageApplicationService;
 import com.example.agent.application.conversation.MessageListResponse;
 import com.example.agent.application.conversation.MessageApplicationService.MessageResponse;
-import com.example.agent.application.conversation.StreamOrchestrationService;
+import com.example.agent.application.interaction.InteractionApplicationService;
 import com.example.agent.application.optimization.event.MessageFeedbackEvent;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.helper.ResultRespHelper;
@@ -26,11 +26,12 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.List;
-import java.util.concurrent.ThreadPoolExecutor;
-
 /**
- * 消息收发 Controller — SSE 流式 + 非流式，纯粹 HTTP 适配层.
+ * 消息收发 Controller — 纯粹 HTTP 适配层.
+ * <p>
+ * 流式端点统一通过 {@link InteractionApplicationService} 路由到对应交互策略，
+ * 支持 CONVERSATION（智能对话）和 KNOWLEDGE_SEARCH（知识库检索）两种模式。
+ * 新增模式只需在策略层注册，Controller 无需改动。
  *
  * @author Agent Platform Team
  * @since 1.0.0
@@ -42,8 +43,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class MessageController {
 
     private final MessageApplicationService messageService;
-    private final StreamOrchestrationService streamService;
-    private final ThreadPoolExecutor streamExecutor;
+    private final InteractionApplicationService interactionService;
     private final ApplicationEventPublisher eventPublisher;
 
     @PostMapping("/api/v1/conversations/messages/send")
@@ -58,13 +58,16 @@ public class MessageController {
     @PostMapping(value = "/api/v1/conversations/messages/stream",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @SaCheckPermission("conversation:send")
-    @Operation(summary = "发送消息（SSE 流式）")
+    @Operation(summary = "发送消息（SSE 流式）— 支持 CONVERSATION / KNOWLEDGE_SEARCH 双模式")
     public SseEmitter streamChat(@Valid @RequestBody MessageSendRequest request) {
-        Long tenantId = TenantContext.getCurrentTenantId();
-        String userId = TenantContext.getCurrentUserId();
         SseEmitter emitter = SseEmitterFactory.create(300_000L);
-        streamExecutor.submit(() -> streamService.executeStreamPipeline(
-                request.getConversationId(), tenantId, userId, request.getContent(), emitter));
+        // 统一走策略工厂路由，模式解析（含默认值/异常回退）下沉到 ApplicationService
+        interactionService.executeStream(
+                request.getMode(),
+                request.getContent(),
+                request.getConversationId(),
+                request.getKnowledgeId(),
+                emitter);
         return emitter;
     }
 

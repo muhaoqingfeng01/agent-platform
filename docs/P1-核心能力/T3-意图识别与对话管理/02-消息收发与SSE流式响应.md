@@ -17,14 +17,11 @@
 
 | 设计模式 | 应用场景 | 核心价值 |
 |----------|----------|----------|
-| **Observer** | SSE 事件订阅 / WebSocket 推送 | 一对多通知，解耦生产者与消费者 |
-| **Strategy** | 消息发送模式（stream vs non-stream） | 运行时选择发送策略 |
+| **Strategy + Factory** | 交互模式路由（`InteractionStrategy` + `InteractionStrategyFactory`） | 新增模式不改 Controller，开闭原则 |
+| **Observer** | SSE 事件订阅 | 一对多通知，解耦生产者与消费者 |
 | **Builder** | 消息实体 / 事件构建 | 链式构造复杂对象 |
-| **Chain of Responsibility** | 消息处理管道（校验→意图→执行→响应） | 每个处理节点独立，可插拔 |
 | **Template Method** | 消息存储骨架（save → update counter → notify） | 统一流程，保证一致性 |
-| **Factory Method** | SSE 事件工厂（token/tool_call/done/error） | 统一事件格式，类型安全 |
-| **Mediator** | WebSocket Session 管理（ConcurrentHashMap 注册中心） | 集中管理连接，避免点对点耦合 |
-| **Command** | WebSocket 消息类型路由（type → handler） | 开放-封闭原则，新增消息类型不改路由逻辑 |
+| **Factory Method** | SSE 事件工厂（`SseEventFactory`）/ 上下文构建（`InteractionContext.forXxx()`） | 统一事件格式，类型安全 |
 
 ---
 
@@ -32,304 +29,333 @@
 
 | 方法 | 路径 | 说明 | Content-Type |
 |------|------|------|:--:|
-| POST | `/api/v1/conversations/{id}/messages` | 发送消息（非流式） | `application/json` |
-| POST | `/api/v1/conversations/{id}/stream` | 发送消息（SSE 流式） | `text/event-stream` |
-| GET | `/api/v1/conversations/{id}/messages` | 历史消息列表（分页） | `application/json` |
-| GET | `/api/v1/conversations/{id}/messages?before={msgId}` | 加载更早的消息 | `application/json` |
-| PATCH | `/api/v1/conversations/{id}/messages/{msgId}/feedback` | 消息反馈（点赞/点踩） | `application/json` |
+| POST | `/api/v1/conversations/messages/send` | 发送消息（非流式） | `application/json` |
+| POST | `/api/v1/conversations/messages/stream` | 发送消息（SSE 流式，支持 CONVERSATION / KNOWLEDGE_SEARCH 双模式） | `text/event-stream` |
+| POST | `/api/v1/conversations/messages/list` | 历史消息列表（分页） | `application/json` |
+| POST | `/api/v1/conversations/messages/before` | 加载更早的消息（游标分页） | `application/json` |
+| POST | `/api/v1/conversations/messages/feedback` | 消息反馈（点赞/点踩） | `application/json` |
+
+> **注意**: 所有端点统一使用 POST 方法，路径中的业务 ID（conversationId、messageId 等）均通过 Request Body 传递，
+> 不使用 `@PathVariable`。流式端点通过 `InteractionApplicationService` → `InteractionStrategyFactory` 路由到对应策略，
+> Controller 自身不包含 `if-else` 模式分发逻辑。
 
 ---
 
 ## 实现方案
 
-### 1. 整体架构（消息处理管道）
+### 1. 整体架构（策略路由模式）
 
 ```
-HTTP Request (POST /stream)
+HTTP Request (POST /api/v1/conversations/messages/stream)
     │
     ▼
-┌─────────────────────────────────────────────────────────┐
-│  MessagePipeline (Chain of Responsibility)               │
-│                                                         │
-│  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────┐ │
-│  │Validate  │──→│ Intent   │──→│ Execute  │──→│Stream│ │
-│  │Filter    │   │Recognition│  │Orchestra │   │Output│ │
-│  └──────────┘   └──────────┘   └──────────┘   └──────┘ │
-│       │              │              │              │    │
-│       ▼              ▼              ▼              ▼    │
-│  [400 Reject]  [意图结果]     [工具调用]    [SSE Event] │
-└─────────────────────────────────────────────────────────┘
-    │
-    ▼
-┌──────────────────────────┐
-│  Message Persistence      │
-│  (Builder → Repository)   │
-└──────────────────────────┘
-    │
-    ▼
-┌──────────────────────────┐
-│  Notification             │
-│  (WebSocket + Event)     │
-└──────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  MessageController#streamChat  (纯粹 HTTP 适配层)             │
+│                                                             │
+│  1. SseEmitterFactory.create(300_000L)  — 创建 SSE 发射器    │
+│  2. interactionService.executeStream(                       │
+│       mode, content, conversationId, knowledgeId, emitter)  │
+│     → 模式解析 + 策略路由下沉到 Application 层                │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  InteractionApplicationService#executeStream                 │
+│                                                             │
+│  resolveMode(modeCode) → InteractionMode                    │
+│    ├─ null/blank → CONVERSATION (默认)                       │
+│    ├─ "CONVERSATION" → CONVERSATION                         │
+│    ├─ "KNOWLEDGE_SEARCH" → KNOWLEDGE_SEARCH                  │
+│    └─ invalid → log.warn + CONVERSATION (安全回退)           │
+│                                                             │
+│  strategyFactory.getStrategy(mode) → InteractionStrategy     │
+│  streamExecutor.submit(() → strategy.executeStream(ctx))    │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+              ┌─────────────┴─────────────┐
+              │                           │
+              ▼ CONVERSATION              ▼ KNOWLEDGE_SEARCH
+┌─────────────────────────┐   ┌──────────────────────────────┐
+│ ConversationInteraction │   │ KnowledgeSearchInteraction    │
+│ Strategy                │   │ Strategy                     │
+│ (委托 StreamOrchSvc)    │   │ (委托 KnowledgeSearchStream   │
+│                         │   │  Service — RAG 流式管线)      │
+│ ● 保存用户消息           │   │                              │
+│ ● 意图识别（3层链）      │   │ ● 保存用户消息                │
+│ ● 构建 Prompt + LLM流式  │   │ ● 上下文增强检索              │
+│ ● 保存助手消息           │   │ ● 无命中→友好提示             │
+│ ● 长期记忆提取           │   │ ● 有命中→RAG Prompt + LLM流式 │
+│                         │   │ ● 保存助手消息 + 长期记忆      │
+└─────────────────────────┘   └──────────────────────────────┘
 ```
 
-### 2. SSE 流式响应（Observer 模式）
+> **设计要点**: Controller 不包含模式分发逻辑（无 `if-else`）。模式解析与路由全部下沉到
+> `InteractionApplicationService`，通过 `InteractionStrategyFactory` 自动发现策略实现。
+> 新增交互模式无需修改 Controller，只需实现 `InteractionStrategy` 接口并标注 `@Component`。
+
+### 2. MessageController — HTTP 适配层
 
 ```java
 /**
- * SSE 流式聊天端点 — Observer 模式的核心被观察者.
+ * 消息收发 Controller — 纯粹 HTTP 适配层.
  * <p>
- * 使用 SseEmitter 实现服务端推送事件，支持：
- * - 逐 token 流式输出
- * - 工具调用过程透明展示
- * - 错误信息实时推送
- * - 超时自动断开
+ * 流式端点统一通过 {@link InteractionApplicationService} 路由到对应交互策略，
+ * 支持 CONVERSATION（智能对话）和 KNOWLEDGE_SEARCH（知识库检索）两种模式。
+ * 新增模式只需在策略层注册，Controller 无需改动。
  *
  * @author Agent Platform Team
  * @since 1.0.0
  */
-@RestController
-@RequestMapping("/api/v1/conversations/{id}")
-@Tag(name = "对话管理", description = "消息收发与流式响应")
 @Slf4j
+@RestController
 @RequiredArgsConstructor
+@Tag(name = "对话管理", description = "消息收发与流式响应")
 public class MessageController {
 
     private final MessageApplicationService messageService;
-    private final StreamOrchestrationService streamService;
-    private final ThreadPoolExecutor streamExecutor;  // 自定义线程池
+    private final InteractionApplicationService interactionService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
-     * SSE 流式聊天 — Strategy 模式选择流式策略.
-     *
-     * @param id 会话 ID
-     * @param request 消息请求体
-     * @return SseEmitter 事件发射器
+     * 非流式发送消息 — 仅保存用户消息，不调用 LLM.
      */
-    @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PostMapping("/api/v1/conversations/messages/send")
     @SaCheckPermission("conversation:send")
-    @Operation(summary = "发送消息（SSE 流式）")
-    public SseEmitter streamChat(@PathVariable String id,
-                                  @Valid @RequestBody SendMessageRequest request) {
-        // Factory Method: 创建超时 5 分钟的 Emitter
+    @Operation(summary = "发送消息（非流式）")
+    public Result<MessageResponse> sendMessage(@Valid @RequestBody MessageSendRequest request) {
+        return ResultRespHelper.responseInvoke("MessageController.sendMessage", request, (req) ->
+                MessageResponse.from(
+                        messageService.saveUserMessage(req.getConversationId(), req.getContent())));
+    }
+
+    /**
+     * SSE 流式聊天 — 统一通过 InteractionApplicationService 策略工厂路由.
+     * <p>
+     * 模式解析（默认 CONVERSATION / 异常回退）全部下沉到 Application 层，
+     * Controller 仅负责 HTTP 适配：创建 SseEmitter → 委托 executeStream → 返回 emitter.
+     */
+    @PostMapping(value = "/api/v1/conversations/messages/stream",
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @SaCheckPermission("conversation:send")
+    @Operation(summary = "发送消息（SSE 流式）— 支持 CONVERSATION / KNOWLEDGE_SEARCH 双模式")
+    public SseEmitter streamChat(@Valid @RequestBody MessageSendRequest request) {
         SseEmitter emitter = SseEmitterFactory.create(300_000L);
-
-        streamExecutor.submit(() -> {
-            try {
-                // Chain of Responsibility: 执行消息处理管道
-                streamService.executeStreamPipeline(id, request.getContent(), emitter);
-            } catch (Exception e) {
-                log.error("[Conversation] SSE 流式异常: convId={}", id, e);
-                emitter.completeWithError(e);
-            }
-        });
-
+        interactionService.executeStream(
+                request.getMode(),
+                request.getContent(),
+                request.getConversationId(),
+                request.getKnowledgeId(),
+                emitter);
         return emitter;
     }
 
     /**
-     * 非流式发送消息 — Strategy 模式选择同步策略.
+     * 历史消息列表（分页）— POST + Request Body 传参.
      */
-    @PostMapping("/messages")
-    @SaCheckPermission("conversation:send")
-    @Operation(summary = "发送消息（非流式）")
-    public Result<MessageResponse> sendMessage(@PathVariable String id,
-                                                @Valid @RequestBody SendMessageRequest request) {
-        log.info("[Conversation] 发送消息: convId={}, contentLen={}", id, request.getContent().length());
-        MessageResponse response = messageService.sendAndWait(id, request);
-        return Result.ok(response);
-    }
-
-    /**
-     * 历史消息列表（分页）.
-     */
-    @GetMapping("/messages")
+    @PostMapping("/api/v1/conversations/messages/list")
     @SaCheckPermission("conversation:read")
     @Operation(summary = "历史消息列表")
-    public Result<PageResponse<MessageResponse>> listMessages(
-            @PathVariable String id,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "50") int size) {
-        return Result.ok(messageService.listMessages(id, page, size));
+    public Result<PageResponse<MessageResponse>> listMessages(@RequestBody MessageListRequest request) {
+        return ResultRespHelper.responseInvoke("MessageController.listMessages", request, (req) ->
+                messageService.listMessages(req.getId(), req.getPage(), req.getSize()));
     }
 
     /**
-     * 加载更早的消息（基于游标的分页）.
+     * 加载更早的消息（基于游标的分页）— POST + Request Body 传参.
      */
-    @GetMapping(value = "/messages", params = "before")
+    @PostMapping("/api/v1/conversations/messages/before")
     @SaCheckPermission("conversation:read")
     @Operation(summary = "加载更早的消息")
-    public Result<List<MessageResponse>> loadBefore(@PathVariable String id,
-                                                      @RequestParam String before) {
-        return Result.ok(messageService.loadMessagesBefore(id, before, 50));
+    public Result<MessageListResponse> loadBefore(@Valid @RequestBody MessageLoadBeforeRequest request) {
+        return ResultRespHelper.responseInvoke("MessageController.loadBefore", request, (req) ->
+                MessageListResponse.builder()
+                        .records(messageService.loadMessagesBefore(req.getId(), req.getBefore(), 50))
+                        .build());
     }
 
     /**
-     * 消息反馈（点赞/点踩）.
+     * 消息反馈（点赞/点踩）— POST + Request Body 传参，附带发布 FeedbackEvent.
      */
-    @PatchMapping("/messages/{msgId}/feedback")
+    @PostMapping("/api/v1/conversations/messages/feedback")
     @SaCheckPermission("conversation:feedback")
     @Operation(summary = "消息反馈")
-    public Result<Void> feedback(@PathVariable String id,
-                                  @PathVariable String msgId,
-                                  @Valid @RequestBody FeedbackRequest request) {
-        messageService.updateFeedback(msgId, request.getFeedback());
-        return Result.ok();
+    public Result<Void> feedback(@Valid @RequestBody MessageFeedbackRequest request) {
+        return ResultRespHelper.responseInvoke("MessageController.feedback", request, (req) -> {
+            FeedbackType feedbackType = FeedbackType.fromCode(req.getFeedback());
+            messageService.updateFeedback(req.getMsgId(), feedbackType);
+
+            Long tenantId = TenantContext.getCurrentTenantId();
+            eventPublisher.publishEvent(new MessageFeedbackEvent(
+                    this, req.getMsgId(), req.getConversationId(), tenantId, feedbackType));
+
+            return null;
+        });
     }
 }
 ```
 
-### 3. 流式编排服务（Chain of Responsibility + Template Method）
+### 3. 交互应用服务 — 策略路由核心（Strategy + Factory）
 
 ```java
 /**
- * 流式编排服务 — Chain of Responsibility 模式串联处理步骤.
+ * 交互应用服务 — 编排多模式交互流程.
  * <p>
- * 每个步骤是独立的责任节点，失败时立即终止链路.
+ * Controller 通过本服务完成模式路由与策略调度，自身仅负责 HTTP 适配。
+ * 这是 MessageController 和 InteractionController 共同依赖的核心服务。
+ *
+ * <h3>职责</h3>
+ * <ul>
+ *   <li>同步交互：构建上下文 → 获取策略 → 执行 → 返回统一响应</li>
+ *   <li>流式交互：构建上下文 → 获取策略 → 异步提交线程池 → SSE 推送</li>
+ *   <li>模式查询：返回所有已注册的模式编码</li>
+ * </ul>
  *
  * @author Agent Platform Team
- * @since 1.0.0
+ * @since 1.7.0
  */
-@Service
 @Slf4j
+@Service
 @RequiredArgsConstructor
-public class StreamOrchestrationService {
+public class InteractionApplicationService {
 
-    private final MessageApplicationService messageService;
-    private final IntentRecognitionService intentService;
-    private final SessionMemoryService sessionMemoryService;
-    private final ChatClient chatClient;
-
-    /** SSE 事件超时时间（毫秒） */
-    private static final long SSE_TIMEOUT_MS = 300_000L;
-    /** SSE 心跳间隔（毫秒） */
-    private static final long HEARTBEAT_INTERVAL_MS = 15_000L;
+    private final InteractionStrategyFactory strategyFactory;
+    private final ThreadPoolExecutor streamExecutor;
 
     /**
-     * 流式执行管道 — Chain of Responsibility.
-     *
-     * <pre>
-     *   Step 1: 保存用户消息
-     *   Step 2: 加载会话上下文（短期记忆 + 长期记忆）
-     *   Step 3: 意图识别（规则→缓存→LLM）
-     *   Step 4: 构建系统提示词 + 上下文
-     *   Step 5: 调用 LLM 逐 token 推送
-     *   Step 6: 保存助手回复
-     *   Step 7: 异步提取长期记忆
-     * </pre>
+     * 流式执行交互（SSE 流式模式：智能对话、知识检索 RAG 等）.
+     * <p>
+     * 在独立线程中执行策略，通过 SseEmitter 推送结果。
+     * <p>
+     * <b>默认模式：</b>若 {@code modeCode} 为空或无效，默认回退到 {@code CONVERSATION}，
+     * 确保旧版客户端不传 mode 字段时行为不变。
      */
-    public void executeStreamPipeline(String conversationId, String userContent, SseEmitter emitter) {
-        ScheduledExecutorService heartbeatExecutor = null;
+    public void executeStream(String modeCode, String content, String conversationId,
+                               String knowledgeId, SseEmitter emitter) {
+        InteractionMode mode = resolveMode(modeCode);
+        Long tenantId = TenantContext.getCurrentTenantId();
+        String userId = TenantContext.getCurrentUserId();
 
-        try {
-            // Step 1: 保存用户消息（Builder 模式）
-            Message userMsg = messageService.saveUserMessage(conversationId, userContent);
+        InteractionContext context = buildContext(mode, content, conversationId,
+                knowledgeId, null, emitter);
+        InteractionStrategy strategy = strategyFactory.getStrategy(mode);
 
-            // Step 2: 加载会话上下文
-            List<Message> history = sessionMemoryService.getRecentMessages(conversationId, 10);
-
-            // Step 3: 意图识别（参见 03-意图识别引擎）
-            IntentResult intent = intentService.recognize(userContent);
-            log.info("[Conversation] 意图识别: convId={}, intent={}, confidence={}",
-                    conversationId, intent.getIntentCode(), intent.getConfidence());
-
-            // Step 4: 构建完整上下文
-            String systemPrompt = buildSystemPrompt(intent, history);
-            String fullPrompt = buildFullPrompt(history, userContent);
-
-            // Step 5: 启动心跳
-            heartbeatExecutor = startHeartbeat(emitter);
-
-            // Step 6: 推送 thinking 事件
-            sendEvent(emitter, SseEventFactory.thinking("正在分析您的需求..."));
-
-            // Step 7: 调用 LLM 流式输出（Observer 模式：每 token 推一个事件）
-            StringBuilder fullResponse = new StringBuilder();
-            AtomicInteger tokenCount = new AtomicInteger(0);
-
-            chatClient.prompt()
-                    .system(systemPrompt)
-                    .user(fullPrompt)
-                    .stream()
-                    .chatResponse()
-                    .doOnNext(resp -> {
-                        String token = resp.getResult().getOutput().getContent();
-                        fullResponse.append(token);
-                        tokenCount.incrementAndGet();
-                        sendEvent(emitter, SseEventFactory.token(token));
-                    })
-                    .doOnComplete(() -> {
-                        // Step 8: 保存助手回复
-                        Message assistantMsg = messageService.saveAssistantMessage(
-                                conversationId, fullResponse.toString(), tokenCount.get());
-
-                        // 发送完成事件
-                        sendEvent(emitter, SseEventFactory.done(tokenCount.get(), assistantMsg.getMessageId()));
-                        emitter.complete();
-
-                        // Step 9: 异步提取长期记忆（不阻塞）
-                        messageService.extractLongTermMemoryAsync(conversationId);
-                    })
-                    .doOnError(error -> {
-                        log.error("[Conversation] LLM 调用失败: convId={}", conversationId, error);
-                        sendEvent(emitter, SseEventFactory.error("LLM 调用失败", 500));
-                        emitter.completeWithError(error);
-                    })
-                    .subscribe();  // 触发订阅执行
-
-        } catch (Exception e) {
-            log.error("[Conversation] 流式管道异常: convId={}", conversationId, e);
-            sendEvent(emitter, SseEventFactory.error(e.getMessage(), 500));
-            emitter.completeWithError(e);
-        } finally {
-            if (heartbeatExecutor != null) {
-                heartbeatExecutor.shutdown();
-            }
-        }
-    }
-
-    /**
-     * 启动 SSE 心跳 — 防止代理/负载均衡器超时断开连接.
-     */
-    private ScheduledExecutorService startHeartbeat(SseEmitter emitter) {
-        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(
-                r -> new Thread(r, "sse-heartbeat"));
-        executor.scheduleAtFixedRate(() -> {
+        streamExecutor.submit(() -> {
             try {
-                sendEvent(emitter, SseEmitter.event().name("ping").data(""));
-            } catch (Exception ignored) {
-                // 客户端已断开，忽略
+                strategy.executeStream(context);
+            } catch (Exception e) {
+                log.error("[Interaction] 流式执行异常: mode={}", mode.getDesc(), e);
+                emitter.completeWithError(e);
             }
-        }, HEARTBEAT_INTERVAL_MS, HEARTBEAT_INTERVAL_MS, TimeUnit.MILLISECONDS);
-        return executor;
+        });
     }
 
-    private void sendEvent(SseEmitter emitter, SseEmitter.SseEventBuilder event) {
+    /**
+     * 解析交互模式 — null/blank/invalid 时安全回退到 CONVERSATION.
+     * <p>
+     * 将模式解析逻辑从 Controller 层下沉到应用层，确保所有调用方行为一致。
+     */
+    private InteractionMode resolveMode(String modeCode) {
+        if (modeCode == null || modeCode.isBlank()) {
+            return InteractionMode.CONVERSATION;
+        }
         try {
-            emitter.send(event);
-        } catch (IOException e) {
-            // 客户端断开连接，标记完成
+            return InteractionMode.fromCode(modeCode);
+        } catch (IllegalArgumentException e) {
+            log.warn("[Interaction] 不支持的交互模式: {}，回退到 CONVERSATION", modeCode);
+            return InteractionMode.CONVERSATION;
+        }
+    }
+
+    /**
+     * 构建交互上下文 — 根据模式和参数选择合适的工厂方法.
+     */
+    private InteractionContext buildContext(InteractionMode mode, String content,
+                                             String conversationId, String knowledgeId,
+                                             Map<String, Object> searchConfig, Object emitter) {
+        Long tenantId = TenantContext.getCurrentTenantId();
+
+        return switch (mode) {
+            case CONVERSATION -> InteractionContext.forConversation(
+                    content, conversationId, tenantId,
+                    TenantContext.getCurrentUserId(), emitter);
+            case KNOWLEDGE_SEARCH -> {
+                if (emitter != null) {
+                    yield InteractionContext.forKnowledgeSearchStream(
+                            content, conversationId, knowledgeId, tenantId,
+                            TenantContext.getCurrentUserId(), emitter);
+                }
+                yield InteractionContext.forKnowledgeSearch(
+                        content, knowledgeId, tenantId, searchConfig);
+            }
+        };
+    }
+
+    /** 查询所有已注册的交互模式编码 */
+    public List<String> getRegisteredModeCodes() {
+        return strategyFactory.getRegisteredModes().stream()
+                .map(InteractionMode::getCode)
+                .toList();
+    }
+}
+```
+
+### 3.1 策略接口与工厂
+
+```java
+/**
+ * 交互策略接口 — 定义在 domain 层，实现在 application 层.
+ * <p>
+ * 所有交互模式（智能对话、知识检索、任务执行...）均实现此接口，
+ * 由 {@link InteractionStrategyFactory} 自动发现并注入。
+ */
+public interface InteractionStrategy {
+
+    /** 该策略对应的交互模式 */
+    InteractionMode getMode();
+
+    /** 同步执行（非流式） */
+    Object execute(InteractionContext context);
+
+    /**
+     * 流式执行（SSE）— 默认委托给 execute().
+     * <p>
+     * 需要流式能力的策略（如 KNOWLEDGE_SEARCH、CONVERSATION）覆写此方法。
+     */
+    default void executeStream(InteractionContext context) {
+        SseEmitter emitter = (SseEmitter) context.getEmitter();
+        try {
+            Object result = execute(context);
+            emitter.send(SseEventFactory.done(0, "").data(result));
+            emitter.complete();
+        } catch (Exception e) {
             emitter.completeWithError(e);
         }
     }
 
-    private String buildFullPrompt(List<Message> history, String userContent) {
-        StringBuilder sb = new StringBuilder();
-        for (Message msg : history) {
-            sb.append(msg.getRole().getLabel()).append(": ").append(msg.getContent()).append("\n");
+    /** 策略优先级（数字越小优先级越高） */
+    int getPriority();
+}
+```
+
+**策略工厂 — Spring InitializingBean + List\<T\> 自动发现：**
+```java
+@Component
+public class InteractionStrategyFactory implements InitializingBean {
+
+    private final List<InteractionStrategy> strategies;
+    private final Map<InteractionMode, InteractionStrategy> strategyMap = new EnumMap<>(InteractionMode.class);
+
+    @Override
+    public void afterPropertiesSet() {
+        for (InteractionStrategy strategy : strategies) {
+            strategyMap.put(strategy.getMode(), strategy);
         }
-        sb.append("User: ").append(userContent);
-        return sb.toString();
+        log.info("[InteractionStrategyFactory] 已注册 {} 个策略: {}", strategyMap.size(),
+                strategyMap.keySet().stream().map(InteractionMode::getCode).toList());
     }
 
-    private String buildSystemPrompt(IntentResult intent, List<Message> history) {
-        return """
-            你是一个智能助手。请根据用户意图提供准确、有帮助的回答。
-
-            当前意图: %s (置信度: %.2f)
-            对话历史轮次: %d 轮
-            """.formatted(intent.getIntentName(), intent.getConfidence(), history.size() / 2);
-    }
+    public InteractionStrategy getStrategy(InteractionMode mode) { ... }
+    public Set<InteractionMode> getRegisteredModes() { ... }
 }
 ```
 
@@ -440,12 +466,13 @@ public final class SseEmitterFactory {
 | 事件名 | 数据格式 | 说明 | 触发时机 |
 |--------|----------|------|----------|
 | `ping` | `""` | 心跳，每 15s | 流式进行中 |
-| `thinking` | `"正在分析您的需求..."` | 思考状态提示 | LLM 调用前 |
+| `thinking` | `"正在检索知识库..."` | 状态提示 | 检索前 / LLM 调用前 |
 | `token` | `"你好"` | 逐 token 文本 | LLM 流式输出中 |
+| `references` | `[{"documentId":"doc-1","filename":"员工手册.pdf",...}]` | 文件引用列表 | 知识库检索有命中时（RAG 模式） |
 | `tool_call` | `{"tool":"order_query","status":"calling"}` | 工具调用开始 | 执行工具前 |
 | `tool_result` | `{"tool":"order_query","result":{...}}` | 工具调用结果 | 工具返回后 |
 | `error` | `{"code":500,"message":"..."}` | 错误信息 | 异常发生时 |
-| `done` | `{"status":"completed","tokens":1250,"messageId":"msg_xxx"}` | 流式完成 | LLM 输出完毕 |
+| `done` | `{"status":"completed","tokens":1250,"messageId":"msg_xxx"}` | 流式完成 | 流式输出完毕 |
 
 ### 6. 消息实体与 Builder 模式
 
@@ -644,196 +671,7 @@ public class MessageApplicationService {
 }
 ```
 
-### 8. WebSocket 推送（Mediator 模式）
-
-```java
-/**
- * WebSocket 会话管理器 — Mediator 模式集中管理所有连接.
- * <p>
- * 使用 ConcurrentHashMap 维护 userId → WebSocketSession 映射，
- * 作为所有 WebSocket 消息的中介者，避免模块间点对点耦合.
- *
- * @author Agent Platform Team
- * @since 1.0.0
- */
-@Component
-@Slf4j
-public class ConversationWebSocketHandler extends TextWebSocketHandler {
-
-    /** 中介者注册表：userId → WebSocketSession */
-    private final ConcurrentHashMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
-
-    @Override
-    public void afterConnectionEstablished(WebSocketSession session) {
-        String userId = extractUserId(session);
-        if (userId != null) {
-            // 关闭旧连接（同一用户只保留最新连接）
-            WebSocketSession oldSession = sessions.put(userId, session);
-            closeQuietly(oldSession);
-            log.info("[WebSocket] 连接建立: userId={}, sessionId={}", userId, session.getId());
-        } else {
-            closeQuietly(session);
-            log.warn("[WebSocket] 无法识别用户，关闭连接");
-        }
-    }
-
-    @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        String userId = extractUserId(session);
-        if (userId != null) {
-            sessions.remove(userId, session);  // 仅移除当前 session，防止误删新连接
-            log.info("[WebSocket] 连接关闭: userId={}, status={}", userId, status);
-        }
-    }
-
-    @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) {
-        // 客户端主动发送的消息（如心跳 ping），回 pong
-        String payload = message.getPayload();
-        if ("ping".equals(payload)) {
-            sendMessage(session, new TextMessage("pong"));
-        }
-    }
-
-    @Override
-    public void handleTransportError(WebSocketSession session, Throwable exception) {
-        log.error("[WebSocket] 传输错误: userId={}", extractUserId(session), exception);
-        closeQuietly(session);
-    }
-
-    /**
-     * 向指定用户推送消息.
-     */
-    public void pushMessage(String userId, WebSocketMessage message) {
-        WebSocketSession session = sessions.get(userId);
-        if (session != null && session.isOpen()) {
-            try {
-                String json = JsonUtil.toJson(message);
-                session.sendMessage(new TextMessage(json));
-            } catch (IOException e) {
-                log.error("[WebSocket] 推送失败: userId={}", userId, e);
-                sessions.remove(userId);
-            }
-        }
-    }
-
-    /**
-     * 广播消息给所有在线用户.
-     */
-    public void broadcast(WebSocketMessage message) {
-        String json = JsonUtil.toJson(message);
-        sessions.forEach((userId, session) -> {
-            if (session.isOpen()) {
-                sendMessage(session, new TextMessage(json));
-            }
-        });
-    }
-
-    /**
-     * 获取在线用户数.
-     */
-    public int getOnlineCount() {
-        return sessions.size();
-    }
-
-    private String extractUserId(WebSocketSession session) {
-        // 从 WebSocket 握手时的 Header/Token 中提取 userId
-        String token = session.getHandshakeHeaders().getFirst("Authorization");
-        if (token != null && token.startsWith("Bearer ")) {
-            return StpUtil.getLoginIdByToken(token.substring(7)).toString();
-        }
-        return null;
-    }
-
-    private void closeQuietly(WebSocketSession session) {
-        if (session != null && session.isOpen()) {
-            try { session.close(); } catch (IOException ignored) {}
-        }
-    }
-
-    private void sendMessage(WebSocketSession session, TextMessage message) {
-        try {
-            if (session.isOpen()) {
-                session.sendMessage(message);
-            }
-        } catch (IOException ignored) {}
-    }
-}
-
-/**
- * WebSocket 消息体 — Builder 模式.
- *
- * @author Agent Platform Team
- * @since 1.0.0
- */
-@Data
-@Builder
-public class WebSocketMessage {
-    /** 消息类型: new_message, conversation_created, approval, progress, notification */
-    private String type;
-    /** 消息载荷 */
-    private Object payload;
-    /** 毫秒时间戳 */
-    private long timestamp;
-}
-```
-
-### 9. WebSocket 配置
-
-```java
-/**
- * WebSocket 配置 — 注册 Handler 与拦截器.
- */
-@Configuration
-@EnableWebSocket
-public class WebSocketConfig implements WebSocketConfigurer {
-
-    private final ConversationWebSocketHandler handler;
-
-    public WebSocketConfig(ConversationWebSocketHandler handler) {
-        this.handler = handler;
-    }
-
-    @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(handler, "/ws/conversation")
-                .setAllowedOrigins("*")
-                .addInterceptors(new WebSocketAuthInterceptor());
-    }
-}
-
-/**
- * WebSocket 认证拦截器 — 握手阶段校验 Token.
- */
-public class WebSocketAuthInterceptor implements HandshakeInterceptor {
-
-    @Override
-    public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
-                                    WebSocketHandler wsHandler, Map<String, Object> attributes) {
-        List<String> authHeaders = request.getHeaders().get("Authorization");
-        if (authHeaders == null || authHeaders.isEmpty()) {
-            return false;  // 拒绝无 Token 的连接
-        }
-        String token = authHeaders.get(0).replace("Bearer ", "");
-        try {
-            Object loginId = StpUtil.getLoginIdByToken(token);
-            attributes.put("userId", loginId.toString());
-            return true;
-        } catch (Exception e) {
-            log.warn("[WebSocket] Token 校验失败: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    @Override
-    public void afterHandshake(ServerHttpRequest request, ServerHttpResponse response,
-                                WebSocketHandler wsHandler, Exception exception) {
-        // no-op
-    }
-}
-```
-
-### 10. MyBatis Mapper XML（消息持久化）
+### 8. MyBatis Mapper XML（消息持久化）
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -894,7 +732,7 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
 </mapper>
 ```
 
-### 11. 线程池配置（遵循开发规范）
+### 9. 线程池配置（遵循开发规范）
 
 ```java
 /**
@@ -920,7 +758,7 @@ public class StreamThreadPoolConfig {
 }
 ```
 
-### 12. 测试策略
+### 10. 测试策略
 
 ```
 SseEventFactoryTest
@@ -929,33 +767,32 @@ SseEventFactoryTest
 ├── done_IncludesTokenCountAndMessageId
 ├── error_IncludesCodeAndMessage
 
-StreamOrchestrationServiceTest
-├── executeStreamPipeline_ValidInput_CompletesSuccessfully
-├── executeStreamPipeline_LLMError_SendsErrorEvent
-├── executeStreamPipeline_ClientDisconnect_CompletesWithError
+InteractionApplicationServiceTest
+├── executeStream_NullMode_DefaultsToConversation
+├── executeStream_InvalidMode_FallsBackToConversation
+├── executeStream_KnowledgeSearch_RoutesToCorrectStrategy
 
 MessageApplicationServiceTest
 ├── saveUserMessage_PersistsAndUpdatesConversation
 ├── saveAssistantMessage_IncrementsTokenCount
 ├── listMessages_ReturnsPagedResults
 
-WebSocketHandlerTest
-├── afterConnectionEstablished_ValidToken_RegistersSession
-├── afterConnectionEstablished_InvalidToken_ClosesConnection
-├── pushMessage_SessionOpen_SendsMessage
-├── pushMessage_SessionClosed_RemovesFromMap
+MessageControllerTest
+├── streamChat_ValidRequest_ReturnsSseEmitter
+├── sendMessage_ValidRequest_ReturnsMessageResponse
+├── feedback_ValidRequest_ReturnsOk
 ```
 
 ---
 
 ## 关键设计决策
 
-1. **Observer 模式驱动 SSE** — 每个 token/工具调用/错误都是独立事件，前端可按需订阅不同类型
-2. **Chain of Responsibility 编排消息管道** — 校验→意图→执行→响应各步骤独立，新增步骤不改现有代码
-3. **Factory Method 统一事件构建** — SseEventFactory 确保所有事件格式一致，杜绝手写 JSON 字符串
-4. **Mediator 模式管理 WebSocket** — ConcurrentHashMap 集中注册所有连接，各模块通过 pushMessage() 发送而不直接操作 Session
-5. **Builder 模式构建消息实体** — 7 个字段通过链式调用赋值，避免构造函数参数列表爆炸
-6. **Strategy 模式区分流式/非流式** — 运行时根据端点选择策略，同一服务支持两种模式
+1. **Strategy + Factory 驱动多模式路由** — `InteractionStrategy` 接口 + `InteractionStrategyFactory` 自动发现策略，新增交互模式只需实现接口并标注 `@Component`，Controller 零改动
+2. **模式解析下沉到 Application 层** — `resolveMode()` 在 `InteractionApplicationService` 中统一处理 null/blank/invalid 回退，避免 Controller 重复实现
+3. **Factory Method 统一事件构建** — `SseEventFactory` 确保所有 SSE 事件格式一致，杜绝手写 JSON 字符串
+4. **Builder 模式构建消息实体** — 多个字段通过链式调用赋值，避免构造函数参数列表爆炸
+5. **统一 POST + Request Body 传参** — 所有端点使用 POST 方法，业务 ID 通过 Request Body 传递，不使用 `@PathVariable`，保持 API 风格一致
+6. **流式异步执行** — `InteractionApplicationService` 通过 `ThreadPoolExecutor` 异步提交策略执行，HTTP 线程立即返回 `SseEmitter`
 7. **ThreadPoolExecutor 而非 Executors** — 遵守阿里规范，有界队列 + CallerRunsPolicy 防止 OOM
 
 ---

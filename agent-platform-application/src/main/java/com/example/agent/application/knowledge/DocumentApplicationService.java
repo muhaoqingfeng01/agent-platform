@@ -322,13 +322,13 @@ public class DocumentApplicationService {
                 .orElseThrow(() -> new ResourceNotFoundException("知识库", doc.getKnowledgeId()));
         domainService.assertCreatorAccess(kb, TenantContext.getCurrentUserId());
 
-        // PARSED 必须先弃用
+        // 阻止删除正在处理中的文档（PARSED 可直接删除，自动清理向量）
         lifecycleService.assertCanDelete(doc);
 
         Long tenantId = TenantContext.getCurrentTenantId();
         String collectionName = "kb_" + tenantId;
 
-        // 若已弃用，向量已删除；若 PARSED 则需删除（正常流程不应到此处）
+        // 若文档可检索（PARSED），清理 Milvus 向量；若已弃用则跳过
         if (doc.isSearchable()) {
             milvusStore.deleteByDocumentId(collectionName, documentId);
             kbRepository.decrementDocumentCount(doc.getKnowledgeId());

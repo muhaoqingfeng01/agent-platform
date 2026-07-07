@@ -115,6 +115,7 @@ public class HybridSearchApplicationService {
                 builder.documentFilename(doc.getFilename())
                         .documentFileType(doc.getFileType())
                         .documentAccessUrl(buildAccessUrl(doc.getDocumentId()))
+                        .documentPreviewUrl(buildPreviewUrl(doc.getDocumentId()))
                         .documentUploadedAt(TimeConverters.toEpochMilli(doc.getUploadedAt()));
             }
             items.add(builder.build());
@@ -128,6 +129,7 @@ public class HybridSearchApplicationService {
                         .fileType(d.getFileType())
                         .fileSize(d.getFileSize())
                         .accessUrl(buildAccessUrl(d.getDocumentId()))
+                        .previewUrl(buildPreviewUrl(d.getDocumentId()))
                         .uploadedAt(TimeConverters.toEpochMilli(d.getUploadedAt()))
                         .build())
                 .toList();
@@ -196,6 +198,11 @@ public class HybridSearchApplicationService {
     /** ★ 新增: 生成文档访问链接 — 代理下载模式（MinIO 不可公网访问时推荐） */
     private String buildAccessUrl(String documentId) {
         return "/api/v1/documents/" + documentId + "/download";
+    }
+
+    /** 生成文档预览链接 */
+    private String buildPreviewUrl(String documentId) {
+        return "/api/v1/documents/" + documentId + "/preview";
     }
 
     private List<FusedHit> rrfFusion(List<VectorSearchProvider.SearchHit> vectorHits,

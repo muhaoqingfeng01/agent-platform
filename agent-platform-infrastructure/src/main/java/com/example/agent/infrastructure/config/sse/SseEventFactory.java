@@ -17,6 +17,7 @@ public final class SseEventFactory {
     public static final String EVENT_TOOL_CALL = "tool_call";
     public static final String EVENT_TOOL_RESULT = "tool_result";
     public static final String EVENT_THINKING = "thinking";
+    public static final String EVENT_REFERENCES = "references";
     public static final String EVENT_ERROR = "error";
     public static final String EVENT_DONE = "done";
 
@@ -48,6 +49,21 @@ public final class SseEventFactory {
                 .id(UUID.randomUUID().toString())
                 .name(EVENT_THINKING)
                 .data(message);
+    }
+
+    /**
+     * 知识库检索命中文件的引用信息事件.
+     * <p>
+     * 在 LLM 流式输出之前推送，前端可据此渲染"参考文档"侧栏，
+     * 提供文件预览和下载入口。
+     *
+     * @param references 文件引用列表（来源: {@code SearchResultDTO.getDocuments()}）
+     */
+    public static SseEmitter.SseEventBuilder references(Object references) {
+        return SseEmitter.event()
+                .id(UUID.randomUUID().toString())
+                .name(EVENT_REFERENCES)
+                .data(references);
     }
 
     public static SseEmitter.SseEventBuilder error(String message, int code) {
