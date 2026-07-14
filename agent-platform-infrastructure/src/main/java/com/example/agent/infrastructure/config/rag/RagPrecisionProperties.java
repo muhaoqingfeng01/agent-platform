@@ -1,5 +1,6 @@
 package com.example.agent.infrastructure.config.rag;
 
+import com.example.agent.common.constant.ProjectConstants;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -24,14 +25,14 @@ public class RagPrecisionProperties {
 
     @Data
     public static class IndexProps {
-        private String defaultType = "IVF_FLAT";
-        private String defaultMetricType = "COSINE";
-        private int nlist = 128;
-        private int hnswM = 16;
-        private int hnswEfConstruction = 200;
-        private int pqNbits = 8;
-        private int pqM = 768;
-        private int diskannMaxDegree = 56;
+        private String defaultType = ProjectConstants.IndexBuild.DEFAULT_TYPE;
+        private String defaultMetricType = ProjectConstants.IndexBuild.DEFAULT_METRIC;
+        private int nlist = ProjectConstants.IndexBuild.NLIST;
+        private int hnswM = ProjectConstants.IndexBuild.HNSW_M;
+        private int hnswEfConstruction = ProjectConstants.IndexBuild.HNSW_EF_CONSTRUCTION;
+        private int pqNbits = ProjectConstants.IndexBuild.PQ_NBITS;
+        private int pqM = ProjectConstants.IndexBuild.PQ_M;
+        private int diskannMaxDegree = ProjectConstants.IndexBuild.DISKANN_MAX_DEGREE;
     }
 
     @Data
@@ -39,7 +40,7 @@ public class RagPrecisionProperties {
         private String defaultStrategy = "balanced";
         private int nprobe = 16;
         private int ef = 64;
-        private int searchListSize = 100;
+        private int searchListSize = ProjectConstants.IndexBuild.SEARCH_LIST_SIZE;
         private int topK = 20;
         private double similarityThreshold = 0.50;
         private String consistencyLevel = "BOUNDED";

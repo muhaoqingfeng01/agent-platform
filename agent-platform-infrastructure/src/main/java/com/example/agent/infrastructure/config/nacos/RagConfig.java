@@ -1,6 +1,7 @@
 package com.example.agent.infrastructure.config.nacos;
 
 import com.alibaba.cloud.nacos.NacosConfigManager;
+import com.example.agent.common.constant.ProjectConstants;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -80,7 +81,8 @@ public class RagConfig extends NacosConfig<RagConfig.RagProps> {
 
     /** DISKANN 检索 search_list_size，默认 100 */
     public int getSearchListSize() {
-        return Optional.ofNullable(getConfig()).map(p -> p.search).map(s -> s.searchListSize).orElse(100);
+        return Optional.ofNullable(getConfig()).map(p -> p.search).map(s -> s.searchListSize)
+                .orElse(ProjectConstants.IndexBuild.SEARCH_LIST_SIZE);
     }
 
     /** Milvus 一致性级别，默认 BOUNDED */
@@ -97,22 +99,26 @@ public class RagConfig extends NacosConfig<RagConfig.RagProps> {
 
     /** IVF 索引 nlist，默认 128 */
     public int getIndexNlist() {
-        return Optional.ofNullable(getConfig()).map(p -> p.index).map(i -> i.nlist).orElse(128);
+        return Optional.ofNullable(getConfig()).map(p -> p.index).map(i -> i.nlist)
+                .orElse(ProjectConstants.IndexBuild.NLIST);
     }
 
     /** HNSW 索引 M，默认 16 */
     public int getIndexHnswM() {
-        return Optional.ofNullable(getConfig()).map(p -> p.index).map(i -> i.hnswM).orElse(16);
+        return Optional.ofNullable(getConfig()).map(p -> p.index).map(i -> i.hnswM)
+                .orElse(ProjectConstants.IndexBuild.HNSW_M);
     }
 
     /** HNSW 索引 efConstruction，默认 200 */
     public int getIndexHnswEfConstruction() {
-        return Optional.ofNullable(getConfig()).map(p -> p.index).map(IndexProps::getHnswEfConstruction).orElse(200);
+        return Optional.ofNullable(getConfig()).map(p -> p.index).map(IndexProps::getHnswEfConstruction)
+                .orElse(ProjectConstants.IndexBuild.HNSW_EF_CONSTRUCTION);
     }
 
     /** DISKANN 索引 max_degree，默认 56 */
     public int getIndexDiskannMaxDegree() {
-        return Optional.ofNullable(getConfig()).map(p -> p.index).map(i -> i.diskannMaxDegree).orElse(56);
+        return Optional.ofNullable(getConfig()).map(p -> p.index).map(i -> i.diskannMaxDegree)
+                .orElse(ProjectConstants.IndexBuild.DISKANN_MAX_DEGREE);
     }
 
     // --- 多阶段融合参数 ---

@@ -1,5 +1,6 @@
 package com.example.agent.domain.knowledge.service;
 
+import com.example.agent.common.constant.ProjectConstants;
 import com.example.agent.domain.knowledge.entity.KnowledgeBase;
 import com.example.agent.domain.knowledge.valueobject.ChunkStrategy;
 import com.example.agent.domain.knowledge.valueobject.SearchStrategy;
@@ -14,8 +15,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class KnowledgeBaseDomainService {
 
-    private static final int MAX_DOCUMENT_COUNT = 1000;
-    private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+    private static final int MAX_DOCUMENT_COUNT = ProjectConstants.BusinessLimit.MAX_DOCUMENT_COUNT;
+    private static final long MAX_FILE_SIZE = ProjectConstants.BusinessLimit.MAX_FILE_SIZE;
 
     /** 校验新建知识库不变量 */
     public void validateNewKnowledgeBase(KnowledgeBase kb) {

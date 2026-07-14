@@ -166,6 +166,12 @@
             <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
         </dependency>
 
+        <!-- Sentinel Nacos DataSource (规则持久化到 Nacos) -->
+        <dependency>
+            <groupId>com.alibaba.csp</groupId>
+            <artifactId>sentinel-datasource-nacos</artifactId>
+        </dependency>
+
         <!-- Spring StateMachine (对话状态机) -->
         <dependency>
             <groupId>org.springframework.statemachine</groupId>

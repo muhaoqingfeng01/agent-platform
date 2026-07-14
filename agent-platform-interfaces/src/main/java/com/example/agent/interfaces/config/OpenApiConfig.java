@@ -1,5 +1,6 @@
 package com.example.agent.interfaces.config;
 
+import com.example.agent.common.constant.ProjectConstants;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
@@ -53,15 +54,15 @@ public class OpenApiConfig {
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("Agent Platform Team")
-                                .email("dev@agent-platform.local"))
+                                .email(ProjectConstants.ApiDoc.CONTACT_EMAIL))
                         .license(new License()
                                 .name("Proprietary")
-                                .url("https://agent-platform.local/license")))
+                                .url(ProjectConstants.ApiDoc.LICENSE_URL)))
                 // --- 服务器列表 ---
                 .servers(List.of(
-                        new Server().url("http://localhost:8080").description("本地开发"),
-                        new Server().url("http://dev.agent-platform.local").description("开发环境"),
-                        new Server().url("https://api.agent-platform.local").description("生产环境")
+                        new Server().url(ProjectConstants.ApiDoc.DEV_SERVER_URL).description("本地开发"),
+                        new Server().url(ProjectConstants.ApiDoc.DEV_ENV_URL).description("开发环境"),
+                        new Server().url(ProjectConstants.ApiDoc.PROD_ENV_URL).description("生产环境")
                 ))
                 // --- Sa-Token Bearer 鉴权 ---
                 .addSecurityItem(new SecurityRequirement().addList("Bearer"))

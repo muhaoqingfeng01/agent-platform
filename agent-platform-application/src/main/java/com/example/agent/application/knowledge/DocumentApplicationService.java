@@ -5,6 +5,7 @@ import com.example.agent.application.knowledge.pipeline.DocumentPipelineOrchestr
 import com.example.agent.application.knowledge.task.DocumentParsePayload;
 import com.example.agent.application.knowledge.task.DocumentParseTaskHandler;
 import com.example.agent.application.task.TaskCenterService;
+import com.example.agent.common.constant.ProjectConstants;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.common.exception.ResourceNotFoundException;
@@ -61,8 +62,8 @@ public class DocumentApplicationService {
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
 
-    /** MinIO part size: 5MB for multipart uploads, -1 for single-shot below 5MB */
-    private static final long MIN_PART_SIZE = 5 * 1024 * 1024L;
+    /** MinIO part size: 5MB for multipart uploads, -1 for single-shot below 5MB — 统一引用 ProjectConstants */
+    private static final long MIN_PART_SIZE = ProjectConstants.BusinessLimit.MIN_PART_SIZE;
 
     /**
      * 上传文档（含 MinIO 存储）— Controller 传入 MultipartFile，此处处理完整流程.

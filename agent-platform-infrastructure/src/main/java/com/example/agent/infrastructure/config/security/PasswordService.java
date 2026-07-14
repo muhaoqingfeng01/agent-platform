@@ -1,5 +1,6 @@
 package com.example.agent.infrastructure.config.security;
 
+import com.example.agent.common.constant.ProjectConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -21,8 +22,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class PasswordService {
 
-    /** BCrypt 强度（对数级：2^12 = 4096 轮迭代） */
-    private static final int BCRYPT_STRENGTH = 12;
+    /** BCrypt 强度（对数级：2^12 = 4096 轮迭代） — 统一引用 ProjectConstants */
+    private static final int BCRYPT_STRENGTH = ProjectConstants.Security.BCRYPT_STRENGTH;
 
     private final BCryptPasswordEncoder encoder;
 

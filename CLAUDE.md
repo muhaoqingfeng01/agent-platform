@@ -94,7 +94,7 @@ interfaces → application → domain ← infrastructure
 
 ## 项目定位
 
-**企业级 AI Agent 平台** — DDD 六模块 Maven 多模块项目，P0-P4 核心已全部实现（508 Java 文件），P5 前端未开始，P6 迭代增强代码已实现（9 项），运维设施待部署（11 项）。
+**企业级 AI Agent 平台** — DDD 六模块 Maven 多模块项目，P0-P4 核心已全部实现（573 Java 文件），P5 前端未开始，P6 迭代增强代码已实现（9 项），配置治理子方案 01-05 已全部实现，运维设施待部署（11 项）。
 
 - **路径**: `D:\mhqf_project\heavenly-craft-agent\agent-platform`
 - **包名**: `com.example.agent`
@@ -195,24 +195,28 @@ interfaces → application → domain ← infrastructure
       BizAssert.hasText(name, 400, ExceptionMessages.VALIDATION_ERROR + "名称不能为空");
       ```
     - `BizAssert` 位于 `common/exception/BizAssert.java`，对标 `org.springframework.util.Assert`
+17. **🔴 project-memory 文件必须用递增序号命名（强制）** — 新建快照/总结文件时，查看 `docs/project-memory/` 中已有文件的最大序号，使用 `{max+1}-文件名.md` 格式
+    - **禁止**使用 `XX-` 或 `TODO-` 等占位前缀
+    - 文件命名示例: `35-配置治理-子方案05-Sentinel规则Nacos持久化.md`、`36-会话总结-2026-07-14-子方案05.md`
+    - 同步更新 `docs/project-memory/README.md` 时，链接路径必须与实际文件名一致
 
 ---
 
-## 当前 Java 代码（572 个文件，P0 + P1 + P2 + P3 + P4 + P6 + P7 核心已实现）
+## 当前 Java 代码（573 个文件，P0 + P1 + P2 + P3 + P4 + P6 + P7 + 配置治理子方案 01-04 核心已实现）
 
 ```
 agent-platform-bootstrap/     1 文件  ← @SpringBootApplication + @EnableAsync
-agent-platform-common/       26 文件  ← Result、6 异常、BizAssert、PageResponse、IdGenerator、安全异常、值对象基类
+agent-platform-common/       27 文件  ← Result、6 异常、BizAssert、PageResponse、IdGenerator、安全异常、值对象基类、🆕 ProjectConstants（7内部类25常量）
 agent-platform-domain/      125 文件  ← 23 聚合根/实体 + 23 仓储接口 + 32 值对象 + 5 安全接口 + 19 DomainService/端口 + 3 交互策略
 agent-platform-application/ 157 文件  ← 19 AppService + 3 识别器 + 1 责任链 + 5 提取器 + 4 Resolver + 5 Handler + 7 切片策略 + 1 管线 + Security DTO + Event + 4 交互策略
-agent-platform-infrastructure/ 138 文件 ← 23 PO + 23 Mapper + 23 Impl + ServiceImpl + Config + Rag + Observability + AgentMetrics + McpClientManager + HttpToolAdapter + Annotation + Aspect + 🆕 SchedulerConfig + DynamicScheduledTaskManager + 🆕 RagConfig + AiModelConfig + SecurityConfig + SessionConfig + ...
+agent-platform-infrastructure/ 138 文件 ← 23 PO + 23 Mapper + 23 Impl + ServiceImpl + Config + Rag + Observability + AgentMetrics + McpClientManager + HttpToolAdapter + Annotation + Aspect + 🆕 SchedulerConfig + DynamicScheduledTaskManager + 🆕 RagConfig + AiModelConfig + SecurityConfig + SessionConfig + 🆕 Sentinel Nacos 持久化 + ...
 agent-platform-interfaces/  125 文件  ← 21 Controller + ~102 Request/Response DTO + ExceptionHandler + SwaggerConfig + 认证 DTO
 ```
 
-> ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、T4 提示词管理、T5 任务规划引擎、T6 RAG 知识库、T7 MCP 工具平台、T10 安全围栏、T11 人机协同审批、T9 全链路可观测性、T12 效果评估与持续优化、**P6 迭代增强（Redis缓存/Reranker/工具版本化/心跳检测/精度监控/LDAP/SSO/Presidio）、P7 多模式交互（策略工厂 + 2 种模式）、🆕 P6 配置治理子方案01（@Scheduled → Nacos）、🆕 子方案02（RagConfig 24 参数）、🆕 子方案03（AiModel/Security/Session 17 参数）**
+> ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、T4 提示词管理、T5 任务规划引擎、T6 RAG 知识库、T7 MCP 工具平台、T10 安全围栏、T11 人机协同审批、T9 全链路可观测性、T12 效果评估与持续优化、**P6 迭代增强（Redis缓存/Reranker/工具版本化/心跳检测/精度监控/LDAP/SSO/Presidio）、P7 多模式交互（策略工厂 + 2 种模式）、🆕 P6 配置治理子方案01（@Scheduled → Nacos）、🆕 子方案02（RagConfig 24 参数）、🆕 子方案03（AiModel/Security/Session 17 参数）、🆕 子方案04（ProjectConstants 静态常量统一管理、25常量、26文件改造）、🆕 子方案05（Sentinel 规则 Nacos 持久化、6 项规则）**
 > 📐 DDD 架构：Controller → ApplicationService → DomainService → Repository，禁止越层调用
 > 📦 DTO 分离：Application 层 DTO 独立分包 + Interfaces 层 Request DTO 独立分包
-> 🔜 待完成：P5 前端交互层、配置治理子方案 04-05
+> 🔜 待完成：P5 前端交互层、配置治理子方案 05
 
 ---
 
@@ -233,14 +237,14 @@ agent-platform-interfaces/  125 文件  ← 21 Controller + ~102 Request/Respons
 ## 开发优先级
 
 ```
-P0(收尾✅) → P1(T3-T5✅) → P2(T6-T7✅) → P3(安全✅) → P4(观测✅核心) → P6(增强🟡) → P7(多模式✅) → P5(前端⬜)
+P0(收尾✅) → P1(T3-T5✅) → P2(T6-T7✅) → P3(安全✅) → P4(观测✅核心) → P6(增强✅) → P7(多模式✅) → P5(前端⬜)
 统一网关✅     意图识别✅      RAG引擎✅     安全围栏✅    全链路✅核心   观测增强✅    策略工厂✅     交互端⬜
 多租户✅       提示词管理✅    MCP平台✅     人机协同✅    效果评估✅     配置治理🟡   2种模式✅
               任务规划✅                                        运维部署🔜
 ```
 
 **P5**: 前端交互层（Web聊天/审批卡片/反馈/IM），与后端并行开发
-**P6**: 迭代优化（9 项代码增强已实现：Reranker/工具版本化/Redis缓存/心跳检测/精度监控/LDAP/SSO/Presidio），🆕 配置治理（子方案01✅ 02-05已设计），11 项运维设施待部署
+**P6**: 迭代优化（9 项代码增强已实现：Reranker/工具版本化/Redis缓存/心跳检测/精度监控/LDAP/SSO/Presidio），🆕 配置治理（子方案01✅ 02✅ 03✅ 04✅ 05已设计），11 项运维设施待部署
 
 ### ⚠️ 已知差距速览
 

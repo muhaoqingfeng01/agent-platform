@@ -1,6 +1,7 @@
 package com.example.agent.infrastructure.config.websocket;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.example.agent.common.constant.ProjectConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
@@ -32,7 +33,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(handler, "/ws/conversation")
+        registry.addHandler(handler, ProjectConstants.WebSocket.CONVERSATION_ENDPOINT)
                 .setAllowedOrigins("*")
                 .addInterceptors(new WebSocketAuthInterceptor());
     }

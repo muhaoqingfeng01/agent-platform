@@ -49,6 +49,9 @@
 | 35 | 2026-07-14 | [31-配置治理-子方案02-RAG检索参数Nacos动态化.md](31-配置治理-子方案02-RAG检索参数Nacos动态化.md) | 🆕 P6 配置治理子方案02：RagConfig extends NacosConfig、JSON+Jackson+硬编码兜底、修复 nprobe 硬编码、编译通过 |
 | 36 | 2026-07-14 | [32-配置治理-子方案03-AI模型与会话参数Nacos动态化.md](32-配置治理-子方案03-AI模型与会话参数Nacos动态化.md) | 🆕 P6 配置治理子方案03：AiModelConfig 升迁+SecurityConfig+SessionConfig、3 DataId 17 参数、10 消费者改造、9 常量消除、编译通过 |
 | 37 | 2026-07-14 | [33-会话总结-2026-07-14.md](33-会话总结-2026-07-14.md) | 🆕 配置治理子方案01-03 实施 + Optional 判空重构 + 文件重编号 |
+| 38 | 2026-07-14 | [34-配置治理-子方案04-静态常量类统一管理.md](34-配置治理-子方案04-静态常量类统一管理.md) | 🆕 P6 配置治理子方案04：ProjectConstants 7内部类25常量、26文件改造、58处魔法数字消除、编译通过 |
+| 39 | 2026-07-14 | [35-配置治理-子方案05-Sentinel规则Nacos持久化.md](35-配置治理-子方案05-Sentinel规则Nacos持久化.md) | 🆕 P6 配置治理子方案05：Sentinel 规则 Nacos 持久化、sentinel-datasource-nacos、ds-flow/ds-degrade、条件装配 fallback、编译通过 |
+| 40 | 2026-07-14 | [36-会话总结-2026-07-14-子方案05.md](36-会话总结-2026-07-14-子方案05.md) | 🆕 配置治理子方案05 实现 + 文档同步 |
 
 ## 当前项目状态快照
 
@@ -56,7 +59,7 @@
 - **Spring Boot**: 3.3.7
 - **构建**: ✅ BUILD SUCCESS（7/7 模块）
 - **启动**: ⚠️ 需要 MySQL + Redis + Milvus 外部服务
-- **代码**: 572 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO/Handler/Adapter/SecurityFilter/Aspect/Observability/Metrics/Event/🆕SchedulerConfig/RagConfig/AiModelConfig/SecurityConfig/SessionConfig）
+- **代码**: 573 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO/Handler/Adapter/SecurityFilter/Aspect/Observability/Metrics/Event/🆕SchedulerConfig/RagConfig/AiModelConfig/SecurityConfig/SessionConfig/🆕ProjectConstants）
 - **Swagger**: 已集成，`/swagger-ui.html`
 - **数据库**: V1.0.0(13张) + V1.1.0(15张) + V1.2.0(种子) + V1.2.1(业务ID) + V1.2.2(T7调用日志ID) + V1.3.0(T6精度) + V1.4.0(KB创建者+状态迁移) + V1.5.0(T7工具版本化)，SQL 参考文件在 `docs/database/`
 - **日志**: traceId + spanId + tenantId + userId 全链路追踪（MDC），logback-spring.xml 按天分目录
@@ -71,7 +74,7 @@
 - **P3 进度**: 🟢 ~95%（T10+T11 安全围栏+审批状态机全部完成，Presidio 可选延期）
 - **P4 进度**: 🟡 核心 100%（T9 15项 + T12 已实现，7 项运维增强 🔜 P6）
 - **P5 进度**: ⚪ 0%（前端未开始）
-- **P6 进度**: 🟡 进行中（9项代码增强✅ + 7篇运维方案 + 配置治理子方案01✅/02✅/03✅，04-05已设计）
+- **P6 进度**: 🟢 完成（9项代码增强✅ + 7篇运维方案 + 配置治理子方案01✅/02✅/03✅/04✅/05✅）
 
 ## 会话记录目录结构
 
