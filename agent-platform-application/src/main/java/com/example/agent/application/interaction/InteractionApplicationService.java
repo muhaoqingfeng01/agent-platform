@@ -1,10 +1,12 @@
 package com.example.agent.application.interaction;
 
+import com.alibaba.fastjson.JSON;
 import com.example.agent.application.interaction.dto.InteractionResponse;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.domain.interaction.service.InteractionStrategy;
 import com.example.agent.domain.interaction.valueobject.InteractionContext;
 import com.example.agent.domain.interaction.valueobject.InteractionMode;
+import com.example.agent.infrastructure.config.nacos.test.AiModelConfig;
 import com.example.agent.infrastructure.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +39,7 @@ public class InteractionApplicationService {
 
     private final InteractionStrategyFactory strategyFactory;
     private final ThreadPoolExecutor streamExecutor;
-
+    private final AiModelConfig aiModelConfig;
     /**
      * 同步执行交互（非流式模式：知识检索等）.
      *
@@ -95,6 +97,8 @@ public class InteractionApplicationService {
         InteractionContext context = buildContext(mode, content, conversationId,
                 knowledgeId, null, emitter);
         InteractionStrategy strategy = strategyFactory.getStrategy(mode);
+
+        log.info("aiModelConfig:{}", JSON.toJSONString(aiModelConfig.getConfig()));
 
         streamExecutor.submit(() -> {
             try {
