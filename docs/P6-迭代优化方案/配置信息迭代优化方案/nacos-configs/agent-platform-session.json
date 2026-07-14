@@ -1,0 +1,9 @@
+{
+  "shortTermMemoryMaxRounds": 20,
+  "shortTermMemoryTtlMinutes": 30,
+  "longTermMemoryMaxRounds": 20,
+  "sseHeartbeatIntervalMs": 15000,
+  "contextRounds": 5,
+  "intentCacheTtlMinutes": 30,
+  "toolCacheTtlMinutes": 60
+}

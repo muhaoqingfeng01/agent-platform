@@ -12,6 +12,7 @@ import com.example.agent.domain.security.repository.ApprovalWorkflowRepository;
 import com.example.agent.domain.security.valueobject.ApprovalStatus;
 import com.example.agent.domain.tool.entity.ToolRegistry;
 import com.example.agent.domain.tool.repository.ToolRegistryRepository;
+import com.example.agent.infrastructure.config.nacos.SecurityConfig;
 import com.example.agent.infrastructure.config.websocket.ConversationWebSocketHandler;
 import com.example.agent.infrastructure.config.websocket.WebSocketMessage;
 import com.example.agent.infrastructure.config.websocket.WebSocketMessageType;
@@ -47,13 +48,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ApprovalWorkflowApplicationService {
 
-    private static final int TIMEOUT_MINUTES = 5;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final ApprovalWorkflowRepository approvalRepository;
     private final ToolRegistryRepository toolRepository;
     private final DagExecutionService dagExecutor;
     private final ConversationWebSocketHandler wsHandler;
+    /** 🆕 P6 配置治理子方案03: 审批超时从 Nacos 动态读取 */
+    private final SecurityConfig securityConfig;
 
     /**
      * 创建审批工单 — 高风险工具调用前调用.
@@ -88,7 +90,7 @@ public class ApprovalWorkflowApplicationService {
                 .title("工具调用审批: " + tool.getName())
                 .operationDetail(operationDetail)
                 .status(ApprovalStatus.PENDING)
-                .timeoutAt(LocalDateTime.now().plusMinutes(TIMEOUT_MINUTES))
+                .timeoutAt(LocalDateTime.now().plusMinutes(securityConfig.getApprovalTimeoutMinutes()))
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -240,7 +242,7 @@ public class ApprovalWorkflowApplicationService {
         detail.put("toolName", toolName);
         detail.put("params", params);
         detail.put("riskLevel", riskLevel);
-        detail.put("timeoutMinutes", TIMEOUT_MINUTES);
+        detail.put("timeoutMinutes", securityConfig.getApprovalTimeoutMinutes());
         try {
             return objectMapper.writeValueAsString(detail);
         } catch (JsonProcessingException e) {

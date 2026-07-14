@@ -1,6 +1,7 @@
 package com.example.agent.application.memory;
 
 import com.example.agent.domain.conversation.entity.Message;
+import com.example.agent.infrastructure.config.nacos.SessionConfig;
 import com.example.agent.infrastructure.context.TenantContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,20 +30,22 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class SessionMemoryService {
 
-    private static final int MAX_ROUNDS = 20;
-    private static final int MAX_MESSAGES = MAX_ROUNDS * 2;
-    private static final Duration TTL = Duration.ofMinutes(30);
-
     private final RedisTemplate<String, String> redisTemplate;
-    private final ObjectMapper objectMapper;  // 使用 Spring Boot 自动配置的 ObjectMapper（已支持 Java 8 日期时间）
+    private final ObjectMapper objectMapper;
+    /** 🆕 P6 配置治理子方案03: 短期记忆参数从 Nacos 动态读取 */
+    private final SessionConfig sessionConfig;
+
+    private int maxRounds() { return sessionConfig.getShortTermMemoryMaxRounds(); }
+    private int maxMessages() { return maxRounds() * 2; }
+    private Duration ttl() { return Duration.ofMinutes(sessionConfig.getShortTermMemoryTtlMinutes()); }
 
     public void appendMessage(String conversationId, Message message) {
         String key = buildSessionKey(conversationId);
         try {
             String json = objectMapper.writeValueAsString(MessageCacheEntry.from(message));
             redisTemplate.opsForList().rightPush(key, json);
-            redisTemplate.opsForList().trim(key, -MAX_MESSAGES, -1);
-            redisTemplate.expire(key, TTL);
+            redisTemplate.opsForList().trim(key, -maxMessages(), -1);
+            redisTemplate.expire(key, ttl());
         } catch (JsonProcessingException e) {
             log.warn("[SessionMemory] 序列化失败: msgId={}", message.getMessageId(), e);
         }
@@ -50,7 +53,7 @@ public class SessionMemoryService {
 
     public List<Message> getRecentMessages(String conversationId, int rounds) {
         String key = buildSessionKey(conversationId);
-        int count = Math.min(rounds * 2, MAX_MESSAGES);
+        int count = Math.min(rounds * 2, maxMessages());
         List<String> entries = redisTemplate.opsForList().range(key, -count, -1);
         if (entries == null || entries.isEmpty()) return List.of();
         return entries.stream()
@@ -60,7 +63,7 @@ public class SessionMemoryService {
     }
 
     public List<Message> loadContextForLLM(String conversationId, int maxTokens) {
-        List<Message> allMessages = getRecentMessages(conversationId, MAX_ROUNDS);
+        List<Message> allMessages = getRecentMessages(conversationId, maxRounds());
         List<Message> result = new ArrayList<>();
         int accumulatedTokens = 0;
         for (int i = allMessages.size() - 1; i >= 0; i--) {
@@ -74,7 +77,7 @@ public class SessionMemoryService {
     }
 
     public void touch(String conversationId) {
-        redisTemplate.expire(buildSessionKey(conversationId), TTL);
+        redisTemplate.expire(buildSessionKey(conversationId), ttl());
     }
 
     public void clear(String conversationId) {

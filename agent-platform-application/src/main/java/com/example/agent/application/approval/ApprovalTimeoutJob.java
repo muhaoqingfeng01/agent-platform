@@ -2,12 +2,14 @@ package com.example.agent.application.approval;
 
 import com.example.agent.domain.security.entity.ApprovalWorkflow;
 import com.example.agent.domain.security.repository.ApprovalWorkflowRepository;
+import com.example.agent.infrastructure.config.nacos.SchedulerConfig;
+import com.example.agent.infrastructure.config.scheduler.DynamicScheduledTaskManager;
 import com.example.agent.infrastructure.config.websocket.ConversationWebSocketHandler;
 import com.example.agent.infrastructure.config.websocket.WebSocketMessage;
 import com.example.agent.infrastructure.config.websocket.WebSocketMessageType;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -16,10 +18,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 审批超时扫描任务 — 每 30 秒扫描一次超时的待审批工单并自动拒绝.
+ * 审批超时扫描任务 — 定期扫描超时的待审批工单并自动拒绝.
  *
- * <p>使用 Spring {@code @Scheduled} 定时任务。
- * <p>需要 {@code @EnableScheduling} 已启用（通常在 bootstrap 启动类上）。
+ * <p>使用 {@link DynamicScheduledTaskManager} 替代 {@code @Scheduled} 注解，
+ * 扫描间隔从 {@link SchedulerConfig}（Nacos 动态配置）读取，支持运行时免重启调优.
  *
  * @author Agent Platform Team
  * @since 1.0.0
@@ -31,11 +33,22 @@ public class ApprovalTimeoutJob {
 
     private final ApprovalWorkflowRepository approvalRepository;
     private final ConversationWebSocketHandler wsHandler;
+    private final DynamicScheduledTaskManager dynamicScheduler;
+    private final SchedulerConfig schedulerConfig;
+
+    @PostConstruct
+    public void registerTasks() {
+        dynamicScheduler.register(
+                "approvalTimeoutScan",
+                this::scanTimeout,
+                schedulerConfig::getApprovalTimeoutScanMs);
+
+        log.info("[ApprovalTimeoutJob] 动态定时任务已注册: approvalTimeoutScan");
+    }
 
     /**
-     * 每 30 秒扫描超时工单.
+     * 扫描超时工单.
      */
-    @Scheduled(fixedDelay = 30_000)
     public void scanTimeout() {
         try {
             List<ApprovalWorkflow> timeouts = approvalRepository.findTimeoutPending(LocalDateTime.now());

@@ -1,0 +1,14 @@
+{
+  "maxParallelism": 5,
+  "stepTimeoutMinutes": 10,
+  "retryStrategy": "EXPONENTIAL_BACKOFF",
+  "dagMaxDepth": 10,
+  "dagMaxNodes": 50,
+  "planningTimeoutSeconds": 120,
+  "chatModel": "deepseek-v4-pro",
+  "chatTemperature": 0.7,
+  "chatMaxTokens": 4096,
+  "embeddingModel": "text-embedding-v3",
+  "chatTimeoutSeconds": 60,
+  "chatRetryMaxAttempts": 3
+}

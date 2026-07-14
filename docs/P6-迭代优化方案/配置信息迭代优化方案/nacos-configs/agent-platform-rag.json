@@ -1,0 +1,39 @@
+{
+  "search": {
+    "topK": 20,
+    "similarityThreshold": 0.50,
+    "nprobe": 16,
+    "ef": 64,
+    "searchListSize": 100,
+    "consistencyLevel": "BOUNDED",
+    "timeoutMs": 5000
+  },
+  "index": {
+    "nlist": 128,
+    "hnswM": 16,
+    "hnswEfConstruction": 200,
+    "diskannMaxDegree": 56
+  },
+  "multiStage": {
+    "enableReranker": false,
+    "rerankerType": "NONE",
+    "rerankerTopK": 10,
+    "coarseTopK": 50,
+    "enableRrfFusion": true,
+    "rrfK": 60,
+    "fusionTopN": 5,
+    "vectorWeight": 0.5,
+    "keywordWeight": 0.5
+  },
+  "monitoring": {
+    "enableAutoTuning": false,
+    "evaluationDatasetSize": 50,
+    "recallTarget": 0.90,
+    "precisionTarget": 0.80,
+    "tuningIntervalDays": 7,
+    "maxLatencyMsTarget": 200,
+    "regressionAlertThreshold": 0.05,
+    "gridSearchEnabled": false
+  },
+  "finalTopK": 5
+}

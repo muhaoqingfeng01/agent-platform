@@ -5,9 +5,11 @@ import com.example.agent.domain.tool.repository.ToolRegistryRepository;
 import com.example.agent.domain.tool.service.ToolDomainService;
 import com.example.agent.domain.tool.valueobject.ToolStatus;
 import com.example.agent.domain.tool.valueobject.ToolType;
+import com.example.agent.infrastructure.config.nacos.SchedulerConfig;
+import com.example.agent.infrastructure.config.scheduler.DynamicScheduledTaskManager;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -17,16 +19,19 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * MCP 心跳检测器.
  *
- * <p>每 30 秒对所有 ACTIVE 的 MCP 工具发送 list_tools 探测请求.
+ * <p>使用 {@link DynamicScheduledTaskManager} 替代 {@code @Scheduled} 注解，
+ * 心跳间隔和最大失败次数从 {@link SchedulerConfig}（Nacos 动态配置）读取.
+ *
+ * <p>行为：
  * <ul>
- *   <li>连续失败 3 次 → 自动 DISABLED + 告警日志</li>
+ *   <li>连续失败 N 次 → 自动 DISABLED + 告警日志</li>
  *   <li>恢复探测成功 1 次 → 重置计数器（需人工确认恢复）</li>
  * </ul>
  *
  * <p>与 McpClientManager 定时刷新的关系：
  * <ul>
- *   <li>心跳检测（30s）：快速发现故障 → 自动禁用</li>
- *   <li>定时刷新（5min）：全量重建连接 → 发现新工具</li>
+ *   <li>心跳检测（可动态调整）：快速发现故障 → 自动禁用</li>
+ *   <li>定时刷新（可动态调整）：全量重建连接 → 发现新工具</li>
  * </ul>
  * <p>两者互补，共同保障 MCP 连接可靠性.
  *
@@ -41,17 +46,25 @@ public class McpHeartbeatDetector {
     private final ToolRegistryRepository toolRepository;
     private final ToolDomainService toolDomainService;
     private final McpClientManager mcpClientManager;
+    private final DynamicScheduledTaskManager dynamicScheduler;
+    private final SchedulerConfig schedulerConfig;
 
     /** 连续失败计数器: toolId → failureCount */
     private final Map<String, Integer> failureCounters = new ConcurrentHashMap<>();
 
-    private static final int MAX_FAILURES = 3;
-    private static final int HEARTBEAT_INTERVAL = 30_000;  // 30 秒
+    @PostConstruct
+    public void registerTasks() {
+        dynamicScheduler.register(
+                "mcpHeartbeat",
+                this::detectHeartbeat,
+                schedulerConfig::getMcpHeartbeatIntervalMs);
+
+        log.info("[MCP-Heartbeat] 动态定时任务已注册: mcpHeartbeat");
+    }
 
     /**
-     * 定时心跳检测 — 每 30 秒执行.
+     * 定时心跳检测.
      */
-    @Scheduled(fixedDelay = HEARTBEAT_INTERVAL)
     public void detectHeartbeat() {
         try {
             List<ToolRegistry> activeMcpTools = toolRepository.findByTypeAndStatus(
@@ -65,8 +78,9 @@ public class McpHeartbeatDetector {
 
                     if (alive) {
                         // 成功 → 重置计数器
+                        int maxFailures = schedulerConfig.getMcpMaxFailures();
                         Integer previousFailures = failureCounters.remove(tool.getToolId());
-                        if (previousFailures != null && previousFailures >= MAX_FAILURES) {
+                        if (previousFailures != null && previousFailures >= maxFailures) {
                             log.warn("[MCP-Heartbeat] MCP 工具已恢复: toolId={} (之前已自动禁用，需人工确认恢复)",
                                 tool.getToolId());
                         }
@@ -107,11 +121,12 @@ public class McpHeartbeatDetector {
      * 记录一次心跳失败，达到阈值后自动禁用工具.
      */
     private void recordFailure(ToolRegistry tool) {
+        int maxFailures = schedulerConfig.getMcpMaxFailures();
         int failures = failureCounters.merge(tool.getToolId(), 1, Integer::sum);
         log.warn("[MCP-Heartbeat] MCP 心跳失败: toolId={}, 连续失败次数={}/{}",
-            tool.getToolId(), failures, MAX_FAILURES);
+            tool.getToolId(), failures, maxFailures);
 
-        if (failures >= MAX_FAILURES) {
+        if (failures >= maxFailures) {
             try {
                 // 自动禁用
                 toolDomainService.assertCanDisable(tool);
@@ -122,7 +137,7 @@ public class McpHeartbeatDetector {
                 mcpClientManager.removeClient(tool.getToolId());
 
                 log.error("[MCP-Heartbeat] MCP 工具已自动禁用: toolId={}, name={}, 原因: 连续 {} 次心跳失败",
-                    tool.getToolId(), tool.getName(), MAX_FAILURES);
+                    tool.getToolId(), tool.getName(), maxFailures);
                 // TODO: 发送告警通知（飞书/钉钉/Telegram）
 
             } catch (Exception e) {

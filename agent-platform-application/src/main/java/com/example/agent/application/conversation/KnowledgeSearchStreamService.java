@@ -6,6 +6,7 @@ import com.example.agent.application.memory.SessionMemoryService;
 import com.example.agent.domain.conversation.entity.Message;
 import com.example.agent.infrastructure.annotation.Auditable;
 import com.example.agent.infrastructure.config.sse.SseEventFactory;
+import com.example.agent.infrastructure.config.nacos.SessionConfig;
 import com.example.agent.infrastructure.context.TenantContext;
 import com.example.agent.infrastructure.metrics.AgentMetrics;
 import com.example.agent.infrastructure.observability.LangfuseTraceService;
@@ -75,12 +76,8 @@ public class KnowledgeSearchStreamService {
     private final ChatClient chatClient;
     private final AgentMetrics metrics;
     private final LangfuseTraceService langfuseTrace;
-
-    /** SSE 心跳间隔（毫秒） */
-    private static final long HEARTBEAT_INTERVAL_MS = 15_000L;
-
-    /** 上下文加载轮数（用于检索增强 + Prompt 构建） */
-    private static final int CONTEXT_ROUNDS = 5;
+    /** 🆕 P6 配置治理子方案03: SSE 心跳+上下文轮数从 Nacos 动态读取（消除与 StreamOrchestrationService 的重复定义） */
+    private final SessionConfig sessionConfig;
 
     /** 知识库检索无结果时的提示模板 */
     private static final String NO_RESULT_TEMPLATE = "您检索的「%s」内容本知识库暂时未涵盖，请联系相关人员及时更新内容。";
@@ -143,7 +140,7 @@ public class KnowledgeSearchStreamService {
             log.info("[RAG-Stream] 用户消息已保存: convId={}, msgId={}", conversationId, userMsg.getMessageId());
 
             // ========== Step 2: 加载会话上下文 ==========
-            List<Message> history = sessionMemoryService.getRecentMessages(conversationId, CONTEXT_ROUNDS);
+            List<Message> history = sessionMemoryService.getRecentMessages(conversationId, sessionConfig.getContextRounds());
             log.info("[RAG-Stream] 加载会话上下文: convId={}, historySize={}", conversationId, history.size());
 
             // ========== Step 3: 启动心跳 ==========
@@ -412,7 +409,7 @@ public class KnowledgeSearchStreamService {
             } catch (Exception ignored) {
                 // 连接已关闭，忽略
             }
-        }, HEARTBEAT_INTERVAL_MS, HEARTBEAT_INTERVAL_MS, TimeUnit.MILLISECONDS);
+        }, sessionConfig.getSseHeartbeatIntervalMs(), sessionConfig.getSseHeartbeatIntervalMs(), TimeUnit.MILLISECONDS);
         return executor;
     }
 

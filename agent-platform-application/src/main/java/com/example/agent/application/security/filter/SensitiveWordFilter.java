@@ -5,10 +5,11 @@ import com.example.agent.domain.security.entity.SensitiveWord;
 import com.example.agent.domain.security.repository.SensitiveWordRepository;
 import com.example.agent.domain.security.valueobject.ActionType;
 import com.example.agent.domain.security.valueobject.MatchType;
+import com.example.agent.infrastructure.config.nacos.SchedulerConfig;
+import com.example.agent.infrastructure.config.scheduler.DynamicScheduledTaskManager;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -23,7 +24,7 @@ import java.util.regex.Pattern;
  *
  * <p>从数据库加载 ACTIVE 敏感词，使用 Aho-Corasick 多模匹配（Hutool WordTree）
  * 实现 O(n) 时间复杂度的高效匹配。
- * <p>每 5 分钟自动刷新缓存中的敏感词列表。
+ * <p>缓存刷新间隔从 {@link SchedulerConfig}（Nacos 动态配置）读取，支持运行时免重启调优.
  *
  * @author Agent Platform Team
  * @since 1.0.0
@@ -34,6 +35,8 @@ import java.util.regex.Pattern;
 public class SensitiveWordFilter implements InputFilter {
 
     private final SensitiveWordRepository sensitiveWordRepository;
+    private final DynamicScheduledTaskManager dynamicScheduler;
+    private final SchedulerConfig schedulerConfig;
 
     /** EXACT 匹配的敏感词（Hutool WordTree 实现 Aho-Corasick，线程安全） */
     private volatile WordTree exactWordTree = new WordTree();
@@ -50,15 +53,28 @@ public class SensitiveWordFilter implements InputFilter {
     }
 
     /**
-     * 启动时加载 + 每 5 分钟刷新缓存.
+     * 启动时加载 + 注册动态定时刷新（替代 {@code @Scheduled} 注解）.
      */
     @PostConstruct
-    @Scheduled(fixedDelay = 300_000)
+    public void init() {
+        // 启动时立即加载
+        refreshCache();
+
+        // 注册动态定时刷新任务
+        dynamicScheduler.register(
+                "sensitiveWordRefresh",
+                this::refreshCache,
+                schedulerConfig::getSensitiveWordRefreshMs);
+
+        log.info("[SensitiveWordFilter] 动态定时刷新任务已注册: sensitiveWordRefresh");
+    }
+
+    /**
+     * 刷新敏感词缓存.
+     */
     public void refreshCache() {
         lock.writeLock().lock();
         try {
-            // 从 DB 加载全局 + 当前所有租户的启用规则
-            // 注：此处加载全局规则；租户级规则在 filter() 中按需使用
             List<SensitiveWord> words = sensitiveWordRepository.findActiveGlobal();
 
             WordTree newTree = new WordTree();
@@ -98,14 +114,12 @@ public class SensitiveWordFilter implements InputFilter {
             // 1. EXACT 匹配 — 使用 Aho-Corasick
             List<String> matched = exactWordTree.matchAll(content, -1, false, false);
             if (!matched.isEmpty()) {
-                // 在租户规则中查找匹配词，获取其 action
                 for (String match : matched) {
                     SensitiveWord rule = findRuleByWord(match, tenantWords);
                     if (rule != null) {
                         return handleMatch(rule, match, context);
                     }
                 }
-                // 未在规则中找到（不应出现），默认阻断
                 String matchedWord = matched.get(0);
                 log.warn("[SensitiveWordFilter] 全局敏感词命中: word={}, conversationId={}",
                         matchedWord, context.getConversationId());
@@ -144,9 +158,6 @@ public class SensitiveWordFilter implements InputFilter {
         return FilterResult.pass();
     }
 
-    /**
-     * 根据命中的词和规则决定处理方式.
-     */
     private FilterResult handleMatch(SensitiveWord rule, String matchedWord, FilterContext context) {
         log.warn("[SensitiveWordFilter] 敏感词命中: word={}, severity={}, action={}, conversationId={}",
                 matchedWord, rule.getSeverity(), rule.getAction(), context.getConversationId());
@@ -156,7 +167,6 @@ public class SensitiveWordFilter implements InputFilter {
                     "输入内容包含违规词汇，已被安全系统拦截",
                     matchedWord);
         }
-        // LOG / WARN — 不阻断，仅记录
         FilterResult result = FilterResult.pass();
         result.setMatchedPattern(matchedWord);
         result.setEventType("SENSITIVE_WORD");
@@ -164,9 +174,6 @@ public class SensitiveWordFilter implements InputFilter {
         return result;
     }
 
-    /**
-     * 在规则列表中按 word 查找.
-     */
     private SensitiveWord findRuleByWord(String match, List<SensitiveWord> rules) {
         return rules.stream()
                 .filter(r -> r.getMatchType() == MatchType.EXACT && r.getWord().equals(match))

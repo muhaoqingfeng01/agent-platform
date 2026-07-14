@@ -1,6 +1,7 @@
 package com.example.agent.infrastructure.rag;
 
 import com.example.agent.domain.knowledge.service.MilvusStoreClient;
+import com.example.agent.infrastructure.config.nacos.RagConfig;
 import io.milvus.client.MilvusServiceClient;
 import io.milvus.grpc.DataType;
 import io.milvus.grpc.MutationResult;
@@ -22,6 +23,7 @@ import io.milvus.param.index.CreateIndexParam;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -63,6 +65,10 @@ public class MilvusCollectionManager implements MilvusStoreClient {
 
     @Value("${milvus.keep-alive-time-ms:60000}")
     private long keepAliveTimeMs;
+
+    /** 🆕 P6 配置治理子方案02: RAG 检索参数 Nacos 动态配置（JSON 格式，Nacos 不可用时硬编码兜底） */
+    @Autowired
+    private RagConfig ragConfig;
 
     private MilvusServiceClient milvusClient;
     private final Map<String, Boolean> collectionCache = new ConcurrentHashMap<>();
@@ -269,7 +275,7 @@ public class MilvusCollectionManager implements MilvusStoreClient {
                     .withVectors(Collections.singletonList(queryVector))
                     .withTopK(topK)
                     .withMetricType(MetricType.COSINE)
-                    .withParams("{\"nprobe\": 16}")
+                    .withParams("{\"nprobe\": " + ragConfig.getSearchNprobe() + "}")
                     .addOutField("content")
                     .addOutField("document_id")
                     .addOutField("knowledge_id");
@@ -404,10 +410,16 @@ public class MilvusCollectionManager implements MilvusStoreClient {
 
     private String buildIndexExtraParam(io.milvus.param.IndexType indexType) {
         return switch (indexType) {
-            case IVF_FLAT, IVF_SQ8, IVF_PQ -> "{\"nlist\":128}";
-            case HNSW -> "{\"M\":16,\"efConstruction\":200}";
-            case DISKANN -> "{\"max_degree\":56,\"search_list_size\":100}";
-            default -> "{\"nlist\":128}";
+            case IVF_FLAT, IVF_SQ8, IVF_PQ ->
+                    "{\"nlist\":" + ragConfig.getIndexNlist() + "}";
+            case HNSW ->
+                    "{\"M\":" + ragConfig.getIndexHnswM()
+                    + ",\"efConstruction\":" + ragConfig.getIndexHnswEfConstruction() + "}";
+            case DISKANN ->
+                    "{\"max_degree\":" + ragConfig.getIndexDiskannMaxDegree()
+                    + ",\"search_list_size\":" + ragConfig.getSearchListSize() + "}";
+            default ->
+                    "{\"nlist\":" + ragConfig.getIndexNlist() + "}";
         };
     }
 

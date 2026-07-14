@@ -1,6 +1,7 @@
 package com.example.agent.infrastructure.persistence.cache;
 
 import com.example.agent.domain.tool.entity.ToolRegistry;
+import com.example.agent.infrastructure.config.nacos.SessionConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -30,8 +31,11 @@ import java.util.Optional;
 public class ToolCacheManager {
 
     private final RedisTemplate<String, ToolRegistry> redisTemplate;
+    /** 🆕 P6 配置治理子方案03: 工具缓存 TTL 从 Nacos 动态读取 */
+    private final SessionConfig sessionConfig;
     private static final String KEY_PREFIX = "tool:def:";
-    private static final Duration TTL = Duration.ofHours(1);
+
+    private Duration ttl() { return Duration.ofMinutes(sessionConfig.getToolCacheTtlMinutes()); }
 
     /**
      * 从 Redis 获取工具定义.
@@ -58,7 +62,7 @@ public class ToolCacheManager {
      */
     public void put(ToolRegistry tool) {
         String key = KEY_PREFIX + tool.getTenantId() + ":" + tool.getToolId();
-        redisTemplate.opsForValue().set(key, tool, TTL);
+        redisTemplate.opsForValue().set(key, tool, ttl());
         log.debug("Redis cache PUT for tool: {}", tool.getToolId());
     }
 

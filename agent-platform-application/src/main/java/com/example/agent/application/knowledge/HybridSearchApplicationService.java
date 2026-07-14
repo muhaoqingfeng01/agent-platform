@@ -12,6 +12,7 @@ import com.example.agent.domain.knowledge.repository.KnowledgeBaseRepository;
 import com.example.agent.domain.knowledge.repository.KnowledgeHitRecordRepository;
 import com.example.agent.domain.knowledge.service.*;
 import com.example.agent.domain.knowledge.valueobject.RerankerType;
+import com.example.agent.infrastructure.config.nacos.RagConfig;
 import com.example.agent.infrastructure.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,12 +42,12 @@ public class HybridSearchApplicationService {
     private final DocumentRepository documentRepository;
     private final KnowledgeBaseRepository kbRepository;                // ★ V1.4.0: KB 过滤
     private final RerankerRegistry rerankerRegistry;                   // ★ V1.5.0: Reranker 精排
+    /** 🆕 P6 配置治理子方案02: RAG 检索参数 Nacos 动态配置（JSON 格式，Nacos 不可用时硬编码兜底） */
+    private final RagConfig ragConfig;
 
     private static final int DEFAULT_VECTOR_TOP_K = 20;
     private static final int DEFAULT_FULLTEXT_TOP_K = 20;
     private static final int DEFAULT_FUSION_TOP_N = 5;
-    private static final int FINAL_TOP_K = 5;            // ★ V1.5.0: Reranker 后最终返回数
-    private static final int RRF_K = 60;
 
     public SearchResultDTO search(String query, String knowledgeId, Map<String, Object> searchConfig) {
         Long tenantId = TenantContext.getCurrentTenantId();
@@ -75,10 +76,10 @@ public class HybridSearchApplicationService {
 
         List<FusedHit> fused;
         if (config.enableRrfFusion()) {
-            fused = rrfFusion(vectorHits, fulltextHits, RRF_K, config.vectorWeight(), config.keywordWeight());
+            fused = rrfFusion(vectorHits, fulltextHits, ragConfig.getMultiStageRrfK(), config.vectorWeight(), config.keywordWeight());
         } else {
             fused = vectorHits.stream()
-                    .map(h -> new FusedHit(h, 1.0 / (RRF_K + 1)))
+                    .map(h -> new FusedHit(h, 1.0 / (ragConfig.getMultiStageRrfK() + 1)))
                     .toList();
         }
 
@@ -87,7 +88,7 @@ public class HybridSearchApplicationService {
         // ★ V1.5.0: Reranker 精排（如果 KB 配置了 Reranker）
         RerankerType rerankerType = resolveRerankerType(knowledgeId, config);
         if (rerankerType != null && rerankerType != RerankerType.NONE) {
-            topN = applyReranker(query, topN, rerankerType, FINAL_TOP_K);
+            topN = applyReranker(query, topN, rerankerType, ragConfig.getFinalTopK());
         }
 
         // ★ 新增: 批量查询文档元数据

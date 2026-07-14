@@ -6,6 +6,7 @@ import com.example.agent.domain.conversation.entity.LongTermMemory;
 import com.example.agent.domain.conversation.entity.Message;
 import com.example.agent.domain.conversation.repository.LongTermMemoryRepository;
 import com.example.agent.domain.conversation.valueobject.MemoryType;
+import com.example.agent.infrastructure.config.nacos.SessionConfig;
 import com.example.agent.infrastructure.context.TenantContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,19 +37,19 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class LongTermMemoryService {
 
-    private static final int MAX_ROUNDS = 20;
-
     private final LongTermMemoryRepository memoryRepository;
     private final SessionMemoryService sessionMemoryService;
     private final ChatClient chatClient;
     private final MemoryExtractorRegistry extractorRegistry;
+    /** 🆕 P6 配置治理子方案03: 长期记忆参数从 Nacos 动态读取 */
+    private final SessionConfig sessionConfig;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Async
     public void extractAndSave(String conversationId, String userId, Long tenantId) {
         log.info("[LTM] 开始提取: convId={}", conversationId);
         try {
-            List<Message> history = sessionMemoryService.getRecentMessages(conversationId, MAX_ROUNDS);
+            List<Message> history = sessionMemoryService.getRecentMessages(conversationId, sessionConfig.getLongTermMemoryMaxRounds());
             if (history.size() < 4) {
                 log.debug("[LTM] 对话轮次不足，跳过: convId={}", conversationId);
                 return;

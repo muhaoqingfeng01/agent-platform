@@ -187,6 +187,7 @@ interfaces → application → domain ← infrastructure
     - 正确模式: `catch (Exception e) { log.error("...", e); throw new BusinessException(500, "...", e); }`
     - **禁止** `catch (Exception e) { log.error("...", e); }` 后无声返回 — 这会隐藏真实故障，导致上层状态不一致
     - **例外**（可 fail-open，但必须 `log.warn` 或更高级别）: 审计日志写入、WebSocket 推送、可观测性埋点上报、定时任务逐条扫描（单条失败不影响后续）
+16. **🔴 Spring 6.x `Trigger.nextExecution()` 返回 `Instant` 非 `Date`** — 动态调度时 `TriggerContext.lastScheduledExecutionTime()` 返回的类型需用 `Object` 接收以兼容不同 Spring 版本，最终统一用 `Instant.ofEpochMilli()` 返回
     - 业务参数校验使用 `BizAssert` 工具类替代散落的 `if-check + throw`:
       ```java
       BizAssert.notNull(user, 404, ExceptionMessages.USER_NOT_FOUND + userId);
@@ -197,21 +198,21 @@ interfaces → application → domain ← infrastructure
 
 ---
 
-## 当前 Java 代码（516 个文件，P0 + P1 + P2 + P3 + P4 + P6 + P7 核心已实现）
+## 当前 Java 代码（572 个文件，P0 + P1 + P2 + P3 + P4 + P6 + P7 核心已实现）
 
 ```
 agent-platform-bootstrap/     1 文件  ← @SpringBootApplication + @EnableAsync
-agent-platform-common/       24 文件  ← Result、6 异常、BizAssert、PageResponse、IdGenerator、安全异常、值对象基类
-agent-platform-domain/      120 文件  ← 23 聚合根/实体 + 23 仓储接口 + 32 值对象 + 5 安全接口 + 19 DomainService/端口 + 3 交互策略
-agent-platform-application/ 121 文件  ← 19 AppService + 3 识别器 + 1 责任链 + 5 提取器 + 4 Resolver + 5 Handler + 7 切片策略 + 1 管线 + Security DTO + Event + 4 交互策略
-agent-platform-infrastructure/ 126 文件 ← 23 PO + 23 Mapper + 23 Impl + ServiceImpl + Config + Rag + Observability + AgentMetrics + McpClientManager + HttpToolAdapter + Annotation + Aspect + ...
-agent-platform-interfaces/  124 文件  ← 21 Controller + ~102 Request/Response DTO + ExceptionHandler + SwaggerConfig + 认证 DTO
+agent-platform-common/       26 文件  ← Result、6 异常、BizAssert、PageResponse、IdGenerator、安全异常、值对象基类
+agent-platform-domain/      125 文件  ← 23 聚合根/实体 + 23 仓储接口 + 32 值对象 + 5 安全接口 + 19 DomainService/端口 + 3 交互策略
+agent-platform-application/ 157 文件  ← 19 AppService + 3 识别器 + 1 责任链 + 5 提取器 + 4 Resolver + 5 Handler + 7 切片策略 + 1 管线 + Security DTO + Event + 4 交互策略
+agent-platform-infrastructure/ 138 文件 ← 23 PO + 23 Mapper + 23 Impl + ServiceImpl + Config + Rag + Observability + AgentMetrics + McpClientManager + HttpToolAdapter + Annotation + Aspect + 🆕 SchedulerConfig + DynamicScheduledTaskManager + 🆕 RagConfig + AiModelConfig + SecurityConfig + SessionConfig + ...
+agent-platform-interfaces/  125 文件  ← 21 Controller + ~102 Request/Response DTO + ExceptionHandler + SwaggerConfig + 认证 DTO
 ```
 
-> ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、T4 提示词管理、T5 任务规划引擎、T6 RAG 知识库、T7 MCP 工具平台、T10 安全围栏、T11 人机协同审批、T9 全链路可观测性、T12 效果评估与持续优化、**P6 迭代增强（Redis缓存/Reranker/工具版本化/心跳检测/精度监控/LDAP/SSO/Presidio）、P7 多模式交互（策略工厂 + 2 种模式）**
+> ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、T4 提示词管理、T5 任务规划引擎、T6 RAG 知识库、T7 MCP 工具平台、T10 安全围栏、T11 人机协同审批、T9 全链路可观测性、T12 效果评估与持续优化、**P6 迭代增强（Redis缓存/Reranker/工具版本化/心跳检测/精度监控/LDAP/SSO/Presidio）、P7 多模式交互（策略工厂 + 2 种模式）、🆕 P6 配置治理子方案01（@Scheduled → Nacos）、🆕 子方案02（RagConfig 24 参数）、🆕 子方案03（AiModel/Security/Session 17 参数）**
 > 📐 DDD 架构：Controller → ApplicationService → DomainService → Repository，禁止越层调用
 > 📦 DTO 分离：Application 层 DTO 独立分包 + Interfaces 层 Request DTO 独立分包
-> 🔜 待完成：P5 前端交互层
+> 🔜 待完成：P5 前端交互层、配置治理子方案 04-05
 
 ---
 
@@ -232,14 +233,14 @@ agent-platform-interfaces/  124 文件  ← 21 Controller + ~102 Request/Respons
 ## 开发优先级
 
 ```
-P0(收尾✅) → P1(T3-T5✅) → P2(T6-T7✅) → P3(安全✅) → P4(观测✅核心) → P6(增强✅) → P7(多模式✅) → P5(前端⬜)
+P0(收尾✅) → P1(T3-T5✅) → P2(T6-T7✅) → P3(安全✅) → P4(观测✅核心) → P6(增强🟡) → P7(多模式✅) → P5(前端⬜)
 统一网关✅     意图识别✅      RAG引擎✅     安全围栏✅    全链路✅核心   观测增强✅    策略工厂✅     交互端⬜
-多租户✅       提示词管理✅    MCP平台✅     人机协同✅    效果评估✅     运维部署🔜   2种模式✅
-              任务规划✅
+多租户✅       提示词管理✅    MCP平台✅     人机协同✅    效果评估✅     配置治理🟡   2种模式✅
+              任务规划✅                                        运维部署🔜
 ```
 
 **P5**: 前端交互层（Web聊天/审批卡片/反馈/IM），与后端并行开发
-**P6**: 迭代优化（9 项代码增强已实现：Reranker/工具版本化/Redis缓存/心跳检测/精度监控/LDAP/SSO/Presidio），11 项运维设施待部署
+**P6**: 迭代优化（9 项代码增强已实现：Reranker/工具版本化/Redis缓存/心跳检测/精度监控/LDAP/SSO/Presidio），🆕 配置治理（子方案01✅ 02-05已设计），11 项运维设施待部署
 
 ### ⚠️ 已知差距速览
 

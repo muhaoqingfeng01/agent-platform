@@ -6,7 +6,7 @@ import com.example.agent.common.exception.BusinessException;
 import com.example.agent.domain.interaction.service.InteractionStrategy;
 import com.example.agent.domain.interaction.valueobject.InteractionContext;
 import com.example.agent.domain.interaction.valueobject.InteractionMode;
-import com.example.agent.infrastructure.config.nacos.test.AiModelConfig;
+import com.example.agent.infrastructure.config.nacos.AiModelConfig;
 import com.example.agent.infrastructure.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

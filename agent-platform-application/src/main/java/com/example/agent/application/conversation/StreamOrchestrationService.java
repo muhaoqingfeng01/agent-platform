@@ -6,6 +6,7 @@ import com.example.agent.application.memory.SessionMemoryService;
 import com.example.agent.domain.conversation.entity.Message;
 import com.example.agent.infrastructure.annotation.Auditable;
 import com.example.agent.infrastructure.config.sse.SseEventFactory;
+import com.example.agent.infrastructure.config.nacos.SessionConfig;
 import com.example.agent.infrastructure.context.TenantContext;
 import com.example.agent.infrastructure.metrics.AgentMetrics;
 import com.example.agent.infrastructure.observability.LangfuseTraceService;
@@ -40,8 +41,8 @@ public class StreamOrchestrationService {
     private final ChatClient chatClient;
     private final AgentMetrics metrics;
     private final LangfuseTraceService langfuseTrace;
-
-    private static final long HEARTBEAT_INTERVAL_MS = 15_000L;
+    /** 🆕 P6 配置治理子方案03: SSE 心跳间隔从 Nacos 动态读取 */
+    private final SessionConfig sessionConfig;
 
     @Auditable(action = "LLM_CALL", resourceType = "CONVERSATION", recordResponse = false)
     public void executeStreamPipeline(String conversationId, Long tenantId, String userId,
@@ -149,7 +150,7 @@ public class StreamOrchestrationService {
                 emitter.send(SseEmitter.event().name("ping").data(""));
             } catch (Exception ignored) {
             }
-        }, HEARTBEAT_INTERVAL_MS, HEARTBEAT_INTERVAL_MS, TimeUnit.MILLISECONDS);
+        }, sessionConfig.getSseHeartbeatIntervalMs(), sessionConfig.getSseHeartbeatIntervalMs(), TimeUnit.MILLISECONDS);
         return executor;
     }
 

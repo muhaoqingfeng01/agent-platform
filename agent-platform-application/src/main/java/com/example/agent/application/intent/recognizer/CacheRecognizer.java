@@ -1,6 +1,7 @@
 package com.example.agent.application.intent.recognizer;
 
 import com.example.agent.application.intent.model.IntentResult;
+import com.example.agent.infrastructure.config.nacos.SessionConfig;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +25,13 @@ import java.util.Set;
 public class CacheRecognizer {
 
     private static final String CACHE_NAMESPACE = "intent:cache";
-    private static final Duration CACHE_TTL = Duration.ofMinutes(30);
 
     private final RedisTemplate<String, String> redisTemplate;
+    /** 🆕 P6 配置治理子方案03: 缓存 TTL 从 Nacos 动态读取 */
+    private final SessionConfig sessionConfig;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private Duration cacheTtl() { return Duration.ofMinutes(sessionConfig.getIntentCacheTtlMinutes()); }
 
     public Optional<IntentResult> recognize(Long tenantId, String userInput) {
         String cacheKey = buildCacheKey(tenantId, userInput);
@@ -48,7 +52,7 @@ public class CacheRecognizer {
         try {
             String cacheKey = buildCacheKey(tenantId, userInput);
             String json = objectMapper.writeValueAsString(result);
-            redisTemplate.opsForValue().set(cacheKey, json, CACHE_TTL);
+            redisTemplate.opsForValue().set(cacheKey, json, cacheTtl());
             log.debug("[Intent] 结果缓存: key={}, intent={}", cacheKey, result.getIntentCode());
         } catch (JsonProcessingException e) {
             log.warn("[Intent] 缓存序列化失败", e);

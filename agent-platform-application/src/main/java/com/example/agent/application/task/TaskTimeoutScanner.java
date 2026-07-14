@@ -4,10 +4,12 @@ import com.example.agent.domain.task.entity.AsyncTask;
 import com.example.agent.domain.task.repository.AsyncTaskRepository;
 import com.example.agent.domain.task.service.TaskHandler;
 import com.example.agent.domain.task.valueobject.AsyncTaskStatus;
+import com.example.agent.infrastructure.config.nacos.SchedulerConfig;
+import com.example.agent.infrastructure.config.scheduler.DynamicScheduledTaskManager;
 import com.google.gson.Gson;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -15,8 +17,10 @@ import java.util.List;
 
 /**
  * 任务超时扫描器 — 定期扫描超时和僵尸任务.
- * <p>
- * 与 worker 线程通过 CAS（WHERE status='RUNNING'）竞争，避免重复处理.
+ *
+ * <p>使用 {@link DynamicScheduledTaskManager} 替代 {@code @Scheduled} 注解，
+ * 扫描间隔从 {@link SchedulerConfig}（Nacos 动态配置）读取，支持运行时免重启调优.
+ * <p>与 worker 线程通过 CAS（WHERE status='RUNNING'）竞争，避免重复处理.
  *
  * @author Agent Platform Team
  * @since 1.6.0
@@ -28,24 +32,34 @@ public class TaskTimeoutScanner {
 
     private final AsyncTaskRepository taskRepository;
     private final TaskHandlerRegistry handlerRegistry;
+    private final DynamicScheduledTaskManager dynamicScheduler;
+    private final SchedulerConfig schedulerConfig;
     private final Gson gson = new Gson();
 
-    /** 每次扫描最大处理数 */
-    private static final int BATCH_SIZE = 100;
-    /** 超时扫描间隔（毫秒） */
-    private static final int TIMEOUT_SCAN_INTERVAL_MS = 15_000;
-    /** 僵尸任务扫描间隔（毫秒） */
-    private static final int STALE_SCAN_INTERVAL_MS = 60_000;
-    /** SUBMITTED 任务超时未启动的阈值（分钟） */
-    private static final int STALE_SUBMITTED_MINUTES = 5;
+    @PostConstruct
+    public void registerTasks() {
+        // 注册超时 RUNNING 任务扫描
+        dynamicScheduler.register(
+                "timeoutTaskScan",
+                this::scanTimeoutTasks,
+                schedulerConfig::getTimeoutScanIntervalMs);
+
+        // 注册僵尸 SUBMITTED 任务扫描
+        dynamicScheduler.register(
+                "staleSubmittedScan",
+                this::scanStaleSubmittedTasks,
+                schedulerConfig::getStaleScanIntervalMs);
+
+        log.info("[TaskTimeoutScanner] 动态定时任务已注册: timeoutTaskScan, staleSubmittedScan");
+    }
 
     /**
-     * 每 15 秒扫描超时的 RUNNING 任务.
+     * 扫描超时的 RUNNING 任务.
      */
-    @Scheduled(fixedDelay = TIMEOUT_SCAN_INTERVAL_MS)
     public void scanTimeoutTasks() {
         try {
-            List<AsyncTask> timeoutTasks = taskRepository.findTimeoutRunning(LocalDateTime.now(), BATCH_SIZE);
+            int batchSize = schedulerConfig.getTimeoutScanBatchSize();
+            List<AsyncTask> timeoutTasks = taskRepository.findTimeoutRunning(LocalDateTime.now(), batchSize);
             if (timeoutTasks.isEmpty()) return;
 
             log.info("[TaskTimeoutScanner] 发现 {} 个超时任务", timeoutTasks.size());
@@ -58,17 +72,18 @@ public class TaskTimeoutScanner {
     }
 
     /**
-     * 每 60 秒扫描僵尸 SUBMITTED 任务（提交后长时间未启动）.
+     * 扫描僵尸 SUBMITTED 任务（提交后长时间未启动）.
      */
-    @Scheduled(fixedDelay = STALE_SCAN_INTERVAL_MS)
     public void scanStaleSubmittedTasks() {
         try {
-            LocalDateTime before = LocalDateTime.now().minusMinutes(STALE_SUBMITTED_MINUTES);
-            List<AsyncTask> staleTasks = taskRepository.findStaleSubmitted(before, BATCH_SIZE);
+            int staleMinutes = schedulerConfig.getStaleSubmittedMinutes();
+            int batchSize = schedulerConfig.getTimeoutScanBatchSize();
+            LocalDateTime before = LocalDateTime.now().minusMinutes(staleMinutes);
+            List<AsyncTask> staleTasks = taskRepository.findStaleSubmitted(before, batchSize);
             if (staleTasks.isEmpty()) return;
 
             log.warn("[TaskTimeoutScanner] 发现 {} 个僵尸 SUBMITTED 任务（>{}分钟未启动）",
-                    staleTasks.size(), STALE_SUBMITTED_MINUTES);
+                    staleTasks.size(), staleMinutes);
             for (AsyncTask task : staleTasks) {
                 handleStaleSubmitted(task);
             }
@@ -109,10 +124,11 @@ public class TaskTimeoutScanner {
 
     private void handleStaleSubmitted(AsyncTask task) {
         try {
+            int staleMinutes = schedulerConfig.getStaleSubmittedMinutes();
             // CAS: SUBMITTED → FAILED
             int rows = taskRepository.updateStatusIfExpected(task.getTaskId(),
                     AsyncTaskStatus.SUBMITTED, AsyncTaskStatus.FAILED,
-                    "任务提交后超过" + STALE_SUBMITTED_MINUTES + "分钟未启动（可能应用重启导致丢失）", null);
+                    "任务提交后超过" + staleMinutes + "分钟未启动（可能应用重启导致丢失）", null);
 
             if (rows > 0) {
                 log.warn("[TaskTimeoutScanner] 僵尸任务已标记失败: taskId={}, taskType={}, bizId={}",

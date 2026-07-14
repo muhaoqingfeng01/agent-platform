@@ -1,0 +1,12 @@
+{
+  "maxInputLength": 10000,
+  "approvalTimeoutMinutes": 5,
+  "presidioTimeoutMs": 5000,
+  "presidioFallbackToRegex": true,
+  "corsAllowedOrigins": [
+    "http://localhost:*",
+    "https://*.agent-platform.local",
+    "https://*.agent-platform.com"
+  ],
+  "corsMaxAgeSeconds": 3600
+}

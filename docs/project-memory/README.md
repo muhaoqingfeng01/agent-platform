@@ -34,14 +34,21 @@
 | 20 | 2026-06-17 | [17-会话总结-2026-06-17.md](17-会话总结-2026-06-17.md) | T7 实现总结、项目进度同步、长期记忆更新 |
 | 21 | 2026-06-17 | [18-P3-安全治理实现.md](18-P3-安全治理实现.md) | 🆕 P3-T10+T11 完整实现：42 文件、安全围栏 4 层过滤链 + 人机协同审批状态机 |
 | 22 | 2026-06-17 | [18-会话总结-2026-06-17.md](18-会话总结-2026-06-17.md) | P3 实现总结、开发进度同步 ⚪→🟢
-| 23 | 2026-06-18 | [XX-T9-全链路可观测性实现.md](XX-T9-全链路可观测性实现.md) | 🆕 P4-T9 完整实现：17 文件、Trace/MDC 增强、AgentMetrics、AuditLog DDD、Langfuse HTTP 直连、编译通过
-| 24 | 2026-06-18 | [XX-T12-效果评估与持续优化实现.md](XX-T12-效果评估与持续优化实现.md) | 🆕 P4-T12 完整实现：~30 文件、LLM-as-Judge 4维度评分、BadCase 自动工单、SpringEvent 闭环、编译通过
-| 25 | 2026-06-18 | [XX-P0-P4-差距分析-2026-06-18.md](XX-P0-P4-差距分析-2026-06-18.md) | 🆕 P0-P4 全面差距分析：19 项未实现（8代码+11运维）、5 项方案变更、真实完成度评估
-| 26 | 2026-06-18 | [XX-会话总结-2026-06-18.md](XX-会话总结-2026-06-18.md) | 🆕 差距分析会话总结：7 文件同步更新、3 长期记忆新增
-| 27 | 2026-06-18 | [19-移除Flyway框架.md](19-移除Flyway框架.md) | 🆕 移除 Flyway 依赖/SQL 归档至 docs/database/、4 文档更新 |
-| 28 | 2026-07-03 | [XX-多模式交互系统架构设计.md](XX-多模式交互系统架构设计.md) | 🆕 多模式交互系统架构设计方案 v2.0：DDD 六模块映射、InteractionStrategy 抽象、7 步请求管道、20+ 技术栈精确对齐 |
-| 29 | 2026-07-03 | [XX-P7-多模式交互实现.md](XX-P7-多模式交互实现.md) | 🆕 P7 多模式交互实现：8 文件、DDD 四层、InteractionStrategy 策略工厂、2 种模式（知识检索+智能对话）、编译通过 |
-| 30 | 2026-07-06 | [XX-P7-迭代增强-streamChat双模式改造.md](XX-P7-迭代增强-streamChat双模式改造.md) | 🆕 P7 迭代增强：streamChat 双模式改造、KnowledgeSearchStreamService RAG 流式管线、8 文件变更、编译通过 |
+| 23 | 2026-06-18 | [20-T9-全链路可观测性实现.md](20-T9-全链路可观测性实现.md) | 🆕 P4-T9 完整实现：17 文件、Trace/MDC 增强、AgentMetrics、AuditLog DDD、Langfuse HTTP 直连、编译通过
+| 24 | 2026-06-18 | [21-T12-效果评估与持续优化实现.md](21-T12-效果评估与持续优化实现.md) | 🆕 P4-T12 完整实现：~30 文件、LLM-as-Judge 4维度评分、BadCase 自动工单、SpringEvent 闭环、编译通过
+| 25 | 2026-06-18 | [22-P0-P4-差距分析-2026-06-18.md](22-P0-P4-差距分析-2026-06-18.md) | 🆕 P0-P4 全面差距分析：19 项未实现（8代码+11运维）、5 项方案变更、真实完成度评估
+| 26 | 2026-06-18 | [23-会话总结-2026-06-18.md](23-会话总结-2026-06-18.md) | 🆕 差距分析会话总结：7 文件同步更新、3 长期记忆新增
+| 27 | 2026-06-18 | [24-P6-迭代增强-缺口实现-2026-06-18.md](24-P6-迭代增强-缺口实现-2026-06-18.md) | 🆕 P6 迭代增强：9 项代码缺口全量实现（Reranker+版本化+缓存+心跳+精度监控+LDAP+Presidio）、编译通过
+| 28 | 2026-06-18 | [25-会话总结-2026-06-18-P6实现.md](25-会话总结-2026-06-18-P6实现.md) | 🆕 P6 实现会话总结
+| 29 | 2026-06-18 | [26-controller-map-refactor-response-dto.md](26-controller-map-refactor-response-dto.md) | 🆕 Controller 禁止返回 Map/List → Response DTO 重构
+| 30 | 2026-06-18 | [19-移除Flyway框架.md](19-移除Flyway框架.md) | 🆕 移除 Flyway 依赖/SQL 归档至 docs/database/、4 文档更新 |
+| 31 | 2026-07-03 | [27-多模式交互系统架构设计.md](27-多模式交互系统架构设计.md) | 🆕 多模式交互系统架构设计方案 v2.0：DDD 六模块映射、InteractionStrategy 抽象、7 步请求管道、20+ 技术栈精确对齐 |
+| 32 | 2026-07-03 | [28-P7-多模式交互实现.md](28-P7-多模式交互实现.md) | 🆕 P7 多模式交互实现：8 文件、DDD 四层、InteractionStrategy 策略工厂、2 种模式（知识检索+智能对话）、编译通过 |
+| 33 | 2026-07-06 | [29-P7-迭代增强-streamChat双模式改造.md](29-P7-迭代增强-streamChat双模式改造.md) | 🆕 P7 迭代增强：streamChat 双模式改造、KnowledgeSearchStreamService RAG 流式管线、8 文件变更、编译通过 |
+| 34 | 2026-07-14 | [30-配置治理-子方案01-定时任务与心跳Nacos动态化.md](30-配置治理-子方案01-定时任务与心跳Nacos动态化.md) | 🆕 P6 配置治理子方案01：SchedulerConfig + DynamicScheduledTaskManager、5 类 @Scheduled→动态注册、9 参数 Nacos 热更新、编译通过 |
+| 35 | 2026-07-14 | [31-配置治理-子方案02-RAG检索参数Nacos动态化.md](31-配置治理-子方案02-RAG检索参数Nacos动态化.md) | 🆕 P6 配置治理子方案02：RagConfig extends NacosConfig、JSON+Jackson+硬编码兜底、修复 nprobe 硬编码、编译通过 |
+| 36 | 2026-07-14 | [32-配置治理-子方案03-AI模型与会话参数Nacos动态化.md](32-配置治理-子方案03-AI模型与会话参数Nacos动态化.md) | 🆕 P6 配置治理子方案03：AiModelConfig 升迁+SecurityConfig+SessionConfig、3 DataId 17 参数、10 消费者改造、9 常量消除、编译通过 |
+| 37 | 2026-07-14 | [33-会话总结-2026-07-14.md](33-会话总结-2026-07-14.md) | 🆕 配置治理子方案01-03 实施 + Optional 判空重构 + 文件重编号 |
 
 ## 当前项目状态快照
 
@@ -49,7 +56,7 @@
 - **Spring Boot**: 3.3.7
 - **构建**: ✅ BUILD SUCCESS（7/7 模块）
 - **启动**: ⚠️ 需要 MySQL + Redis + Milvus 外部服务
-- **代码**: ~508 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO/Handler/Adapter/SecurityFilter/Aspect/Observability/Metrics/Event）
+- **代码**: 572 个 Java 文件（含 Controller/Service/DomainService/Repository/PO/Mapper/Filter/Recognizer/Extractor/Resolver/DTO/Handler/Adapter/SecurityFilter/Aspect/Observability/Metrics/Event/🆕SchedulerConfig/RagConfig/AiModelConfig/SecurityConfig/SessionConfig）
 - **Swagger**: 已集成，`/swagger-ui.html`
 - **数据库**: V1.0.0(13张) + V1.1.0(15张) + V1.2.0(种子) + V1.2.1(业务ID) + V1.2.2(T7调用日志ID) + V1.3.0(T6精度) + V1.4.0(KB创建者+状态迁移) + V1.5.0(T7工具版本化)，SQL 参考文件在 `docs/database/`
 - **日志**: traceId + spanId + tenantId + userId 全链路追踪（MDC），logback-spring.xml 按天分目录
@@ -64,7 +71,7 @@
 - **P3 进度**: 🟢 ~95%（T10+T11 安全围栏+审批状态机全部完成，Presidio 可选延期）
 - **P4 进度**: 🟡 核心 100%（T9 15项 + T12 已实现，7 项运维增强 🔜 P6）
 - **P5 进度**: ⚪ 0%（前端未开始）
-- **P6 进度**: ⚪ 0%（7 篇增强方案已设计，待执行）
+- **P6 进度**: 🟡 进行中（9项代码增强✅ + 7篇运维方案 + 配置治理子方案01✅/02✅/03✅，04-05已设计）
 
 ## 会话记录目录结构
 
