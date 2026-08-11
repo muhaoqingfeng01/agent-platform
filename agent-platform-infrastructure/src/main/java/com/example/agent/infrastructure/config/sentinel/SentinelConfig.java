@@ -8,7 +8,7 @@ import com.alibaba.csp.sentinel.slots.block.flow.FlowRule;
 import com.alibaba.csp.sentinel.slots.block.flow.FlowRuleManager;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.ArrayList;
@@ -52,7 +52,7 @@ import java.util.List;
  */
 @Slf4j
 @Configuration
-@ConditionalOnExpression("${app.sentinel.fallback.enabled:false}")
+@ConditionalOnProperty(name = "app.sentinel.fallback.enabled", havingValue = "true")
 public class SentinelConfig {
 
     // ========== Fallback 硬编码默认值（仅 Nacos 不可用时生效） ==========
@@ -71,8 +71,8 @@ public class SentinelConfig {
     private static final int FALLBACK_MIN_REQUEST_AMOUNT = 10;
     /** 统计间隔 ms（fallback） */
     private static final int FALLBACK_STAT_INTERVAL_MS = 1000;
-    /** 慢调用 RT 阈值 ms（fallback） */
-    private static final double FALLBACK_SLOW_RT_THRESHOLD_MS = 0.2;
+    /** 慢调用 RT 阈值 秒（fallback，200ms = 0.2s） */
+    private static final double FALLBACK_SLOW_RT_THRESHOLD = 0.2;
 
     /** 全局聊天接口资源名 */
     private static final String RESOURCE_CHAT = "com.example.agent.interfaces.rest.ConversationController.streamChat";
@@ -139,7 +139,7 @@ public class SentinelConfig {
                 .setCount(FALLBACK_SLOW_RATIO)
                 .setTimeWindow(FALLBACK_TIME_WINDOW)
                 .setMinRequestAmount(FALLBACK_MIN_REQUEST_AMOUNT)
-                .setSlowRatioThreshold(FALLBACK_SLOW_RT_THRESHOLD_MS)
+                .setSlowRatioThreshold(FALLBACK_SLOW_RT_THRESHOLD)
                 .setStatIntervalMs(FALLBACK_STAT_INTERVAL_MS);
         rules.add(slowCallRule);
         log.info("[Sentinel-Fallback] 熔断规则: LLM慢调用比例 > {}% → 熔断 {} 秒",
