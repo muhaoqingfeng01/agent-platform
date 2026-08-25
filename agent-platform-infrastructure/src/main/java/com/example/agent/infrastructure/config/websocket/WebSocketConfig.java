@@ -46,12 +46,11 @@ public class WebSocketConfig implements WebSocketConfigurer {
         @Override
         public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
                                         WebSocketHandler wsHandler, Map<String, Object> attributes) {
-            List<String> authHeaders = request.getHeaders().get("Authorization");
-            if (authHeaders == null || authHeaders.isEmpty()) {
-                log.warn("[WebSocket] 握手缺少 Authorization header");
+            String token = extractToken(request);
+            if (token == null || token.isBlank()) {
+                log.warn("[WebSocket] 握手缺少认证凭据（Authorization header / ?token= 均缺失）");
                 return false;
             }
-            String token = authHeaders.get(0).replace("Bearer ", "");
             try {
                 Object loginId = StpUtil.getLoginIdByToken(token);
                 attributes.put("userId", loginId.toString());
@@ -60,6 +59,30 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 log.warn("[WebSocket] Token 校验失败: {}", e.getMessage());
                 return false;
             }
+        }
+
+        /**
+         * 提取 Token — 优先读取 {@code Authorization: Bearer <token>} 头；
+         * 浏览器原生 WebSocket 无法自定义 Header，此时回退到查询参数 {@code ?token=<token>}。
+         */
+        private String extractToken(ServerHttpRequest request) {
+            List<String> authHeaders = request.getHeaders().get("Authorization");
+            if (authHeaders != null && !authHeaders.isEmpty()) {
+                String header = authHeaders.get(0);
+                if (header != null && header.startsWith("Bearer ")) {
+                    return header.substring("Bearer ".length()).trim();
+                }
+            }
+            String query = request.getURI().getQuery();
+            if (query != null) {
+                for (String pair : query.split("&")) {
+                    int idx = pair.indexOf('=');
+                    if (idx > 0 && "token".equals(pair.substring(0, idx))) {
+                        return pair.substring(idx + 1);
+                    }
+                }
+            }
+            return null;
         }
 
         @Override

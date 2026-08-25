@@ -36,7 +36,7 @@ public class ToolUpdateCommand {
     @Schema(description = "连接端点")
     private String endpoint;
 
-    /** 认证类型 */
+    /** 认证类型 — 对应 {@link com.example.agent.domain.tool.valueobject.AuthType} */
     @Schema(description = "认证类型", allowableValues = {"API_KEY", "BEARER", "BASIC", "NONE"})
     private String authType;
 

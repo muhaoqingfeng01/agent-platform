@@ -1,6 +1,7 @@
 package com.example.agent.domain.tool.entity;
 
 import com.example.agent.domain.tool.valueobject.AuthConfig;
+import com.example.agent.domain.tool.valueobject.AuthType;
 import com.example.agent.domain.tool.valueobject.ToolSchema;
 import com.example.agent.domain.tool.valueobject.ToolType;
 import lombok.Builder;
@@ -91,7 +92,9 @@ public class ToolRegistryVersion {
     private static String toJson(AuthConfig config) {
         // 简单 JSON 序列化
         StringBuilder sb = new StringBuilder("{");
-        sb.append("\"authType\":\"").append(config.getAuthType()).append("\"");
+        sb.append("\"authType\":\"").append(
+                config.getAuthType() != null ? config.getAuthType().getCode() : AuthType.NONE.getCode())
+                .append("\"");
         if (config.getApiKey() != null) sb.append(",\"apiKey\":\"").append(config.getApiKey()).append("\"");
         if (config.getToken() != null) sb.append(",\"token\":\"").append(config.getToken()).append("\"");
         sb.append("}");

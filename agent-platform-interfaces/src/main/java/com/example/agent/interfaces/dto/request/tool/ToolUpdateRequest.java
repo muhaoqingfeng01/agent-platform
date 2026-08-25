@@ -24,7 +24,7 @@ public class ToolUpdateRequest {
     private Map<String, Object> outputSchema;
     @Schema(description = "端点地址")
     private String endpoint;
-    @Schema(description = "认证类型")
+    @Schema(description = "认证类型", allowableValues = {"API_KEY", "BEARER", "BASIC", "NONE"})
     private String authType;
     @Schema(description = "API Key")
     private String apiKey;

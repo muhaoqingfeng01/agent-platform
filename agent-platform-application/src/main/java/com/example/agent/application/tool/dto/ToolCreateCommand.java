@@ -39,15 +39,15 @@ public class ToolCreateCommand {
     @Schema(description = "MCP SSE 端点或 HTTP URL", example = "https://api.example.com/orders/query")
     private String endpoint;
 
-    /** 认证类型 — API_KEY / BEARER / BASIC / NONE */
+    /** 认证类型 — 对应 {@link com.example.agent.domain.tool.valueobject.AuthType} */
     @Schema(description = "认证类型", example = "API_KEY", allowableValues = {"API_KEY", "BEARER", "BASIC", "NONE"})
     private String authType;
 
-    /** API 密钥 — authType=API_KEY 时必填 */
+    /** API 密钥 — AuthType.API_KEY 时必填 */
     @Schema(description = "API 密钥")
     private String apiKey;
 
-    /** Bearer Token — authType=BEARER 时必填 */
+    /** Bearer Token — AuthType.BEARER 时必填 */
     @Schema(description = "Bearer Token")
     private String token;
 

@@ -3,9 +3,11 @@ package com.example.agent.infrastructure.mcp;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.domain.tool.entity.ToolRegistry;
 import com.example.agent.domain.tool.valueobject.AuthConfig;
+import com.example.agent.domain.tool.valueobject.AuthType;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -143,35 +145,35 @@ public class HttpToolAdapter {
      * @param headers    目标请求头（可变）
      * @param authConfig 认证配置
      */
-    private void applyAuth(org.springframework.http.HttpHeaders headers, AuthConfig authConfig) {
+    private void applyAuth(HttpHeaders headers, AuthConfig authConfig) {
         if (authConfig == null) {
             return;
         }
 
-        String authType = authConfig.getAuthType();
+        AuthType authType = authConfig.getAuthType();
         if (authType == null) {
-            return;
+            authType = AuthType.NONE;
         }
 
-        switch (authType.toUpperCase()) {
-            case "API_KEY":
+        switch (authType) {
+            case API_KEY:
                 if (authConfig.getApiKey() != null) {
                     headers.set("Authorization", "Bearer " + authConfig.getApiKey());
                 }
                 break;
-            case "BEARER":
+            case BEARER:
                 if (authConfig.getToken() != null) {
                     headers.set("Authorization", "Bearer " + authConfig.getToken());
                 }
                 break;
-            case "BASIC":
+            case BASIC:
                 if (authConfig.getUsername() != null && authConfig.getPassword() != null) {
                     String basicAuth = java.util.Base64.getEncoder().encodeToString(
                             (authConfig.getUsername() + ":" + authConfig.getPassword()).getBytes());
                     headers.set("Authorization", "Basic " + basicAuth);
                 }
                 break;
-            case "NONE":
+            case NONE:
             default:
                 // 无需认证
                 break;

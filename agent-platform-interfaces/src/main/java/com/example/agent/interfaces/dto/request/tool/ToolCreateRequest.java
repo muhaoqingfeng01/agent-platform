@@ -41,7 +41,7 @@ public class ToolCreateRequest {
     @Schema(description = "MCP SSE 端点或 HTTP URL", example = "https://api.example.com/orders/query")
     private String endpoint;
 
-    /** 认证类型 */
+    /** 认证类型 — 对应 AuthType：API_KEY / BEARER / BASIC / NONE */
     @Schema(description = "认证类型", example = "API_KEY", allowableValues = {"API_KEY", "BEARER", "BASIC", "NONE"})
     private String authType;
 

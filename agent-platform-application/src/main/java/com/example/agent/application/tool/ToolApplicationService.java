@@ -234,7 +234,7 @@ public class ToolApplicationService {
                            .password(existingAuth.getPassword())
                            .headers(existingAuth.getHeaders());
             }
-            if (request.getAuthType() != null) authBuilder.authType(request.getAuthType());
+            if (request.getAuthType() != null) authBuilder.authType(AuthType.fromCode(request.getAuthType()));
             if (request.getApiKey() != null) authBuilder.apiKey(request.getApiKey());
             if (request.getToken() != null) authBuilder.token(request.getToken());
             builder.authConfig(authBuilder.build());
@@ -491,12 +491,12 @@ public class ToolApplicationService {
      * @return AuthConfig 值对象（可能为 null）
      */
     private AuthConfig buildAuthConfig(ToolCreateCommand request) {
-        if (request.getAuthType() == null || request.getAuthType().isBlank()
-                || "NONE".equalsIgnoreCase(request.getAuthType())) {
+        AuthType authType = AuthType.fromCode(request.getAuthType());
+        if (authType == AuthType.NONE) {
             return null;
         }
         return AuthConfig.builder()
-                .authType(request.getAuthType().toUpperCase())
+                .authType(authType)
                 .apiKey(request.getApiKey())
                 .token(request.getToken())
                 .build();
