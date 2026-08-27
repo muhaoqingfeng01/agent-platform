@@ -34,11 +34,14 @@ export function ChatPage() {
     setMode,
     setKnowledgeId,
     send,
+    stop,
     reconnect,
   } = useConversationStore();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [listHeight, setListHeight] = useState(480);
+  const [composerSeed, setComposerSeed] = useState(0);
+  const [composerPreset, setComposerPreset] = useState('');
   const paneRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -128,10 +131,19 @@ export function ChatPage() {
             {!currentId ? (
               <div className="page-center muted">新建或选择一个会话开始聊天</div>
             ) : (
-              <MessageList messages={messages} height={listHeight} />
+              <MessageList
+                messages={messages}
+                height={listHeight}
+                onSuggest={(text) => {
+                  setComposerPreset(text);
+                  setComposerSeed((n) => n + 1);
+                }}
+              />
             )}
           </div>
           <Composer
+            key={composerSeed}
+            initialValue={composerPreset}
             disabled={streaming}
             canKnowledge={canKnowledge}
             mode={mode}
@@ -139,6 +151,7 @@ export function ChatPage() {
             knowledgeBases={knowledgeBases}
             onModeChange={setMode}
             onKnowledgeChange={setKnowledgeId}
+            onStop={stop}
             onSend={(content) => void send(content).catch((err) => message.error(err.message))}
           />
         </Content>

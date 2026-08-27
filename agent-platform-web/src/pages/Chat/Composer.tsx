@@ -1,5 +1,5 @@
-import { Button, Input, Select, Space } from 'antd';
-import { SendOutlined } from '@ant-design/icons';
+import { Button, Input, Select, Space, Typography } from 'antd';
+import { SendOutlined, StopOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { CHAT_CONFIG } from '@/config/constants';
 import type { InteractionMode, KnowledgeBase } from '@/types/api';
@@ -13,6 +13,8 @@ interface Props {
   onModeChange: (mode: InteractionMode) => void;
   onKnowledgeChange: (id?: string) => void;
   onSend: (content: string) => void;
+  onStop?: () => void;
+  initialValue?: string;
 }
 
 export function Composer({
@@ -24,8 +26,10 @@ export function Composer({
   onModeChange,
   onKnowledgeChange,
   onSend,
+  onStop,
+  initialValue = '',
 }: Props) {
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState(initialValue);
 
   const submit = () => {
     const text = value.trim();
@@ -72,16 +76,26 @@ export function Composer({
         placeholder={disabled ? '正在生成回复...' : '输入问题，Enter 发送，Shift+Enter 换行'}
         onChange={(e) => setValue(e.target.value)}
         onPressEnter={(e) => {
-          if (!e.shiftKey) {
-            e.preventDefault();
-            submit();
+          if (e.shiftKey || e.nativeEvent.isComposing) {
+            return;
           }
+          e.preventDefault();
+          submit();
         }}
       />
       <div className="composer-actions">
-        <Button type="primary" icon={<SendOutlined />} disabled={disabled || !value.trim()} onClick={submit}>
-          发送
-        </Button>
+        <Typography.Text type="secondary">
+          {value.length}/{CHAT_CONFIG.maxMessageLength}
+        </Typography.Text>
+        {disabled ? (
+          <Button danger icon={<StopOutlined />} onClick={onStop}>
+            停止
+          </Button>
+        ) : (
+          <Button type="primary" icon={<SendOutlined />} disabled={!value.trim()} onClick={submit}>
+            发送
+          </Button>
+        )}
       </div>
     </div>
   );

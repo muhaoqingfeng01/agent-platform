@@ -51,8 +51,8 @@ export function ConversationList({ items, currentId, loading, onSelect, onCreate
             >
               <List.Item.Meta
                 avatar={<MessageOutlined />}
-                title={item.title || '未命名对话'}
-                description={item.status}
+                title={<span className="conv-title">{item.title || '未命名对话'}</span>}
+                description={item.status === 'ACTIVE' ? '进行中' : item.status}
               />
             </List.Item>
           )}

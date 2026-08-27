@@ -4,6 +4,7 @@ import {
   createConversation,
   deleteConversation,
   listConversations,
+  updateConversationTitle,
 } from '@/services/conversation';
 import { listKnowledgeBases } from '@/services/knowledge';
 import { listMessages } from '@/services/message';
@@ -34,11 +35,26 @@ interface ConversationState {
   setMode: (mode: InteractionMode) => void;
   setKnowledgeId: (id?: string) => void;
   send: (content: string) => Promise<void>;
+  stop: () => void;
   reconnect: () => void;
 }
 
 function localId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function titleFromContent(content: string): string {
+  const compact = content.replace(/\s+/g, ' ').trim();
+  return compact.length > 24 ? `${compact.slice(0, 24)}…` : compact || '新对话';
+}
+
+let activeAbort: AbortController | null = null;
+
+function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof DOMException && error.name === 'AbortError') ||
+    (error instanceof Error && error.name === 'AbortError')
+  );
 }
 
 export const useConversationStore = create<ConversationState>((set, get) => ({
@@ -125,6 +141,12 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       conversationId = await get().createNew();
     }
 
+    const existing = get().messagesByConv[conversationId] ?? [];
+    const conv = get().conversations.find((item) => item.conversationId === conversationId);
+    const shouldRename =
+      existing.filter((item) => item.role === 'USER').length === 0 &&
+      (!conv?.title || conv.title === '新对话');
+
     const userMsg: ChatMessage = {
       messageId: localId('local_user'),
       conversationId,
@@ -153,6 +175,16 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       },
     }));
 
+    if (shouldRename) {
+      const title = titleFromContent(content);
+      void updateConversationTitle(conversationId, title).catch(() => undefined);
+      set((prev) => ({
+        conversations: prev.conversations.map((item) =>
+          item.conversationId === conversationId ? { ...item, title } : item,
+        ),
+      }));
+    }
+
     const patchAssistant = (updater: (msg: ChatMessage) => ChatMessage) => {
       set((prev) => {
         const list = [...(prev.messagesByConv[conversationId!] ?? [])];
@@ -167,6 +199,8 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     };
 
     try {
+      activeAbort?.abort();
+      activeAbort = new AbortController();
       await streamChat(
         {
           conversationId,
@@ -209,14 +243,32 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             set({ streamError: message });
           }
         },
+        activeAbort.signal,
       );
+      activeAbort = null;
       patchAssistant((msg) => ({ ...msg, streaming: false }));
       set({ streaming: false });
     } catch (error) {
+      activeAbort = null;
+      if (isAbortError(error)) {
+        patchAssistant((msg) => ({
+          ...msg,
+          streaming: false,
+          content: msg.content || '（已停止生成）',
+        }));
+        set({ streaming: false, streamError: null });
+        return;
+      }
       const message = error instanceof Error ? error.message : '连接中断';
       patchAssistant((msg) => ({ ...msg, streaming: false, error: message }));
       set({ streaming: false, streamError: message });
     }
+  },
+
+  stop: () => {
+    activeAbort?.abort();
+    activeAbort = null;
+    set((prev) => ({ streaming: false, streamError: prev.streamError }));
   },
 
   reconnect: () => {
