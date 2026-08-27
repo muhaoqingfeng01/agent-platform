@@ -270,9 +270,10 @@ P0(收尾✅) → P1(T3-T5✅) → P2(T6-T7✅) → P3(安全✅) → P4(观测�
 | 开发规范 | `docs/开发规范.md` |
 | 后端开发计划 | `docs/后端开发计划.md` |
 | 数据库设计 | `docs/数据库设计文档.md` |
+| 架构设计文档（总入口） | `docs/Agent平台架构设计文档.md` | 🆕 源码级：为什么/技术栈/如何实现/场景 + 流程图 |
 | 技术方案汇总 | `docs/企业级Agent平台技术方案.md` |
-| 技术方案流程图 | `docs/Agent平台技术方案流程图.md` | 🆕 11 张 Mermaid 图 |
-| 架构设计图 | `docs/Agent平台架构设计图.md` | 🆕 10 张架构图 (4+1/部署/DDD/安全/MCP) |
+| 技术方案流程图 | `docs/Agent平台技术方案流程图.md` | 11 张 Mermaid 图 |
+| 架构设计图 | `docs/Agent平台架构设计图.md` | 10 张架构图 (4+1/部署/DDD/安全/MCP) |
 | 子方案(P0-P5) | `docs/P0-基础底座/` ~ `docs/P5-交互端/` |
 | P6 迭代增强 | `docs/P6-迭代优化方案/` |
 | Swagger 配置 | `agent-platform-interfaces/.../config/OpenApiConfig.java` |
