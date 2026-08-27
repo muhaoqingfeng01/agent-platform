@@ -42,8 +42,17 @@ apiClient.interceptors.response.use(
   (error: AxiosError<ApiResult<unknown>>) => {
     const status = error.response?.status;
     const body = error.response?.data;
-    const code = body?.code ?? status ?? 500;
-    const message = body?.message || error.message || '网络错误';
+    const code = typeof body?.code === 'number' ? body.code : (status ?? 500);
+    let message = body?.message;
+    if (!message) {
+      if (!error.response || status === 502 || status === 503 || status === 504) {
+        message = '无法连接后端，请确认服务已在 8080 启动';
+      } else if (status === 500) {
+        message = '后端暂不可用，请稍后重试';
+      } else {
+        message = error.message || '网络错误';
+      }
+    }
     if (code === 401 || status === 401) {
       clearSessionAndRedirect();
     }
