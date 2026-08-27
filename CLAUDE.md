@@ -216,7 +216,7 @@ agent-platform-interfaces/  125 文件  ← 21 Controller + ~102 Request/Respons
 > ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、T4 提示词管理、T5 任务规划引擎、T6 RAG 知识库、T7 MCP 工具平台、T10 安全围栏、T11 人机协同审批、T9 全链路可观测性、T12 效果评估与持续优化、**P6 迭代增强（Redis缓存/Reranker/工具版本化/心跳检测/精度监控/LDAP/SSO/Presidio）、P7 多模式交互（策略工厂 + 2 种模式）、🆕 P6 配置治理子方案01（@Scheduled → Nacos）、🆕 子方案02（RagConfig 24 参数）、🆕 子方案03（AiModel/Security/Session 17 参数）、🆕 子方案04（ProjectConstants 静态常量统一管理、25常量、26文件改造）、🆕 子方案05（Sentinel 规则 Nacos 持久化、6 项规则）**
 > 📐 DDD 架构：Controller → ApplicationService → DomainService → Repository，禁止越层调用
 > 📦 DTO 分离：Application 层 DTO 独立分包 + Interfaces 层 Request DTO 独立分包
-> 🔜 待完成：P5 前端交互层、配置治理子方案 05
+> 🔜 待完成：P5 前端；主链路接线（围栏/意图/记忆/工具/审批）见 `docs/已设计未实现清单.md`
 
 ---
 
@@ -264,7 +264,8 @@ P0(收尾✅) → P1(T3-T5✅) → P2(T6-T7✅) → P3(安全✅) → P4(观测�
 | 项目现状摘要 | `docs/project-memory/00-项目现状摘要.md` |
 | 会话索引 | `docs/project-memory/README.md` |
 | 开发进度 | `docs/开发进度.md` |
-| P0-P4 差距分析 | `docs/project-memory/XX-P0-P4-差距分析-2026-06-18.md` |
+| 已设计未实现清单 | `docs/已设计未实现清单.md` |
+| P0-P4 差距分析（历史） | `docs/project-memory/22-P0-P4-差距分析-2026-06-18.md` |
 | 开发规范 | `docs/开发规范.md` |
 | 后端开发计划 | `docs/后端开发计划.md` |
 | 数据库设计 | `docs/数据库设计文档.md` |
