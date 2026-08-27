@@ -1,5 +1,6 @@
 package com.example.agent.infrastructure.rag;
 
+import com.example.agent.common.exception.BusinessException;
 import com.example.agent.domain.knowledge.service.MilvusStoreClient;
 import com.example.agent.infrastructure.config.nacos.RagConfig;
 import io.milvus.client.MilvusServiceClient;
@@ -66,6 +67,12 @@ public class MilvusCollectionManager implements MilvusStoreClient {
     @Value("${milvus.keep-alive-time-ms:60000}")
     private long keepAliveTimeMs;
 
+    /**
+     * 为 true 时连接失败会阻止 Spring 启动；本地开发默认 false，便于先跑对话（知识检索仍不可用）。
+     */
+    @Value("${milvus.required:false}")
+    private boolean required;
+
     /** 🆕 P6 配置治理子方案02: RAG 检索参数 Nacos 动态配置（JSON 格式，Nacos 不可用时硬编码兜底） */
     @Autowired
     private RagConfig ragConfig;
@@ -81,9 +88,27 @@ public class MilvusCollectionManager implements MilvusStoreClient {
                 .withDatabaseName(database)
                 .withConnectTimeout(connectTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)
                 .withKeepAliveTime(keepAliveTimeMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+        try {
+            milvusClient = new MilvusServiceClient(builder.build());
+            log.info("[Milvus] 客户端初始化完成: host={}:{}, db={}", host, port, database);
+        } catch (Exception e) {
+            milvusClient = null;
+            String hint = String.format(
+                    "无法连接 Milvus %s:%s（database=%s）。请先启动向量库，或确认 MILVUS_HOST/MILVUS_PORT。知识检索暂不可用。",
+                    host, port, database);
+            if (required) {
+                throw new IllegalStateException(hint, e);
+            }
+            log.warn("[Milvus] {} 原因: {}", hint, e.getMessage());
+        }
+    }
 
-        milvusClient = new MilvusServiceClient(builder.build());
-        log.info("[Milvus] 客户端初始化完成: host={}:{}, db={}", host, port, database);
+    private MilvusServiceClient requireClient() {
+        if (milvusClient == null) {
+            throw new BusinessException(503,
+                    "Milvus 未连接，请先启动向量库（默认 localhost:19530）后再使用知识库/检索");
+        }
+        return milvusClient;
     }
 
     @PreDestroy
@@ -104,14 +129,14 @@ public class MilvusCollectionManager implements MilvusStoreClient {
             return;
         }
 
-        R<Boolean> hasColl = milvusClient.hasCollection(
+        R<Boolean> hasColl = requireClient().hasCollection(
                 HasCollectionParam.newBuilder().withCollectionName(collectionName).build());
         if (hasColl.getData() != null && hasColl.getData()) {
             // 校验已有 collection 的 embedding 维度是否匹配
             if (isDimensionMismatch(collectionName, dimension)) {
                 log.warn("[Milvus] Collection 维度不匹配，重建: collection={}, expectedDim={}",
                         collectionName, dimension);
-                milvusClient.dropCollection(
+                requireClient().dropCollection(
                         DropCollectionParam.newBuilder().withCollectionName(collectionName).build());
                 collectionCache.remove(collectionName);
             } else {
@@ -151,7 +176,7 @@ public class MilvusCollectionManager implements MilvusStoreClient {
                 .addFieldType(kbIdField)
                 .build();
 
-        R<RpcStatus> createResp = milvusClient.createCollection(createParam);
+        R<RpcStatus> createResp = requireClient().createCollection(createParam);
         if (createResp.getStatus() != 0) {
             log.error("[Milvus] Collection 创建失败: {}, error={}", collectionName, createResp.getMessage());
             collectionCache.remove(collectionName);
@@ -161,7 +186,7 @@ public class MilvusCollectionManager implements MilvusStoreClient {
 
         // 向量索引
         io.milvus.param.IndexType idxType = resolveIndexType(indexType);
-        R<RpcStatus> indexResp = milvusClient.createIndex(CreateIndexParam.newBuilder()
+        R<RpcStatus> indexResp = requireClient().createIndex(CreateIndexParam.newBuilder()
                 .withCollectionName(collectionName)
                 .withFieldName("embedding")
                 .withIndexType(idxType)
@@ -186,7 +211,7 @@ public class MilvusCollectionManager implements MilvusStoreClient {
      */
     private boolean isDimensionMismatch(String collectionName, int expectedDim) {
         try {
-            R<io.milvus.grpc.DescribeCollectionResponse> resp = milvusClient.describeCollection(
+            R<io.milvus.grpc.DescribeCollectionResponse> resp = requireClient().describeCollection(
                     DescribeCollectionParam.newBuilder().withCollectionName(collectionName).build());
             if (resp.getData() != null && resp.getData().getSchema() != null) {
                 for (var field : resp.getData().getSchema().getFieldsList()) {
@@ -242,14 +267,14 @@ public class MilvusCollectionManager implements MilvusStoreClient {
                 .withFields(fields)
                 .build();
 
-        R<MutationResult> insertResp = milvusClient.insert(insertParam);
+        R<MutationResult> insertResp = requireClient().insert(insertParam);
         if (insertResp.getStatus() != 0) {
             log.error("[Milvus] 插入失败: collection={}, error={}", collectionName, insertResp.getMessage());
             return;
         }
         log.info("[Milvus] 批量插入成功: collection={}, count={}", collectionName, entries.size());
 
-        milvusClient.flush(FlushParam.newBuilder()
+        requireClient().flush(FlushParam.newBuilder()
                 .withCollectionNames(Collections.singletonList(collectionName)).build());
     }
 
@@ -285,7 +310,7 @@ public class MilvusCollectionManager implements MilvusStoreClient {
                 builder.withExpr(filterExpression);
             }
 
-            R<io.milvus.grpc.SearchResults> searchResp = milvusClient.search(builder.build());
+            R<io.milvus.grpc.SearchResults> searchResp = requireClient().search(builder.build());
             if (searchResp.getStatus() != 0) {
                 log.error("[Milvus] 检索失败: collection={}, error={}", collectionName, searchResp.getMessage());
                 return Collections.emptyList();
@@ -328,6 +353,8 @@ public class MilvusCollectionManager implements MilvusStoreClient {
                     collectionName, topK, threshold, filterExpression, hits.size());
             return hits;
 
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
             log.error("[Milvus] 检索异常: collection={}", collectionName, e);
             return Collections.emptyList();
@@ -354,7 +381,7 @@ public class MilvusCollectionManager implements MilvusStoreClient {
 
     private void executeDelete(String collectionName, String expr) {
         try {
-            R<MutationResult> resp = milvusClient.delete(
+            R<MutationResult> resp = requireClient().delete(
                     DeleteParam.newBuilder()
                             .withCollectionName(collectionName)
                             .withExpr(expr)
@@ -365,6 +392,8 @@ public class MilvusCollectionManager implements MilvusStoreClient {
                 log.warn("[Milvus] 向量删除异常: collection={}, expr={}, error={}",
                         collectionName, expr, resp.getMessage());
             }
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
             log.error("[Milvus] 向量删除异常: collection={}, expr={}", collectionName, expr, e);
         }
@@ -375,7 +404,7 @@ public class MilvusCollectionManager implements MilvusStoreClient {
     // ============================================================
 
     private void loadIfNeeded(String collectionName) {
-        R<RpcStatus> loadResp = milvusClient.loadCollection(
+        R<RpcStatus> loadResp = requireClient().loadCollection(
                 LoadCollectionParam.newBuilder().withCollectionName(collectionName).build());
         if (loadResp.getStatus() != 0) {
             log.warn("[Milvus] 加载 Collection 异常: {}", loadResp.getMessage());
@@ -384,7 +413,7 @@ public class MilvusCollectionManager implements MilvusStoreClient {
 
     private void createScalarIndex(String collectionName, String fieldName) {
         try {
-            R<RpcStatus> resp = milvusClient.createIndex(CreateIndexParam.newBuilder()
+            R<RpcStatus> resp = requireClient().createIndex(CreateIndexParam.newBuilder()
                     .withCollectionName(collectionName)
                     .withFieldName(fieldName)
                     .withIndexType(io.milvus.param.IndexType.TRIE)

@@ -116,6 +116,8 @@ milvus:
   database: ${MILVUS_DATABASE:agent_platform}
   connect-timeout-ms: 10000
   keep-alive-time-ms: 60000
+  # 本地可先不启 Milvus（对话仍可启动）；知识检索/文档向量化需要向量库
+  required: ${MILVUS_REQUIRED:false}
   client-key-path: ""
   client-cert-path: ""
   server-cert-path: ""
