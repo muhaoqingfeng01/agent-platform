@@ -265,6 +265,7 @@ P0(收尾✅) → P1(T3-T5✅) → P2(T6-T7✅) → P3(安全✅) → P4(观测�
 | 会话索引 | `docs/project-memory/README.md` |
 | 开发进度 | `docs/开发进度.md` |
 | 已设计未实现清单 | `docs/已设计未实现清单.md` |
+| 未实现事项分项方案 | `docs/未实现事项设计方案/README.md` |
 | P0-P4 差距分析（历史） | `docs/project-memory/22-P0-P4-差距分析-2026-06-18.md` |
 | 开发规范 | `docs/开发规范.md` |
 | 后端开发计划 | `docs/后端开发计划.md` |
