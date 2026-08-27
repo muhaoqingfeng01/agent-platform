@@ -1,5 +1,6 @@
 package com.example.agent.application.conversation;
 
+import com.example.agent.common.constant.ProjectConstants;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.exception.ResourceNotFoundException;
 import com.example.agent.common.util.IdGenerator;
@@ -37,10 +38,14 @@ public class ConversationApplicationService {
 
     @Transactional
     public ConversationResponse createConversation(CreateConversationRequest request) {
+        String agentId = request.getAgentId();
+        if (agentId == null || agentId.isBlank()) {
+            agentId = ProjectConstants.Conversation.DEFAULT_AGENT_ID;
+        }
         Conversation conversation = Conversation.builder()
                 .conversationId(IdGenerator.generate("conv"))
                 .tenantId(TenantContext.getCurrentTenantId())
-                .agentId(request.getAgentId())
+                .agentId(agentId)
                 .userId(TenantContext.getCurrentUserId())
                 .title(request.getTitle() != null ? request.getTitle() : "新对话")
                 .status(ConversationStatus.ACTIVE)
@@ -124,7 +129,7 @@ public class ConversationApplicationService {
                     .agentId(conv.getAgentId())
                     .userId(conv.getUserId())
                     .title(conv.getTitle())
-                    .status(conv.getStatus().name())
+                    .status(conv.getStatus() != null ? conv.getStatus().getCode() : null)
                     .messageCount(conv.getMessageCount())
                     .totalTokens(conv.getTotalTokens())
                     .createdAt(TimeConverters.toEpochMilli(conv.getCreatedAt()))

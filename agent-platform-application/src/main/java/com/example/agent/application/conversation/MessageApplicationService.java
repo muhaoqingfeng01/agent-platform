@@ -109,10 +109,10 @@ public class MessageApplicationService {
             return MessageResponse.builder()
                     .messageId(msg.getMessageId())
                     .conversationId(msg.getConversationId())
-                    .role(msg.getRole().name())
+                    .role(msg.getRole() != null ? msg.getRole().getCode() : null)
                     .content(msg.getContent())
                     .tokenCount(msg.getTokenCount())
-                    .feedback(msg.getFeedback() != null ? msg.getFeedback().name() : null)
+                    .feedback(msg.getFeedback() != null ? msg.getFeedback().getCode() : null)
                     .createdAt(TimeConverters.toEpochMilli(msg.getCreatedAt()))
                     .build();
         }

@@ -105,6 +105,15 @@ public final class ProjectConstants {
         public static final String CONTACT_EMAIL = "dev@agent-platform.local";
     }
 
+    // ========== 会话默认值 ==========
+
+    public static final class Conversation {
+        private Conversation() {}
+
+        /** 未指定 Agent 时的默认标识（Web 聊天可直接建会话） */
+        public static final String DEFAULT_AGENT_ID = "default";
+    }
+
     // ========== WebSocket ==========
 
     public static final class WebSocket {

@@ -1,0 +1,14 @@
+{
+  "api": {
+    "baseURL": "",
+    "timeout": 30000
+  },
+  "chat": {
+    "maxMessageLength": 8000,
+    "pageSize": 50,
+    "streamTimeout": 300000
+  },
+  "features": {
+    "enableKnowledgeBase": true
+  }
+}

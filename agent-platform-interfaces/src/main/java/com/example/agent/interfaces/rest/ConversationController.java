@@ -76,7 +76,7 @@ public class ConversationController {
     @Operation(summary = "状态流转")
     public Result<Void> transitionStatus(@Valid @RequestBody ConversationTransitionStatusRequest request) {
         return ResultRespHelper.responseInvoke("ConversationController.transitionStatus", request, (req) -> {
-            applicationService.transitionStatus(req.getId(), ConversationStatus.valueOf(req.getTargetStatus()));
+            applicationService.transitionStatus(req.getId(), ConversationStatus.fromCode(req.getTargetStatus()));
             return null;
         });
     }

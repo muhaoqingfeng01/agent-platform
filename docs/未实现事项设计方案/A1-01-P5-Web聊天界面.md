@@ -1,12 +1,15 @@
 # A1-01 P5 Web 聊天界面实现方案
 
-> **类别**: A 整块未开工 | **优先级**: P1  
+> **类别**: A 整块未开工 → **已实现（2026-08-27）** | **优先级**: P1  
 > **关联**: `docs/P5-交互端/01-Web聊天界面.md`、`docs/api-documentation/前端架构设计方案.md`  
-> **依赖后端**: `POST /api/v1/conversations/messages/stream`、会话 CRUD、Sa-Token Bearer
+> **依赖后端**: `POST /api/v1/conversations/messages/stream`、会话 CRUD、Sa-Token Bearer  
+> **代码**: `agent-platform-web/` + 后端登录/SSE 联调补丁
 
 ## 1. 现状与缺口
 
-后端 SSE 双模式（`CONVERSATION` / `KNOWLEDGE_SEARCH`）已可用，事件名：`token` / `thinking` / `references` / `done` / `error` / `ping`。仓库内无 Vite/React 工程，用户无法操作。
+后端 SSE 双模式（`CONVERSATION` / `KNOWLEDGE_SEARCH`）已可用，事件名：`token` / `thinking` / `references` / `done` / `error` / `ping`。
+
+**已落地（2026-08-27）**：同仓 `agent-platform-web/` Vite+React 聊天应用；登录 Token 走 sessionStorage + fetch SSE；无 `kb:read` 隐藏知识检索。审批/反馈/IM 仍未做。
 
 ## 2. 解决什么场景
 
@@ -42,7 +45,7 @@ agent-platform-web/
 ### 5.2 核心交互
 
 1. 登录页调 `POST /api/v1/auth/login`，Token 存内存 + `sessionStorage`（勿长期放 localStorage 明文，可后续改 HttpOnly Cookie）。  
-2. 会话列表：`GET /api/v1/conversations`。  
+2. 会话列表：`POST /api/v1/conversations/list`（后端现网为 POST JSON，不是 REST GET）。  
 3. 发送：`POST /api/v1/conversations/messages/stream`，body：`conversationId, content, mode, knowledgeId`。  
 4. 解析 SSE：按 `event:` 行分发到 store（追加 token、thinking 文案、references 卡片、done 结束）。  
 5. `ping` 忽略；断线展示「重连」按钮，不自动重放用户消息（防重复落库）。

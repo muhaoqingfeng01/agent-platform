@@ -21,6 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -75,7 +77,12 @@ public class AuthController {
                     refreshToken,
                     REFRESH_TTL_DAYS, TimeUnit.DAYS);
 
-            return new LoginResponse(StpUtil.getTokenValue(), refreshToken);
+            return buildLoginResponse(
+                    StpUtil.getTokenValue(),
+                    refreshToken,
+                    user.getUserId(),
+                    user.getUsername(),
+                    user.getTenantId());
         });
     }
 
@@ -105,7 +112,13 @@ public class AuthController {
                     newRefreshToken,
                     REFRESH_TTL_DAYS, TimeUnit.DAYS);
 
-            return new LoginResponse(StpUtil.getTokenValue(), newRefreshToken);
+            // 刷新会建立新 Session，username/tenantId 需前端用登录态或再调 /me 补齐
+            return buildLoginResponse(
+                    StpUtil.getTokenValue(),
+                    newRefreshToken,
+                    req.getUserId(),
+                    null,
+                    null);
         });
     }
 
@@ -127,14 +140,41 @@ public class AuthController {
         });
     }
 
-    @PostMapping("/me")
-    @Operation(summary = "获取当前用户信息", description = "从 Sa-Token Session 返回登录时写入的用户上下文，需登录")
+    @RequestMapping(value = "/me", method = {RequestMethod.GET, RequestMethod.POST})
+    @Operation(summary = "获取当前用户信息", description = "从 Sa-Token Session 返回登录用户上下文与权限码，需登录")
     public Result<UserInfo> currentUser() {
         return ResultRespHelper.responseInvoke("AuthController.currentUser", null, (__) -> {
-            String userId = (String) StpUtil.getLoginId();
+            String userId = StpUtil.getLoginIdAsString();
             String username = StpUtil.getSession().getString("username");
             Long tenantId = StpUtil.getSession().getLong("tenantId");
-            return new UserInfo(userId, username, tenantId);
+            return new UserInfo(userId, username, tenantId, safeRoleList(), safePermissionList());
         });
+    }
+
+    private LoginResponse buildLoginResponse(String token, String refreshToken,
+                                             String userId, String username, Long tenantId) {
+        LoginResponse response = new LoginResponse(token, refreshToken);
+        response.setUserId(userId);
+        response.setUsername(username);
+        response.setTenantId(tenantId);
+        response.setRoles(safeRoleList());
+        response.setPermissions(safePermissionList());
+        return response;
+    }
+
+    private static List<String> safeRoleList() {
+        try {
+            return new ArrayList<>(StpUtil.getRoleList());
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    private static List<String> safePermissionList() {
+        try {
+            return new ArrayList<>(StpUtil.getPermissionList());
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 }

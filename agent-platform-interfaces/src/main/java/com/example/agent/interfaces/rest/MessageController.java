@@ -18,6 +18,7 @@ import com.example.agent.interfaces.dto.request.message.MessageLoadBeforeRequest
 import com.example.agent.interfaces.dto.request.message.MessageFeedbackRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,8 +60,9 @@ public class MessageController {
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @SaCheckPermission("conversation:send")
     @Operation(summary = "发送消息（SSE 流式）— 支持 CONVERSATION / KNOWLEDGE_SEARCH 双模式")
-    public SseEmitter streamChat(@Valid @RequestBody MessageSendRequest request) {
-        SseEmitter emitter = SseEmitterFactory.create(300_000L);
+    public SseEmitter streamChat(@Valid @RequestBody MessageSendRequest request,
+                                 HttpServletResponse response) {
+        SseEmitter emitter = SseEmitterFactory.create(300_000L, response);
         // 统一走策略工厂路由，模式解析（含默认值/异常回退）下沉到 ApplicationService
         interactionService.executeStream(
                 request.getMode(),

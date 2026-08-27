@@ -46,6 +46,12 @@ data/
 milvus-data/
 mysql-data/
 
+# ==================== Frontend ====================
+node_modules/
+dist/
+agent-platform-web/node_modules/
+agent-platform-web/dist/
+
 # ==================== Temp ====================
 tmp/
 temp/
