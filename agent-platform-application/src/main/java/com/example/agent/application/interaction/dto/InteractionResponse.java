@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
  * 所有交互模式均使用此响应格式，前端可根据 {@link #mode} 字段区分不同模式的 {@link #data} 结构。
  *
  * <pre>
- * CONVERSATION 模式: 走 SSE 流式通道，不使用此 DTO
+ * CONVERSATION / TASK_EXECUTION 模式: 走 SSE 流式通道，不使用此 DTO
  * KNOWLEDGE_SEARCH 模式: data = {@link com.example.agent.application.knowledge.dto.SearchResultDTO}
  * </pre>
  *

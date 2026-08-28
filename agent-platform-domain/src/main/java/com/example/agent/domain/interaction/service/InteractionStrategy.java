@@ -41,8 +41,8 @@ public interface InteractionStrategy {
      * <p>
      * 根据模式不同，返回值类型也不同：
      * <ul>
-     *   <li>流式模式（CONVERSATION）：返回 null，通过 context.emitter 推送 SSE 事件</li>
-     *   <li>同步模式（KNOWLEDGE_SEARCH）：返回对应的结果 DTO</li>
+ *   <li>流式模式（CONVERSATION / TASK_EXECUTION）：返回 null，通过 context.emitter 推送 SSE 事件</li>
+ *   <li>同步模式（KNOWLEDGE_SEARCH）：返回对应的结果 DTO</li>
      * </ul>
      *
      * @param context 交互上下文

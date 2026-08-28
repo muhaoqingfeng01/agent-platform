@@ -55,13 +55,18 @@ public class BadCaseAutoTicketService {
             String analysis = analyzeIssue(context, messageId);
             IssueAnalysisResult result = parseAnalysis(analysis);
 
+            String description = result.description;
+            if (event.getReason() != null && !event.getReason().isBlank()) {
+                description = "点踩原因: " + event.getReason() + "。" + description;
+            }
+
             // 创建工单
             OptimizationTicket ticket = OptimizationTicket.builder()
                     .tenantId(tenantId)
                     .ticketId(IdGenerator.generate("ticket"))
                     .conversationId(conversationId).messageId(messageId)
                     .issueType(result.type).severity(result.severity)
-                    .description(result.description).status(TicketStatus.OPEN).build();
+                    .description(description).status(TicketStatus.OPEN).build();
             ticketRepository.save(ticket);
 
             log.info("[BadCase] 自动工单已创建: ticketId={}, issueType={}, severity={}",

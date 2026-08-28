@@ -31,7 +31,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * 消息收发 Controller — 纯粹 HTTP 适配层.
  * <p>
  * 流式端点统一通过 {@link InteractionApplicationService} 路由到对应交互策略，
- * 支持 CONVERSATION（智能对话）和 KNOWLEDGE_SEARCH（知识库检索）两种模式。
+ * 支持 CONVERSATION（智能对话）、KNOWLEDGE_SEARCH（知识库检索）、TASK_EXECUTION（任务执行）、ANALYSIS（分析推理）。
  * 新增模式只需在策略层注册，Controller 无需改动。
  *
  * @author Agent Platform Team
@@ -59,7 +59,7 @@ public class MessageController {
     @PostMapping(value = "/api/v1/conversations/messages/stream",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @SaCheckPermission("conversation:send")
-    @Operation(summary = "发送消息（SSE 流式）— 支持 CONVERSATION / KNOWLEDGE_SEARCH 双模式")
+    @Operation(summary = "发送消息（SSE 流式）— 支持 CONVERSATION / KNOWLEDGE_SEARCH / TASK_EXECUTION / ANALYSIS")
     public SseEmitter streamChat(@Valid @RequestBody MessageSendRequest request,
                                  HttpServletResponse response) {
         SseEmitter emitter = SseEmitterFactory.create(300_000L, response);
@@ -97,11 +97,18 @@ public class MessageController {
     public Result<Void> feedback(@Valid @RequestBody MessageFeedbackRequest request) {
         return ResultRespHelper.responseInvoke("MessageController.feedback", request, (req) -> {
             FeedbackType feedbackType = FeedbackType.fromCode(req.getFeedback());
-            messageService.updateFeedback(req.getMsgId(), feedbackType);
+            boolean clear = feedbackType == null || feedbackType == FeedbackType.NONE;
+            messageService.updateFeedback(
+                    req.getMsgId(),
+                    clear ? FeedbackType.NONE : feedbackType,
+                    clear ? null : req.getReason());
 
-            Long tenantId = TenantContext.getCurrentTenantId();
-            eventPublisher.publishEvent(new MessageFeedbackEvent(
-                    this, req.getMsgId(), req.getConversationId(), tenantId, feedbackType));
+            if (!clear) {
+                Long tenantId = TenantContext.getCurrentTenantId();
+                eventPublisher.publishEvent(new MessageFeedbackEvent(
+                        this, req.getMsgId(), req.getConversationId(), tenantId,
+                        feedbackType, req.getReason()));
+            }
 
             return null;
         });

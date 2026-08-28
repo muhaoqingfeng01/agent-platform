@@ -6,12 +6,15 @@ import com.example.agent.domain.conversation.valueobject.FeedbackType;
 import com.example.agent.domain.conversation.valueobject.MessageRole;
 import com.example.agent.infrastructure.persistence.mapper.MessageMapper;
 import com.example.agent.infrastructure.persistence.po.MessagePO;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 消息仓储 MyBatis 实现 — Repository 模式.
@@ -26,6 +29,7 @@ import java.util.List;
 public class MessageRepositoryImpl implements MessageRepository {
 
     private final MessageMapper messageMapper;
+    private final ObjectMapper objectMapper;
 
     @Override
     public void save(Message message) {
@@ -45,8 +49,11 @@ public class MessageRepositoryImpl implements MessageRepository {
     }
 
     @Override
-    public void updateFeedback(String messageId, FeedbackType feedback) {
-        messageMapper.updateFeedback(messageId, feedback.getCode());
+    public void updateFeedback(String messageId, FeedbackType feedback, String reason) {
+        boolean clear = feedback == null || feedback == FeedbackType.NONE;
+        String code = clear ? null : feedback.getCode();
+        String storedReason = clear ? null : reason;
+        messageMapper.updateFeedback(messageId, code, storedReason, clear);
     }
 
     // ==================== 映射方法 ====================
@@ -58,7 +65,8 @@ public class MessageRepositoryImpl implements MessageRepository {
                 .role(MessageRole.fromCode(po.getRole()))
                 .content(po.getContent())
                 .tokenCount(po.getTokenCount())
-                .feedback(po.getFeedback() != null ? FeedbackType.fromCode(po.getFeedback()) : null)
+                .metadata(parseMetadata(po.getMetadataJson()))
+                .feedback(parseFeedback(po.getFeedback()))
                 .createdAt(po.getCreatedAt())
                 .build();
     }
@@ -73,5 +81,28 @@ public class MessageRepositoryImpl implements MessageRepository {
                 .feedback(message.getFeedback() != null ? message.getFeedback().getCode() : null)
                 .createdAt(message.getCreatedAt())
                 .build();
+    }
+
+    private Map<String, Object> parseMetadata(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<>() {});
+        } catch (Exception e) {
+            log.warn("[Message] 解析 metadata_json 失败: {}", e.getMessage());
+            return Map.of();
+        }
+    }
+
+    private FeedbackType parseFeedback(String code) {
+        if (code == null || code.isBlank() || "NONE".equalsIgnoreCase(code)) {
+            return null;
+        }
+        try {
+            return FeedbackType.fromCode(code);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

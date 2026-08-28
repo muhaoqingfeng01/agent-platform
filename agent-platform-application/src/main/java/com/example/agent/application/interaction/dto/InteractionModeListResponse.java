@@ -23,6 +23,6 @@ import java.util.List;
 @Schema(description = "交互模式列表响应")
 public class InteractionModeListResponse {
 
-    @Schema(description = "可用模式编码列表", example = "[\"CONVERSATION\", \"KNOWLEDGE_SEARCH\"]")
+    @Schema(description = "可用模式编码列表", example = "[\"CONVERSATION\", \"KNOWLEDGE_SEARCH\", \"TASK_EXECUTION\"]")
     private List<String> modes;
 }

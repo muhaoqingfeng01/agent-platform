@@ -14,6 +14,8 @@ import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -78,7 +80,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 for (String pair : query.split("&")) {
                     int idx = pair.indexOf('=');
                     if (idx > 0 && "token".equals(pair.substring(0, idx))) {
-                        return pair.substring(idx + 1);
+                        return URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8);
                     }
                 }
             }

@@ -43,4 +43,12 @@ public interface ApprovalWorkflowRepository {
 
     /** 按状态查询 */
     List<ApprovalWorkflow> findByTenantAndStatus(Long tenantId, String status, int page, int size);
+
+    /**
+     * 当前用户可见的待审批工单（断线重连补卡片用）.
+     *
+     * <p>无 conversationId 时：本租户 PENDING，且审批人为当前用户或尚未指定审批人。
+     * 有 conversationId 时：该会话下全部 PENDING（请求人也能在聊天里看到卡片）。
+     */
+    List<ApprovalWorkflow> findPending(Long tenantId, String userId, String conversationId, int page, int size);
 }

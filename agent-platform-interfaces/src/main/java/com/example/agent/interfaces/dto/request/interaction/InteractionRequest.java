@@ -24,7 +24,7 @@ import java.util.Map;
 public class InteractionRequest {
 
     @NotBlank(message = "交互模式不能为空")
-    @Schema(description = "交互模式: CONVERSATION | KNOWLEDGE_SEARCH", example = "CONVERSATION", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "交互模式: CONVERSATION | KNOWLEDGE_SEARCH | TASK_EXECUTION | ANALYSIS", example = "CONVERSATION", requiredMode = Schema.RequiredMode.REQUIRED)
     private String mode;
 
     @NotBlank(message = "输入内容不能为空")

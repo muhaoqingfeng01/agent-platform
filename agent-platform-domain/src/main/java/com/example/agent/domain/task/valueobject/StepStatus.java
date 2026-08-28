@@ -6,7 +6,7 @@ import lombok.Getter;
 /**
  * 步骤执行状态枚举 — State 模式.
  *
- * <p>生命周期: PENDING → RUNNING → SUCCESS | FAILED | SKIPPED | TIMEOUT
+ * <p>生命周期: PENDING → RUNNING → SUCCESS | FAILED | SKIPPED | TIMEOUT | WAITING_APPROVAL
  *
  * @author Agent Platform Team
  * @since 1.0.0
@@ -20,7 +20,10 @@ public enum StepStatus {
     SUCCESS("SUCCESS", "执行成功"),
     FAILED("FAILED", "执行失败"),
     SKIPPED("SKIPPED", "已跳过"),
-    TIMEOUT("TIMEOUT", "执行超时");
+    TIMEOUT("TIMEOUT", "执行超时"),
+
+    /** 高风险步骤暂停，等待人机审批 */
+    WAITING_APPROVAL("WAITING_APPROVAL", "等待审批");
 
     private final String code;
     private final String desc;

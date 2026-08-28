@@ -15,7 +15,9 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum FeedbackType {
     LIKE("LIKE", "点赞"),
-    DISLIKE("DISLIKE", "点踩");
+    DISLIKE("DISLIKE", "点踩"),
+    /** 清除反馈（再次点击同一态取消） */
+    NONE("NONE", "取消");
 
     private final String code;
     private final String desc;

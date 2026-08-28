@@ -16,6 +16,8 @@ import java.util.Map;
  *   CONVERSATION 模式使用: userInput, conversationId, tenantId, userId, emitter
  *   KNOWLEDGE_SEARCH 同步模式使用: userInput, knowledgeId, tenantId, searchConfig
  *   KNOWLEDGE_SEARCH 流式模式使用: userInput, conversationId, knowledgeId, tenantId, userId, emitter
+ *   TASK_EXECUTION 流式模式使用: userInput, conversationId, tenantId, userId, emitter
+ *   ANALYSIS 流式模式使用: userInput, conversationId, tenantId, userId, emitter, searchConfig(权限标记)
  * </pre>
  *
  * @author Agent Platform Team
@@ -88,6 +90,39 @@ public class InteractionContext {
                 .tenantId(tenantId)
                 .userId(userId)
                 .emitter(emitter)
+                .build();
+    }
+
+    /** 创建任务执行流式模式的上下文（对话入口规划 DAG 并推送步骤进度） */
+    public static InteractionContext forTaskExecution(String userInput, String conversationId,
+                                                      Long tenantId, String userId, Object emitter) {
+        return InteractionContext.builder()
+                .mode(InteractionMode.TASK_EXECUTION)
+                .userInput(userInput)
+                .conversationId(conversationId)
+                .tenantId(tenantId)
+                .userId(userId)
+                .emitter(emitter)
+                .build();
+    }
+
+    /**
+     * 创建分析推理流式模式的上下文.
+     * <p>
+     * {@code searchConfig} 可携带权限标记（如 {@code canObservability} / {@code canEvaluation}），
+     * 供策略在异步线程中决定可查询的指标范围。
+     */
+    public static InteractionContext forAnalysis(String userInput, String conversationId,
+                                                  Long tenantId, String userId, Object emitter,
+                                                  Map<String, Object> searchConfig) {
+        return InteractionContext.builder()
+                .mode(InteractionMode.ANALYSIS)
+                .userInput(userInput)
+                .conversationId(conversationId)
+                .tenantId(tenantId)
+                .userId(userId)
+                .emitter(emitter)
+                .searchConfig(searchConfig)
                 .build();
     }
 }

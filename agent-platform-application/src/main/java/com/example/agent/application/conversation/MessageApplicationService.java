@@ -60,8 +60,9 @@ public class MessageApplicationService {
     }
 
     @Transactional
-    public void updateFeedback(String messageId, FeedbackType feedback) {
-        messageRepository.updateFeedback(messageId, feedback);
+    public void updateFeedback(String messageId, FeedbackType feedback, String reason) {
+        FeedbackType stored = (feedback == FeedbackType.NONE) ? null : feedback;
+        messageRepository.updateFeedback(messageId, stored, reason);
     }
 
     @Async
@@ -103,6 +104,7 @@ public class MessageApplicationService {
         private String content;
         private Integer tokenCount;
         private String feedback;
+        private String feedbackReason;
         private Long createdAt;
 
         public static MessageResponse from(Message msg) {
@@ -112,9 +114,17 @@ public class MessageApplicationService {
                     .role(msg.getRole() != null ? msg.getRole().getCode() : null)
                     .content(msg.getContent())
                     .tokenCount(msg.getTokenCount())
-                    .feedback(msg.getFeedback() != null ? msg.getFeedback().getCode() : null)
+                    .feedback(toFeedbackCode(msg.getFeedback()))
+                    .feedbackReason(msg.getFeedbackReason())
                     .createdAt(TimeConverters.toEpochMilli(msg.getCreatedAt()))
                     .build();
+        }
+
+        private static String toFeedbackCode(FeedbackType type) {
+            if (type == null || type == FeedbackType.NONE) {
+                return null;
+            }
+            return type.getCode();
         }
     }
 }

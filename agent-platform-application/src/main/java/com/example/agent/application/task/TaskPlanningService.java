@@ -112,8 +112,13 @@ public class TaskPlanningService {
             throw new BusinessException(500, "任务规划 LLM 调用失败: " + e.getMessage());
         }
 
-        // 4. 解析 LLM 输出为 DAG 图
+        // 4. 解析 LLM 输出为 DAG 图（无环校验在 DagParser 内完成）
         DagGraph graph = dagParser.parse(llmResponse);
+
+        // 4.1 先校验所有动作都有对应 Handler，避免持久化后因未知动作回滚留下脏数据
+        for (TaskNode node : graph.getNodes()) {
+            handlerRegistry.getHandler(node.getAction());
+        }
 
         // 5. 生成执行 ID 并持久化
         String executionId = IdGenerator.generate("exec");

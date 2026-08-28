@@ -26,5 +26,7 @@ public interface MessageMapper {
                                   @Param("size") int size);
 
     int updateFeedback(@Param("messageId") String messageId,
-                       @Param("feedback") String feedback);
+                       @Param("feedback") String feedback,
+                       @Param("reason") String reason,
+                       @Param("clearReason") boolean clearReason);
 }

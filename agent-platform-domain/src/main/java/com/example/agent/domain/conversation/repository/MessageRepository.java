@@ -19,5 +19,11 @@ public interface MessageRepository {
 
     List<Message> findBefore(String conversationId, String beforeMessageId, int size);
 
-    void updateFeedback(String messageId, FeedbackType feedback);
+    /**
+     * 更新消息反馈。
+     *
+     * @param feedback  LIKE / DISLIKE；null 或 NONE 表示清除
+     * @param reason    点踩原因，可空；清除反馈时忽略
+     */
+    void updateFeedback(String messageId, FeedbackType feedback, String reason);
 }

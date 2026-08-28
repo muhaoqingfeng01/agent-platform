@@ -1,5 +1,7 @@
 package com.example.agent.application.interaction;
 
+import cn.dev33.satoken.exception.NotPermissionException;
+import cn.dev33.satoken.stp.StpUtil;
 import com.alibaba.fastjson.JSON;
 import com.example.agent.application.interaction.dto.InteractionResponse;
 import com.example.agent.common.exception.BusinessException;
@@ -13,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -59,6 +62,12 @@ public class InteractionApplicationService {
         if (mode == InteractionMode.CONVERSATION) {
             throw new BusinessException(400, "对话模式请使用流式端点");
         }
+        if (mode == InteractionMode.TASK_EXECUTION) {
+            throw new BusinessException(400, "任务执行模式请使用流式端点");
+        }
+        if (mode == InteractionMode.ANALYSIS) {
+            throw new BusinessException(400, "分析推理模式请使用流式端点");
+        }
 
         InteractionContext context = buildContext(mode, content, conversationId,
                 knowledgeId, searchConfig, null);
@@ -91,11 +100,15 @@ public class InteractionApplicationService {
     public void executeStream(String modeCode, String content, String conversationId,
                                String knowledgeId, SseEmitter emitter) {
         InteractionMode mode = resolveMode(modeCode);
-        Long tenantId = TenantContext.getCurrentTenantId();
-        String userId = TenantContext.getCurrentUserId();
+
+        // 分析推理需在 HTTP 线程校验权限（Sa-Token ThreadLocal 不进线程池）
+        Map<String, Object> analysisFlags = null;
+        if (mode == InteractionMode.ANALYSIS) {
+            analysisFlags = resolveAnalysisPermissions();
+        }
 
         InteractionContext context = buildContext(mode, content, conversationId,
-                knowledgeId, null, emitter);
+                knowledgeId, analysisFlags, emitter);
         InteractionStrategy strategy = strategyFactory.getStrategy(mode);
 
         log.info("aiModelConfig:{}", JSON.toJSONString(aiModelConfig.getConfig()));
@@ -163,6 +176,29 @@ public class InteractionApplicationService {
                 yield InteractionContext.forKnowledgeSearch(
                         content, knowledgeId, tenantId, searchConfig);
             }
+            case TASK_EXECUTION -> InteractionContext.forTaskExecution(
+                    content, conversationId, tenantId,
+                    TenantContext.getCurrentUserId(), emitter);
+            case ANALYSIS -> InteractionContext.forAnalysis(
+                    content, conversationId, tenantId,
+                    TenantContext.getCurrentUserId(), emitter, searchConfig);
         };
+    }
+
+    /**
+     * 校验分析推理权限 — 需具备 observability:read 或 evaluation:read 之一，否则 403.
+     * <p>
+     * 在提交异步线程前调用，避免 Sa-Token 上下文丢失。
+     */
+    private Map<String, Object> resolveAnalysisPermissions() {
+        boolean canObs = StpUtil.hasPermission("observability:read");
+        boolean canEval = StpUtil.hasPermission("evaluation:read");
+        if (!canObs && !canEval) {
+            throw new NotPermissionException("observability:read");
+        }
+        Map<String, Object> flags = new HashMap<>();
+        flags.put("canObservability", canObs);
+        flags.put("canEvaluation", canEval);
+        return flags;
     }
 }

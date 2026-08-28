@@ -42,4 +42,13 @@ public class Message {
     public void updateFeedback(FeedbackType type) {
         this.feedback = type;
     }
+
+    /** 点踩原因（存在 metadata.feedbackReason） */
+    public String getFeedbackReason() {
+        if (metadata == null) {
+            return null;
+        }
+        Object value = metadata.get("feedbackReason");
+        return value == null ? null : String.valueOf(value);
+    }
 }

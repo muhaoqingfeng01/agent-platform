@@ -84,6 +84,12 @@ public class ApprovalWorkflowRepositoryImpl implements ApprovalWorkflowRepositor
                 .map(this::toDomain).toList();
     }
 
+    @Override
+    public List<ApprovalWorkflow> findPending(Long tenantId, String userId, String conversationId, int page, int size) {
+        return mapper.selectPending(tenantId, userId, conversationId, page * size, size).stream()
+                .map(this::toDomain).toList();
+    }
+
     // ==================== 映射方法 ====================
 
     private ApprovalWorkflow toDomain(ApprovalWorkflowPO po) {

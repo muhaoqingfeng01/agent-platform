@@ -10,6 +10,7 @@ import com.example.agent.domain.task.entity.TaskExecution;
 import com.example.agent.domain.task.entity.TaskStepExecution;
 import com.example.agent.domain.task.repository.TaskExecutionRepository;
 import com.example.agent.domain.task.repository.TaskStepExecutionRepository;
+import com.example.agent.domain.task.service.DagParser;
 import com.example.agent.domain.task.valueobject.*;
 import com.example.agent.infrastructure.config.websocket.ConversationWebSocketHandler;
 import com.example.agent.infrastructure.config.websocket.WebSocketMessage;
@@ -52,7 +53,14 @@ public class DagExecutionService {
     private final TaskStepExecutionRepository stepExecutionRepository;
     private final ConversationWebSocketHandler wsHandler;
     private final ThreadPoolTaskExecutor asyncTaskExecutor;
+    private final DagParser dagParser;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /** 按 executionId 注册的 SSE/调用方进度监听器 */
+    private final ConcurrentHashMap<String, DagProgressListener> progressListeners = new ConcurrentHashMap<>();
+
+    /** 按 executionId 注册的执行完成 Future，供交互策略等待终态或审批暂停 */
+    private final ConcurrentHashMap<String, CompletableFuture<ExecutionStatus>> completionFutures = new ConcurrentHashMap<>();
 
     /**
      * DAG 节点并行执行线程池 — JDK 17 下使用固定线程池模拟并行.
@@ -70,12 +78,14 @@ public class DagExecutionService {
                                TaskExecutionRepository executionRepository,
                                TaskStepExecutionRepository stepExecutionRepository,
                                ConversationWebSocketHandler wsHandler,
-                               @Qualifier("asyncTaskExecutor") ThreadPoolTaskExecutor asyncTaskExecutor) {
+                               @Qualifier("asyncTaskExecutor") ThreadPoolTaskExecutor asyncTaskExecutor,
+                               DagParser dagParser) {
         this.handlerRegistry = handlerRegistry;
         this.executionRepository = executionRepository;
         this.stepExecutionRepository = stepExecutionRepository;
         this.wsHandler = wsHandler;
         this.asyncTaskExecutor = asyncTaskExecutor;
+        this.dagParser = dagParser;
     }
 
     /**
@@ -86,9 +96,36 @@ public class DagExecutionService {
      * @param conversationId 会话 ID（用于 WebSocket 推送）
      */
     public void execute(DagGraph graph, String executionId, String conversationId) {
-        // 在调用线程（HTTP 线程）上捕获 MDC，通过 MdcContext.wrap() 传播到工作线程
-        asyncTaskExecutor.submit(MdcContext.wrap(() ->
-                executeInternal(graph, executionId, conversationId)));
+        executeAsync(graph, executionId, conversationId, null);
+    }
+
+    /**
+     * 异步执行 DAG，并返回可等待的完成 Future.
+     * <p>终态为 COMPLETED / FAILED / CANCELLED，高风险暂停时完成值为 WAITING_APPROVAL.
+     *
+     * @param graph          已解析的 DAG 图
+     * @param executionId    执行 ID
+     * @param conversationId 会话 ID（用于 WebSocket 推送）
+     * @param listener       可选进度监听器（SSE task_step）
+     * @return 执行结束时的状态 Future
+     */
+    public CompletableFuture<ExecutionStatus> executeAsync(DagGraph graph, String executionId,
+                                                            String conversationId,
+                                                            DagProgressListener listener) {
+        CompletableFuture<ExecutionStatus> future = new CompletableFuture<>();
+        completionFutures.put(executionId, future);
+        if (listener != null) {
+            progressListeners.put(executionId, listener);
+        }
+        asyncTaskExecutor.submit(MdcContext.wrap(() -> {
+            try {
+                executeInternal(graph, executionId, conversationId);
+            } catch (Exception e) {
+                log.error("[DagExec] 异步执行未捕获异常: executionId={}", executionId, e);
+                completeExecution(executionId, ExecutionStatus.FAILED);
+            }
+        }));
+        return future;
     }
 
     /**
@@ -100,12 +137,20 @@ public class DagExecutionService {
                 graph.getTopologicalLevels() != null ? graph.getTopologicalLevels().size() : 0);
 
         try {
-            // 1. 标记执行开始
+            // 1. 标记执行开始（首次 PENDING）或接续执行（审批恢复后已是 RUNNING）
             TaskExecution execution = executionRepository.findByExecutionId(executionId)
                     .orElseThrow(() -> new BusinessException(404, "执行记录不存在: " + executionId));
-            execution.start();
-            executionRepository.update(execution);
-            pushProgress(conversationId, executionId, null, ExecutionStatus.RUNNING.name(), 0, execution.getTotalSteps());
+            if (execution.getStatus() == ExecutionStatus.PENDING) {
+                execution.start();
+                executionRepository.update(execution);
+            } else if (execution.getStatus() != ExecutionStatus.RUNNING) {
+                log.warn("[DagExec] 当前状态不可执行: executionId={}, status={}",
+                        executionId, execution.getStatus());
+                completeExecution(executionId, execution.getStatus());
+                return;
+            }
+            pushProgress(conversationId, executionId, null, null, ExecutionStatus.RUNNING.name(),
+                    0, execution.getTotalSteps(), null);
 
             // 2. 获取拓扑层级
             List<List<TaskNode>> levels = graph.getTopologicalLevels();
@@ -113,12 +158,14 @@ public class DagExecutionService {
                 log.warn("[DagExec] 拓扑层级为空，无法执行");
                 execution.fail(null, "拓扑层级为空");
                 executionRepository.markFailed(executionId, null, "拓扑层级为空");
+                completeExecution(executionId, ExecutionStatus.FAILED);
                 return;
             }
 
             // 3. 逐层执行
             Map<String, CompletableFuture<StepResult>> futures = new ConcurrentHashMap<>();
             boolean hasFailed = false;
+            boolean hasWaitingApproval = false;
             String failedStepId = null;
 
             for (int levelIdx = 0; levelIdx < levels.size(); levelIdx++) {
@@ -140,7 +187,10 @@ public class DagExecutionService {
                         StepResult result = levelFutures.get(i).get();
                         futures.put(node.getId(), CompletableFuture.completedFuture(result));
 
-                        if (result.isFailed()) {
+                        if (result.isWaitingApproval()) {
+                            hasWaitingApproval = true;
+                            log.info("[DagExec] 步骤 {} 等待审批，暂停后续层级", node.getId());
+                        } else if (result.isFailed()) {
                             hasFailed = true;
                             failedStepId = node.getId();
                             log.error("[DagExec] 步骤 {} 执行失败: {}", node.getId(), result.getErrorMessage());
@@ -165,9 +215,16 @@ public class DagExecutionService {
                             }
                         }).count();
                 executionRepository.updateProgress(executionId, completed);
-                pushProgress(conversationId, executionId, null, ExecutionStatus.RUNNING.name(), completed, execution.getTotalSteps());
+                pushProgress(conversationId, executionId, null, null, ExecutionStatus.RUNNING.name(),
+                        completed, execution.getTotalSteps(), null);
 
-                // 3e. 失败时停止后续层
+                // 3e. 等待审批：保留后续 PENDING 步骤，供审批通过后 resume
+                if (hasWaitingApproval) {
+                    log.info("[DagExec] 遇到 WAITING_APPROVAL，暂停后续层级: executionId={}", executionId);
+                    break;
+                }
+
+                // 3f. 失败时停止后续层
                 if (hasFailed) {
                     log.warn("[DagExec] 第 {} 层存在失败步骤，终止后续层级", levelIdx + 1);
                     skipRemainingLevels(levels, levelIdx + 1, executionId, futures);
@@ -177,18 +234,31 @@ public class DagExecutionService {
 
             // 4. 标记最终状态
             TaskExecution finalExec = executionRepository.findByExecutionId(executionId).orElse(null);
-            if (finalExec == null) return;
+            if (finalExec == null) {
+                completeExecution(executionId, ExecutionStatus.FAILED);
+                return;
+            }
+
+            if (hasWaitingApproval) {
+                pushProgress(conversationId, executionId, null, null, ExecutionStatus.WAITING_APPROVAL.name(),
+                        finalExec.getCompletedSteps(), finalExec.getTotalSteps(), null);
+                completeExecution(executionId, ExecutionStatus.WAITING_APPROVAL);
+                log.info("[DagExec] 执行暂停等待审批: executionId={}", executionId);
+                return;
+            }
 
             if (hasFailed) {
                 String errMsg = "步骤 " + failedStepId + " 执行失败";
                 executionRepository.markFailed(executionId, failedStepId, errMsg);
-                pushProgress(conversationId, executionId, null, ExecutionStatus.FAILED.name(),
-                        finalExec.getTotalSteps(), finalExec.getTotalSteps());
+                pushProgress(conversationId, executionId, null, null, ExecutionStatus.FAILED.name(),
+                        finalExec.getTotalSteps(), finalExec.getTotalSteps(), null);
+                completeExecution(executionId, ExecutionStatus.FAILED);
             } else {
                 finalExec.complete();
                 executionRepository.update(finalExec);
-                pushProgress(conversationId, executionId, null, ExecutionStatus.COMPLETED.name(),
-                        finalExec.getTotalSteps(), finalExec.getTotalSteps());
+                pushProgress(conversationId, executionId, null, null, ExecutionStatus.COMPLETED.name(),
+                        finalExec.getTotalSteps(), finalExec.getTotalSteps(), null);
+                completeExecution(executionId, ExecutionStatus.COMPLETED);
             }
 
             log.info("[DagExec] 执行完成: executionId={}, status={}", executionId,
@@ -201,7 +271,8 @@ public class DagExecutionService {
             } catch (Exception dbEx) {
                 log.error("[DagExec] 标记失败状态时数据库异常: executionId={}", executionId, dbEx);
             }
-            pushProgress(conversationId, executionId, null, ExecutionStatus.FAILED.name(), 0, graph.size());
+            pushProgress(conversationId, executionId, null, null, ExecutionStatus.FAILED.name(), 0, graph.size(), null);
+            completeExecution(executionId, ExecutionStatus.FAILED);
             throw new BusinessException(500, "DAG 执行异常: " + executionId, e);
         }
     }
@@ -218,7 +289,7 @@ public class DagExecutionService {
 
         // 等待该节点的所有依赖完成
         CompletableFuture<Void> depsFuture;
-        if (node.getDep().isEmpty()) {
+        if (node.getDep() == null || node.getDep().isEmpty()) {
             depsFuture = CompletableFuture.completedFuture(null);
         } else {
             CompletableFuture<?>[] depFutures = node.getDep().stream()
@@ -247,6 +318,9 @@ public class DagExecutionService {
                     }
                     // 将上游步骤结果注入当前步骤参数
                     if (depResult.getResult() != null) {
+                        if (node.getParams() == null) {
+                            node.setParams(new java.util.HashMap<>());
+                        }
                         node.getParams().put("_upstream_" + depId, depResult.getResult());
                     }
                 } catch (Exception e) {
@@ -261,15 +335,32 @@ public class DagExecutionService {
     }
 
     /**
-     * 执行单个节点 — 含参数校验、超时控制、失败重试、状态持久化.
+     * 执行单个节点 — 含参数校验、超时控制、失败重试、高风险审批暂停、状态持久化.
      */
     private StepResult executeNode(TaskNode node, String executionId, String conversationId) {
         ActionHandler handler = handlerRegistry.getHandler(node.getAction());
         String stepId = node.getId();
+        String action = node.getAction();
+        if (node.getParams() == null) {
+            node.setParams(new java.util.HashMap<>());
+        }
+
+        TaskStepExecution existing = stepExecutionRepository
+                .findByExecutionIdAndStepId(executionId, stepId)
+                .orElse(null);
+
+        // 审批恢复：已成功步骤直接复用结果，避免重跑
+        if (existing != null && existing.getStatus() == StepStatus.SUCCESS) {
+            return StepResult.success(stepId, parseOutput(existing.getOutputJson()),
+                    existing.getDurationMs() != null ? existing.getDurationMs() : 0);
+        }
+
+        // 审批恢复：当前步骤上次停在 WAITING_APPROVAL，本次直接执行（不再二次审批）
+        boolean resumeApprovedStep = existing != null && existing.getStatus() == StepStatus.WAITING_APPROVAL;
 
         // 1. 更新步骤状态为 RUNNING
         stepExecutionRepository.updateStatus(executionId, stepId, StepStatus.RUNNING);
-        pushProgress(conversationId, executionId, stepId, StepStatus.RUNNING.name(), -1, -1);
+        pushProgress(conversationId, executionId, stepId, action, StepStatus.RUNNING.name(), -1, -1, null);
 
         // 2. 参数校验
         try {
@@ -278,8 +369,14 @@ public class DagExecutionService {
             log.error("[DagExec] 步骤 {} 参数校验失败: {}", stepId, e.getMessage());
             StepResult failResult = StepResult.failed(stepId, "参数校验失败: " + e.getMessage(), 0);
             persistStepResult(executionId, stepId, failResult);
-            pushProgress(conversationId, executionId, stepId, StepStatus.FAILED.name(), -1, -1);
+            pushProgress(conversationId, executionId, stepId, action, StepStatus.FAILED.name(), -1, -1, null);
             return failResult;
+        }
+
+        // 2.1 高风险步骤：暂停等待审批（B6）。恢复执行时跳过本检查。
+        if (handler.isHighRisk() && !resumeApprovedStep) {
+            pauseForApproval(executionId, stepId, action, conversationId);
+            return StepResult.waitingApproval(stepId);
         }
 
         // 3. 执行（含超时控制）
@@ -306,10 +403,40 @@ public class DagExecutionService {
         persistStepResult(executionId, stepId, result);
 
         // 6. 推送进度
-        String wsStatus = result.getStatus().name();
-        pushProgress(conversationId, executionId, stepId, wsStatus, -1, -1);
+        pushProgress(conversationId, executionId, stepId, action, result.getStatus().name(),
+                -1, -1, result.getResult());
 
         return result;
+    }
+
+    /** 高风险步骤：将执行与步骤置为 WAITING_APPROVAL */
+    private void pauseForApproval(String executionId, String stepId, String action, String conversationId) {
+        TaskExecution execution = executionRepository.findByExecutionId(executionId)
+                .orElseThrow(() -> new BusinessException(404, "执行记录不存在: " + executionId));
+        if (execution.getStatus() == ExecutionStatus.RUNNING) {
+            try {
+                execution.waitForApproval();
+                executionRepository.update(execution);
+            } catch (IllegalStateException e) {
+                log.info("[DagExec] 执行已处于审批等待: executionId={}, msg={}", executionId, e.getMessage());
+            }
+        }
+        stepExecutionRepository.updateStatus(executionId, stepId, StepStatus.WAITING_APPROVAL);
+        pushProgress(conversationId, executionId, stepId, action, StepStatus.WAITING_APPROVAL.name(),
+                -1, -1, null);
+        log.info("[DagExec] 高风险步骤暂停等待审批: executionId={}, stepId={}, action={}",
+                executionId, stepId, action);
+    }
+
+    private Object parseOutput(String outputJson) {
+        if (outputJson == null || outputJson.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(outputJson, Object.class);
+        } catch (JsonProcessingException e) {
+            return outputJson;
+        }
     }
 
     /**
@@ -343,15 +470,16 @@ public class DagExecutionService {
                 outputJson, result.getErrorMessage(), result.getDurationMs());
     }
 
-    /** WebSocket 进度推送 — Observer 模式 */
+    /** WebSocket + 可选 SSE 进度推送 — Observer 模式 */
     private void pushProgress(String conversationId, String executionId,
-                               String stepId, String status,
-                               int completedSteps, int totalSteps) {
+                               String stepId, String action, String status,
+                               int completedSteps, int totalSteps, Object result) {
         try {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("executionId", executionId);
             payload.put("status", status);
             if (stepId != null) payload.put("stepId", stepId);
+            if (action != null) payload.put("action", action);
             if (completedSteps >= 0) payload.put("completedSteps", completedSteps);
             if (totalSteps >= 0) payload.put("totalSteps", totalSteps);
 
@@ -361,10 +489,27 @@ public class DagExecutionService {
                     .timestamp(System.currentTimeMillis())
                     .build();
 
-            // 通过 userId 推送（conversationId 映射到 userId 需业务层实现）
             wsHandler.pushMessage(conversationId, msg);
         } catch (Exception e) {
             log.warn("[DagExec] WebSocket 推送失败: executionId={}", executionId, e);
+        }
+
+        DagProgressListener listener = progressListeners.get(executionId);
+        if (listener != null) {
+            try {
+                listener.onProgress(executionId, stepId, action, status, result, completedSteps, totalSteps);
+            } catch (Exception e) {
+                log.warn("[DagExec] 进度监听器异常: executionId={}", executionId, e);
+            }
+        }
+    }
+
+    /** 完成等待方 Future 并清理监听器 */
+    private void completeExecution(String executionId, ExecutionStatus status) {
+        progressListeners.remove(executionId);
+        CompletableFuture<ExecutionStatus> future = completionFutures.remove(executionId);
+        if (future != null && !future.isDone()) {
+            future.complete(status);
         }
     }
 
@@ -380,6 +525,7 @@ public class DagExecutionService {
         execution.cancel();
         executionRepository.update(execution);
         stepExecutionRepository.batchUpdateStatusByExecutionId(executionId, StepStatus.SKIPPED);
+        completeExecution(executionId, ExecutionStatus.CANCELLED);
         log.info("[DagExec] 任务已取消: executionId={}", executionId);
     }
 
@@ -415,6 +561,7 @@ public class DagExecutionService {
                 .timestamp(System.currentTimeMillis())
                 .build();
         wsHandler.pushMessage(execution.getConversationId(), msg);
+        completeExecution(executionId, ExecutionStatus.CANCELLED);
     }
 
     /**
@@ -440,16 +587,25 @@ public class DagExecutionService {
 
         log.info("[DagExec] 任务恢复执行: executionId={}", executionId);
 
-        // 重新异步执行 DAG
+        // 用 DagParser 解析节点列表 JSON（planJson 不是 DagGraph 对象）
         try {
-            DagGraph graph = objectMapper.readValue(execution.getPlanJson(), DagGraph.class);
+            DagGraph graph = dagParser.parse(execution.getPlanJson());
             String conversationId = execution.getConversationId();
             this.execute(graph, executionId, conversationId);
-        } catch (JsonProcessingException e) {
+        } catch (Exception e) {
             log.error("[DagExec] 解析 DAG 计划失败: executionId={}", executionId, e);
             execution.fail(null, "恢复执行失败: 计划解析异常");
             executionRepository.markFailed(executionId, null, "恢复执行失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * DAG 执行进度监听器 — 供交互策略将步骤进度转为 SSE task_step.
+     */
+    @FunctionalInterface
+    public interface DagProgressListener {
+        void onProgress(String executionId, String stepId, String action, String status,
+                        Object result, int completedSteps, int totalSteps);
     }
 
     // ==================== DTOs ====================

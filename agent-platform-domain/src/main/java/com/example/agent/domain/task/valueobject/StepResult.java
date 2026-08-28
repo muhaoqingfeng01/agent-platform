@@ -77,11 +77,24 @@ public class StepResult {
                 .build();
     }
 
+    /** 高风险步骤暂停等待审批 */
+    public static StepResult waitingApproval(String stepId) {
+        return StepResult.builder()
+                .stepId(stepId)
+                .status(StepStatus.WAITING_APPROVAL)
+                .errorMessage("等待审批")
+                .build();
+    }
+
     public boolean isSuccess() {
         return this.status == StepStatus.SUCCESS;
     }
 
     public boolean isFailed() {
         return this.status == StepStatus.FAILED || this.status == StepStatus.TIMEOUT;
+    }
+
+    public boolean isWaitingApproval() {
+        return this.status == StepStatus.WAITING_APPROVAL;
     }
 }

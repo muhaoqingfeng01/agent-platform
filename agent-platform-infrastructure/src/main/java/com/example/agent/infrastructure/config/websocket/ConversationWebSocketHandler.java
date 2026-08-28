@@ -91,7 +91,16 @@ public class ConversationWebSocketHandler extends TextWebSocketHandler {
         return sessions.size();
     }
 
+    /**
+     * 解析当前连接对应用户。
+     * 浏览器原生 WebSocket 无法自定义 Header，握手拦截器已把 userId 写入 session attributes。
+     */
     private String extractUserId(WebSocketSession session) {
+        Object attrUserId = session.getAttributes().get("userId");
+        if (attrUserId != null && !attrUserId.toString().isBlank()) {
+            return attrUserId.toString();
+        }
+
         String token = session.getHandshakeHeaders().getFirst("Authorization");
         if (token != null && token.startsWith("Bearer ")) {
             try {

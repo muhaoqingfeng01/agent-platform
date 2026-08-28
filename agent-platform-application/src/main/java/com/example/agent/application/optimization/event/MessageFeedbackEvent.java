@@ -15,18 +15,26 @@ public class MessageFeedbackEvent extends ApplicationEvent {
     private final String conversationId;
     private final Long tenantId;
     private final FeedbackType feedback;
+    private final String reason;
 
     public MessageFeedbackEvent(Object source, String messageId, String conversationId,
                                  Long tenantId, FeedbackType feedback) {
+        this(source, messageId, conversationId, tenantId, feedback, null);
+    }
+
+    public MessageFeedbackEvent(Object source, String messageId, String conversationId,
+                                 Long tenantId, FeedbackType feedback, String reason) {
         super(source);
         this.messageId = messageId;
         this.conversationId = conversationId;
         this.tenantId = tenantId;
         this.feedback = feedback;
+        this.reason = reason;
     }
 
     public String getMessageId() { return messageId; }
     public String getConversationId() { return conversationId; }
     public Long getTenantId() { return tenantId; }
     public FeedbackType getFeedback() { return feedback; }
+    public String getReason() { return reason; }
 }

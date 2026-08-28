@@ -13,6 +13,8 @@ import lombok.Data;
  * <pre>
  * CONVERSATION 模式必填: conversationId, content
  * KNOWLEDGE_SEARCH 模式必填: conversationId, content, 可选 knowledgeId
+ * TASK_EXECUTION 模式必填: conversationId, content
+ * ANALYSIS 模式必填: conversationId, content（需 observability:read 或 evaluation:read）
  * </pre>
  *
  * @author Agent Platform Team
@@ -30,7 +32,7 @@ public class MessageSendRequest {
     @Schema(description = "消息内容", requiredMode = Schema.RequiredMode.REQUIRED)
     private String content;
 
-    @Schema(description = "交互模式: CONVERSATION(智能对话，默认) | KNOWLEDGE_SEARCH(知识库检索)",
+    @Schema(description = "交互模式: CONVERSATION(智能对话，默认) | KNOWLEDGE_SEARCH(知识库检索) | TASK_EXECUTION(任务执行) | ANALYSIS(分析推理)",
             example = "CONVERSATION", defaultValue = "CONVERSATION")
     private String mode;
 

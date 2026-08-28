@@ -48,7 +48,18 @@
 
     <update id="updateFeedback">
         UPDATE t_message
-        SET feedback = #{feedback}
+        SET feedback = #{feedback, jdbcType=VARCHAR}
+        <choose>
+            <when test="clearReason">
+                , metadata_json = CASE
+                    WHEN metadata_json IS NULL OR metadata_json = '' THEN metadata_json
+                    ELSE JSON_REMOVE(metadata_json, '$.feedbackReason')
+                  END
+            </when>
+            <when test="reason != null and reason != ''">
+                , metadata_json = JSON_SET(IFNULL(metadata_json, '{}'), '$.feedbackReason', #{reason})
+            </when>
+        </choose>
         WHERE message_id = #{messageId}
     </update>
 

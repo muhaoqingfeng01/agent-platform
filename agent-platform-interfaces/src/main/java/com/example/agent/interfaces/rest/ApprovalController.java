@@ -1,5 +1,6 @@
 package com.example.agent.interfaces.rest;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.approval.ApprovalWorkflowApplicationService;
 import com.example.agent.application.approval.dto.ApprovalListResponse;
 import com.example.agent.application.approval.dto.ApprovalStatsResponse;
@@ -10,6 +11,7 @@ import com.example.agent.interfaces.dto.request.approval.ApprovalListRequest;
 import com.example.agent.interfaces.dto.request.approval.ApprovalGetRequest;
 import com.example.agent.interfaces.dto.request.approval.ApprovalApproveRequest;
 import com.example.agent.interfaces.dto.request.approval.ApprovalRejectRequest;
+import com.example.agent.interfaces.dto.request.approval.ApprovalPendingRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -35,6 +37,7 @@ public class ApprovalController {
     private final ApprovalWorkflowApplicationService approvalService;
 
     @PostMapping("/list")
+    @SaCheckPermission("approval:read")
     @Operation(summary = "审批列表（我的待审批/我已审批/我发起的）")
     public Result<ApprovalListResponse> list(@RequestBody ApprovalListRequest request) {
         return ResultRespHelper.responseInvoke("ApprovalController.list", request, (req) -> {
@@ -49,7 +52,32 @@ public class ApprovalController {
         });
     }
 
+    @GetMapping("/pending")
+    @SaCheckPermission("approval:read")
+    @Operation(summary = "当前用户可见的待审批工单（断线重连补聊天卡片）")
+    public Result<ApprovalListResponse> pendingGet(
+            @RequestParam(required = false) String conversationId) {
+        ApprovalPendingRequest request = new ApprovalPendingRequest();
+        request.setConversationId(conversationId);
+        return pending(request);
+    }
+
+    @PostMapping("/pending")
+    @SaCheckPermission("approval:read")
+    @Operation(summary = "当前用户可见的待审批工单（POST，与其它审批接口风格一致）")
+    public Result<ApprovalListResponse> pendingPost(@RequestBody(required = false) ApprovalPendingRequest request) {
+        return pending(request != null ? request : new ApprovalPendingRequest());
+    }
+
+    private Result<ApprovalListResponse> pending(ApprovalPendingRequest request) {
+        return ResultRespHelper.responseInvoke("ApprovalController.pending", request, (req) ->
+                ApprovalListResponse.builder()
+                        .records(approvalService.listPending(req.getConversationId()))
+                        .build());
+    }
+
     @PostMapping("/get")
+    @SaCheckPermission("approval:read")
     @Operation(summary = "审批详情")
     public Result<ApprovalWorkflowResponse> getById(@Valid @RequestBody ApprovalGetRequest request) {
         return ResultRespHelper.responseInvoke("ApprovalController.getById", request, (req) ->
@@ -57,6 +85,7 @@ public class ApprovalController {
     }
 
     @PostMapping("/approve")
+    @SaCheckPermission("approval:approve")
     @Operation(summary = "同意审批")
     public Result<ApprovalWorkflowResponse> approve(@Valid @RequestBody ApprovalApproveRequest request) {
         return ResultRespHelper.responseInvoke("ApprovalController.approve", request, (req) ->
@@ -64,6 +93,7 @@ public class ApprovalController {
     }
 
     @PostMapping("/reject")
+    @SaCheckPermission("approval:approve")
     @Operation(summary = "拒绝审批")
     public Result<ApprovalWorkflowResponse> reject(@Valid @RequestBody ApprovalRejectRequest request) {
         return ResultRespHelper.responseInvoke("ApprovalController.reject", request, (req) ->
@@ -71,6 +101,7 @@ public class ApprovalController {
     }
 
     @PostMapping("/stats")
+    @SaCheckPermission("approval:read")
     @Operation(summary = "审批统计")
     public Result<ApprovalStatsResponse> stats() {
         return ResultRespHelper.responseInvoke("ApprovalController.stats", null, (req) ->

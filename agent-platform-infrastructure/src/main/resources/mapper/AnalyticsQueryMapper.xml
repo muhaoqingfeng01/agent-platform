@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.AnalyticsQueryMapper">
+
+    <!-- 知识库命中汇总 -->
+    <select id="selectHitRateSummary" resultType="map">
+        SELECT COUNT(1) AS totalHits,
+               COALESCE(SUM(CASE WHEN used_in_prompt = 1 THEN 1 ELSE 0 END), 0) AS usedInPromptCount
+        FROM t_knowledge_hit_record
+        WHERE tenant_id = #{tenantId}
+          AND created_at &gt;= #{from}
+          AND created_at &lt;= #{to}
+    </select>
+
+    <!-- 按日命中趋势 -->
+    <select id="selectHitRateDaily" resultType="map">
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS day,
+               COUNT(1) AS hitCount,
+               COALESCE(SUM(CASE WHEN used_in_prompt = 1 THEN 1 ELSE 0 END), 0) AS usedInPromptCount
+        FROM t_knowledge_hit_record
+        WHERE tenant_id = #{tenantId}
+          AND created_at &gt;= #{from}
+          AND created_at &lt;= #{to}
+        GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
+        ORDER BY day ASC
+    </select>
+
+    <!-- 消息反馈分布（JOIN 会话以隔离租户） -->
+    <select id="selectFeedbackDist" resultType="map">
+        SELECT m.feedback AS feedback,
+               COUNT(1) AS cnt
+        FROM t_message m
+        INNER JOIN t_conversation c ON m.conversation_id = c.conversation_id
+        WHERE c.tenant_id = #{tenantId}
+          AND c.deleted = 0
+          AND m.feedback IS NOT NULL
+          AND m.feedback != ''
+          AND m.created_at &gt;= #{from}
+          AND m.created_at &lt;= #{to}
+        GROUP BY m.feedback
+        ORDER BY cnt DESC
+    </select>
+
+    <!-- 评估 run 总体 -->
+    <select id="selectEvalOverall" resultType="map">
+        SELECT COUNT(1) AS runCount,
+               COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END), 0) AS completedCount,
+               COALESCE(SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END), 0) AS failedCount,
+               AVG(overall_score) AS avgOverallScore
+        FROM t_evaluation_run
+        WHERE tenant_id = #{tenantId}
+          AND created_at &gt;= #{from}
+          AND created_at &lt;= #{to}
+    </select>
+
+</mapper>

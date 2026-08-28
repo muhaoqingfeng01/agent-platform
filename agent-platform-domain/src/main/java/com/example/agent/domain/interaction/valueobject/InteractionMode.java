@@ -27,7 +27,13 @@ public enum InteractionMode {
     CONVERSATION("CONVERSATION", "智能对话"),
 
     /** 知识库检索 — 向量检索 + 关键词检索 + RRF 融合 + Reranker 精排 */
-    KNOWLEDGE_SEARCH("KNOWLEDGE_SEARCH", "知识库检索");
+    KNOWLEDGE_SEARCH("KNOWLEDGE_SEARCH", "知识库检索"),
+
+    /** 任务执行 — 自然语言规划 DAG 并流式推送步骤进度 */
+    TASK_EXECUTION("TASK_EXECUTION", "任务执行"),
+
+    /** 分析推理 — 只读查询本平台指标后生成简报（不得编造数字） */
+    ANALYSIS("ANALYSIS", "分析推理");
 
     private final String code;
     private final String desc;
@@ -48,6 +54,7 @@ public enum InteractionMode {
                 return e;
             }
         }
-        throw new IllegalArgumentException("不支持的交互模式: " + code + "，可用值: CONVERSATION, KNOWLEDGE_SEARCH");
+        throw new IllegalArgumentException("不支持的交互模式: " + code
+                + "，可用值: CONVERSATION, KNOWLEDGE_SEARCH, TASK_EXECUTION, ANALYSIS");
     }
 }

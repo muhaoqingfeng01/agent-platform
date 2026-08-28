@@ -102,4 +102,22 @@
         LIMIT #{size} OFFSET #{offset}
     </select>
 
+    <!-- 断线重连 / 聊天补卡片：待审批列表 -->
+    <select id="selectPending" resultMap="ApprovalWorkflowPOMap">
+        SELECT *
+        FROM t_approval_workflow
+        WHERE tenant_id = #{tenantId}
+          AND status = 'PENDING'
+        <choose>
+            <when test="conversationId != null and conversationId != ''">
+                AND conversation_id = #{conversationId}
+            </when>
+            <otherwise>
+                AND (approver_id IS NULL OR approver_id = #{userId})
+            </otherwise>
+        </choose>
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
 </mapper>

@@ -7,6 +7,7 @@ import com.example.agent.application.task.DagExecutionService;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.common.exception.ResourceNotFoundException;
 import com.example.agent.common.util.IdGenerator;
+import com.example.agent.common.util.TimeConverters;
 import com.example.agent.domain.security.entity.ApprovalWorkflow;
 import com.example.agent.domain.security.repository.ApprovalWorkflowRepository;
 import com.example.agent.domain.security.valueobject.ApprovalStatus;
@@ -18,6 +19,7 @@ import com.example.agent.infrastructure.config.websocket.WebSocketMessage;
 import com.example.agent.infrastructure.config.websocket.WebSocketMessageType;
 import com.example.agent.infrastructure.context.TenantContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -107,6 +109,46 @@ public class ApprovalWorkflowApplicationService {
     }
 
     /**
+     * 为 DAG 高风险步骤创建审批工单（不依赖工具注册表）.
+     * <p>toolId 字段写入动作类型，供卡片展示与审计。
+     */
+    @Transactional
+    public ApprovalWorkflowResponse createActionApproval(String executionId, String conversationId,
+                                                         String actionType, String stepId,
+                                                         Map<String, Object> params) {
+        Long tenantId = TenantContext.getCurrentTenantId();
+        String requesterId = TenantContext.getCurrentUserId();
+        String action = actionType != null ? actionType : "unknown_action";
+
+        String operationDetail = buildOperationDetail(action, params != null ? params : Map.of(), "HIGH");
+        String approverId = assignApprover(tenantId);
+
+        ApprovalWorkflow approval = ApprovalWorkflow.builder()
+                .approvalId(IdGenerator.generate("appr"))
+                .tenantId(tenantId)
+                .toolId(action)
+                .conversationId(conversationId)
+                .executionId(executionId)
+                .requesterId(requesterId)
+                .approverId(approverId)
+                .title("任务步骤审批: " + action + "（步骤 " + stepId + "）")
+                .operationDetail(operationDetail)
+                .status(ApprovalStatus.PENDING)
+                .timeoutAt(LocalDateTime.now().plusMinutes(securityConfig.getApprovalTimeoutMinutes()))
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        approvalRepository.save(approval);
+
+        log.info("[Approval] DAG 步骤审批工单已创建: approvalId={}, executionId={}, stepId={}, action={}",
+                approval.getApprovalId(), executionId, stepId, action);
+
+        pushApprovalCard(approval);
+        return ApprovalWorkflowResponse.from(approval);
+    }
+
+    /**
      * 同意审批.
      *
      * @param approvalId 审批 ID
@@ -126,12 +168,14 @@ public class ApprovalWorkflowApplicationService {
 
         log.info("[Approval] 审批已同意: approvalId={}, comment={}", approvalId, comment);
 
-        // 回调执行引擎继续执行
-        try {
-            dagExecutor.resumeExecution(approval.getExecutionId());
-        } catch (Exception e) {
-            log.error("[Approval] 恢复执行失败: executionId={}", approval.getExecutionId(), e);
-            throw new BusinessException(500, "恢复执行失败: " + approval.getExecutionId(), e);
+        // 回调执行引擎继续执行（B6 未接线时 executionId 可为空）
+        if (approval.getExecutionId() != null && !approval.getExecutionId().isBlank()) {
+            try {
+                dagExecutor.resumeExecution(approval.getExecutionId());
+            } catch (Exception e) {
+                log.error("[Approval] 恢复执行失败: executionId={}", approval.getExecutionId(), e);
+                throw new BusinessException(500, "恢复执行失败: " + approval.getExecutionId(), e);
+            }
         }
 
         // 推送审批结果
@@ -155,17 +199,20 @@ public class ApprovalWorkflowApplicationService {
             throw new BusinessException(409, "工单状态不是 PENDING，无法审批: " + approval.getStatus());
         }
 
-        approval.reject(reason);
+        String rejectReason = reason == null || reason.isBlank() ? "拒绝" : reason;
+        approval.reject(rejectReason);
         approvalRepository.update(approval);
 
-        log.info("[Approval] 审批已拒绝: approvalId={}, reason={}", approvalId, reason);
+        log.info("[Approval] 审批已拒绝: approvalId={}, reason={}", approvalId, rejectReason);
 
-        // 终止任务
-        try {
-            dagExecutor.cancelExecution(approval.getExecutionId(), "审批拒绝: " + reason);
-        } catch (Exception e) {
-            log.error("[Approval] 取消执行失败: executionId={}", approval.getExecutionId(), e);
-            throw new BusinessException(500, "取消执行失败: " + approval.getExecutionId(), e);
+        // 终止任务（B6 未接线时 executionId 可为空）
+        if (approval.getExecutionId() != null && !approval.getExecutionId().isBlank()) {
+            try {
+                dagExecutor.cancelExecution(approval.getExecutionId(), "审批拒绝: " + rejectReason);
+            } catch (Exception e) {
+                log.error("[Approval] 取消执行失败: executionId={}", approval.getExecutionId(), e);
+                throw new BusinessException(500, "取消执行失败: " + approval.getExecutionId(), e);
+            }
         }
 
         // 推送审批结果
@@ -176,17 +223,31 @@ public class ApprovalWorkflowApplicationService {
 
     // ==================== 查询方法 ====================
 
+    /**
+     * 当前用户可见的待审批工单（断线重连补卡片）.
+     *
+     * @param conversationId 可选；传入则只返回该会话下 PENDING
+     */
+    public List<ApprovalWorkflowResponse> listPending(String conversationId) {
+        Long tenantId = TenantContext.getCurrentTenantId();
+        String userId = TenantContext.getCurrentUserId();
+        return approvalRepository.findPending(tenantId, userId, conversationId, 0, 100).stream()
+                .map(ApprovalWorkflowResponse::from)
+                .toList();
+    }
+
     /** 我的待审批 */
     public List<ApprovalWorkflowResponse> listPendingByApprover(String approverId, int page, int size) {
-        return approvalRepository.findByApprover(approverId, page, size).stream()
-                .filter(ApprovalWorkflow::isPending)
+        String userId = resolveUserId(approverId);
+        Long tenantId = TenantContext.getCurrentTenantId();
+        return approvalRepository.findPending(tenantId, userId, null, page, size).stream()
                 .map(ApprovalWorkflowResponse::from)
                 .toList();
     }
 
     /** 我的已审批 */
     public List<ApprovalWorkflowResponse> listResolvedByApprover(String approverId, int page, int size) {
-        return approvalRepository.findByApprover(approverId, page, size).stream()
+        return approvalRepository.findByApprover(resolveUserId(approverId), page, size).stream()
                 .filter(ApprovalWorkflow::isFinished)
                 .map(ApprovalWorkflowResponse::from)
                 .toList();
@@ -194,7 +255,7 @@ public class ApprovalWorkflowApplicationService {
 
     /** 我发起的 */
     public List<ApprovalWorkflowResponse> listByRequester(String requesterId, int page, int size) {
-        return approvalRepository.findByRequester(requesterId, page, size).stream()
+        return approvalRepository.findByRequester(resolveUserId(requesterId), page, size).stream()
                 .map(ApprovalWorkflowResponse::from)
                 .toList();
     }
@@ -258,27 +319,29 @@ public class ApprovalWorkflowApplicationService {
         return null;
     }
 
+    /** 未显式传入时使用当前登录用户 */
+    private String resolveUserId(String explicitId) {
+        if (explicitId != null && !explicitId.isBlank()) {
+            return explicitId;
+        }
+        return TenantContext.getCurrentUserId();
+    }
+
     /** WebSocket 推送审批卡片 */
     private void pushApprovalCard(ApprovalWorkflow approval) {
         try {
-            Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("approvalId", approval.getApprovalId());
-            payload.put("title", approval.getTitle());
-            payload.put("toolId", approval.getToolId());
-            payload.put("requesterId", approval.getRequesterId());
-            payload.put("status", approval.getStatus().name());
-            payload.put("timeoutAt", approval.getTimeoutAt().toString());
-            payload.put("operationDetail", approval.getOperationDetail());
-
             WebSocketMessage msg = WebSocketMessage.builder()
                     .type(WebSocketMessageType.APPROVAL_CARD)
-                    .payload(payload)
+                    .payload(buildCardPayload(approval))
                     .timestamp(System.currentTimeMillis())
                     .build();
 
-            // 推送给指定审批人或广播给所有在线用户
             if (approval.getApproverId() != null) {
                 wsHandler.pushMessage(approval.getApproverId(), msg);
+                if (approval.getRequesterId() != null
+                        && !approval.getRequesterId().equals(approval.getApproverId())) {
+                    wsHandler.pushMessage(approval.getRequesterId(), msg);
+                }
             } else {
                 wsHandler.broadcast(msg);
             }
@@ -289,33 +352,102 @@ public class ApprovalWorkflowApplicationService {
         }
     }
 
-    /** WebSocket 推送审批结果 */
-    private void pushResult(ApprovalWorkflow approval, String result) {
+    /** WebSocket 推送审批结果（同意 / 拒绝 / 超时） */
+    public void pushResult(ApprovalWorkflow approval, String result) {
         try {
-            Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("approvalId", approval.getApprovalId());
-            payload.put("result", result);
-            payload.put("comment", approval.getApproveComment());
-            payload.put("approvedAt", approval.getApprovedAt() != null
-                    ? approval.getApprovedAt().toString() : null);
-
             WebSocketMessage msg = WebSocketMessage.builder()
                     .type(WebSocketMessageType.APPROVAL_RESULT)
-                    .payload(payload)
+                    .payload(buildResultPayload(approval, result))
                     .timestamp(System.currentTimeMillis())
                     .build();
 
-            // 通知请求人
-            wsHandler.pushMessage(approval.getRequesterId(), msg);
-
-            // 如果是指定审批人，也通知审批人
             if (approval.getApproverId() != null) {
+                if (approval.getRequesterId() != null) {
+                    wsHandler.pushMessage(approval.getRequesterId(), msg);
+                }
                 wsHandler.pushMessage(approval.getApproverId(), msg);
+            } else {
+                // 建单时广播了卡片，结果也必须广播，否则其它在线端按钮不会禁用
+                wsHandler.broadcast(msg);
             }
 
             log.debug("[Approval] 审批结果已推送: approvalId={}, result={}", approval.getApprovalId(), result);
         } catch (Exception e) {
             log.error("[Approval] 结果推送失败: approvalId={}", approval.getApprovalId(), e);
         }
+    }
+
+    private Map<String, Object> buildCardPayload(ApprovalWorkflow approval) {
+        Map<String, Object> detailMap = parseOperationDetail(approval.getOperationDetail());
+        String riskLevel = String.valueOf(detailMap.getOrDefault("riskLevel", "HIGH")).toLowerCase();
+        long remaining = approval.isPending()
+                ? java.time.Duration.between(java.time.LocalDateTime.now(), approval.getTimeoutAt()).getSeconds()
+                : 0;
+        int timeoutSeconds = securityConfig.getApprovalTimeoutMinutes() * 60;
+        Object timeoutMinutes = detailMap.get("timeoutMinutes");
+        if (timeoutMinutes instanceof Number n) {
+            timeoutSeconds = n.intValue() * 60;
+        }
+
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("toolName", detailMap.getOrDefault("toolName", approval.getToolId()));
+        metadata.put("toolParams", detailMap.getOrDefault("params", Map.of()));
+        metadata.put("affectedResources", detailMap.getOrDefault("affectedResources", List.of()));
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("approvalId", approval.getApprovalId());
+        payload.put("conversationId", approval.getConversationId());
+        payload.put("executionId", approval.getExecutionId());
+        payload.put("title", approval.getTitle());
+        payload.put("detail", buildReadableDetail(approval, detailMap));
+        payload.put("riskLevel", riskLevel);
+        payload.put("requestedBy", approval.getRequesterId());
+        payload.put("options", List.of("同意", "拒绝"));
+        payload.put("timeout", timeoutSeconds);
+        payload.put("remainingSeconds", Math.max(0, remaining));
+        payload.put("timeoutAt", TimeConverters.toEpochMilli(approval.getTimeoutAt()));
+        payload.put("createdAt", TimeConverters.toEpochMilli(approval.getCreatedAt()));
+        payload.put("status", approval.getStatus().name());
+        payload.put("toolId", approval.getToolId());
+        payload.put("operationDetail", approval.getOperationDetail());
+        payload.put("metadata", metadata);
+        return payload;
+    }
+
+    private Map<String, Object> buildResultPayload(ApprovalWorkflow approval, String result) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("approvalId", approval.getApprovalId());
+        payload.put("conversationId", approval.getConversationId());
+        payload.put("result", result);
+        payload.put("status", result);
+        payload.put("comment", approval.getApproveComment());
+        payload.put("approvedAt", TimeConverters.toEpochMilli(approval.getApprovedAt()));
+        payload.put("toolId", approval.getToolId());
+        return payload;
+    }
+
+    private Map<String, Object> parseOperationDetail(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<>() {});
+        } catch (Exception e) {
+            log.warn("[Approval] 解析 operationDetail 失败", e);
+            return Map.of();
+        }
+    }
+
+    private String buildReadableDetail(ApprovalWorkflow approval, Map<String, Object> detailMap) {
+        Object toolName = detailMap.get("toolName");
+        Object params = detailMap.get("params");
+        if (toolName != null && params != null) {
+            return "即将调用工具 [" + toolName + "]，参数: " + params;
+        }
+        if (approval.getOperationDetail() != null && !approval.getOperationDetail().isBlank()
+                && !approval.getOperationDetail().startsWith("{")) {
+            return approval.getOperationDetail();
+        }
+        return approval.getTitle();
     }
 }

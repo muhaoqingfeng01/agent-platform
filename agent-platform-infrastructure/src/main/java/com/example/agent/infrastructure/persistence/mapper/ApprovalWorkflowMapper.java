@@ -45,4 +45,11 @@ public interface ApprovalWorkflowMapper {
                                                       @Param("status") String status,
                                                       @Param("offset") int offset,
                                                       @Param("size") int size);
+
+    /** 当前用户可见的待审批工单 */
+    List<ApprovalWorkflowPO> selectPending(@Param("tenantId") Long tenantId,
+                                           @Param("userId") String userId,
+                                           @Param("conversationId") String conversationId,
+                                           @Param("offset") int offset,
+                                           @Param("size") int size);
 }

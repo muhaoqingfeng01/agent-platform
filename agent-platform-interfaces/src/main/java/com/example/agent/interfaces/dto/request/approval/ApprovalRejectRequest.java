@@ -18,7 +18,6 @@ public class ApprovalRejectRequest {
     @Schema(description = "审批ID")
     private String approvalId;
 
-    @NotBlank(message = "拒绝原因不能为空")
-    @Schema(description = "拒绝原因", example = "参数异常，拒绝执行")
+    @Schema(description = "拒绝原因，可空，默认「拒绝」", example = "参数异常，拒绝执行")
     private String reason;
 }

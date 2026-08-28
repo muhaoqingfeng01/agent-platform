@@ -13,6 +13,10 @@ public class MessageFeedbackRequest {
     @NotBlank(message = "消息ID不能为空")
     @Schema(description = "消息ID")
     private String msgId;
-    @Schema(description = "反馈类型")
+    @NotBlank(message = "反馈类型不能为空")
+    @Schema(description = "反馈类型: LIKE / DISLIKE / NONE（取消）")
     private String feedback;
+
+    @Schema(description = "点踩原因: 不准确 / 不完整 / 不安全 / 其他（点踩时建议填写）")
+    private String reason;
 }
