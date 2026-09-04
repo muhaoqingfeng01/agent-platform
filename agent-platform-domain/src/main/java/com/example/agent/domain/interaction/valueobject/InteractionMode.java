@@ -33,7 +33,10 @@ public enum InteractionMode {
     TASK_EXECUTION("TASK_EXECUTION", "任务执行"),
 
     /** 分析推理 — 只读查询本平台指标后生成简报（不得编造数字） */
-    ANALYSIS("ANALYSIS", "分析推理");
+    ANALYSIS("ANALYSIS", "分析推理"),
+
+    /** 安全审批 — 对话内解析同意/拒绝/查看待办，写操作落到现有审批工作流 */
+    APPROVAL("APPROVAL", "安全审批");
 
     private final String code;
     private final String desc;
@@ -55,6 +58,6 @@ public enum InteractionMode {
             }
         }
         throw new IllegalArgumentException("不支持的交互模式: " + code
-                + "，可用值: CONVERSATION, KNOWLEDGE_SEARCH, TASK_EXECUTION, ANALYSIS");
+                + "，可用值: CONVERSATION, KNOWLEDGE_SEARCH, TASK_EXECUTION, ANALYSIS, APPROVAL");
     }
 }

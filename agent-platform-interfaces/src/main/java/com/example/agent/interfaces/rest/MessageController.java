@@ -31,7 +31,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * 消息收发 Controller — 纯粹 HTTP 适配层.
  * <p>
  * 流式端点统一通过 {@link InteractionApplicationService} 路由到对应交互策略，
- * 支持 CONVERSATION（智能对话）、KNOWLEDGE_SEARCH（知识库检索）、TASK_EXECUTION（任务执行）、ANALYSIS（分析推理）。
+ * 支持 CONVERSATION（智能对话）、KNOWLEDGE_SEARCH（知识库检索）、TASK_EXECUTION（任务执行）、ANALYSIS（分析推理）、APPROVAL（安全审批）。
  * 新增模式只需在策略层注册，Controller 无需改动。
  *
  * @author Agent Platform Team
@@ -59,7 +59,7 @@ public class MessageController {
     @PostMapping(value = "/api/v1/conversations/messages/stream",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @SaCheckPermission("conversation:send")
-    @Operation(summary = "发送消息（SSE 流式）— 支持 CONVERSATION / KNOWLEDGE_SEARCH / TASK_EXECUTION / ANALYSIS")
+    @Operation(summary = "发送消息（SSE 流式）— 支持 CONVERSATION / KNOWLEDGE_SEARCH / TASK_EXECUTION / ANALYSIS / APPROVAL")
     public SseEmitter streamChat(@Valid @RequestBody MessageSendRequest request,
                                  HttpServletResponse response) {
         SseEmitter emitter = SseEmitterFactory.create(300_000L, response);

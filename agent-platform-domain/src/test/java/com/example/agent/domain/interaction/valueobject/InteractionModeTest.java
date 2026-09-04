@@ -26,11 +26,18 @@ class InteractionModeTest {
     }
 
     @Test
+    void fromCode_approval() {
+        assertEquals(InteractionMode.APPROVAL, InteractionMode.fromCode("APPROVAL"));
+        assertEquals(InteractionMode.APPROVAL, InteractionMode.fromCode("approval"));
+        assertEquals("安全审批", InteractionMode.APPROVAL.getDesc());
+    }
+
+    @Test
     void fromCode_invalid_throwsIllegalArgument() {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> InteractionMode.fromCode("NOT_A_MODE"));
         assertTrue(ex.getMessage().contains("不支持的交互模式"));
-        assertTrue(ex.getMessage().contains("ANALYSIS"));
+        assertTrue(ex.getMessage().contains("APPROVAL"));
     }
 
     @Test

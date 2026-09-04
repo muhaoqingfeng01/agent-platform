@@ -24,6 +24,7 @@ public final class SseEventFactory {
     public static final String EVENT_TASK_PLAN = "task_plan";
     public static final String EVENT_TASK_STEP = "task_step";
     public static final String EVENT_APPROVAL_REQUIRED = "approval_required";
+    public static final String EVENT_APPROVAL_LIST = "approval_list";
     public static final String EVENT_ANALYSIS_TABLE = "analysis_table";
 
     private SseEventFactory() {}
@@ -133,6 +134,22 @@ public final class SseEventFactory {
         return SseEmitter.event()
                 .id(UUID.randomUUID().toString())
                 .name(EVENT_APPROVAL_REQUIRED)
+                .data(payload);
+    }
+
+    /**
+     * 待审批列表事件 — 安全审批模式推送多张卡片数据，前端可 upsert 审批气泡.
+     *
+     * @param items 待办工单列表（与 ApprovalWorkflowResponse 字段对齐的 Map/DTO）
+     * @param count 条数
+     */
+    public static SseEmitter.SseEventBuilder approvalList(Object items, int count) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("count", count);
+        payload.put("items", items != null ? items : java.util.List.of());
+        return SseEmitter.event()
+                .id(UUID.randomUUID().toString())
+                .name(EVENT_APPROVAL_LIST)
                 .data(payload);
     }
 

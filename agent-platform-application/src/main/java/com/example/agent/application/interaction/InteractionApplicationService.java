@@ -69,6 +69,16 @@ public class InteractionApplicationService {
             throw new BusinessException(400, "分析推理模式请使用流式端点");
         }
 
+        // APPROVAL 支持同步 list/approve/reject；权限须在 HTTP 线程校验
+        Map<String, Object> approvalFlags = null;
+        if (mode == InteractionMode.APPROVAL) {
+            approvalFlags = resolveApprovalPermissions();
+            if (searchConfig != null && !searchConfig.isEmpty()) {
+                approvalFlags.putAll(searchConfig);
+            }
+            searchConfig = approvalFlags;
+        }
+
         InteractionContext context = buildContext(mode, content, conversationId,
                 knowledgeId, searchConfig, null);
         InteractionStrategy strategy = strategyFactory.getStrategy(mode);
@@ -101,14 +111,16 @@ public class InteractionApplicationService {
                                String knowledgeId, SseEmitter emitter) {
         InteractionMode mode = resolveMode(modeCode);
 
-        // 分析推理需在 HTTP 线程校验权限（Sa-Token ThreadLocal 不进线程池）
-        Map<String, Object> analysisFlags = null;
+        // 分析推理 / 安全审批需在 HTTP 线程校验权限（Sa-Token ThreadLocal 不进线程池）
+        Map<String, Object> modeFlags = null;
         if (mode == InteractionMode.ANALYSIS) {
-            analysisFlags = resolveAnalysisPermissions();
+            modeFlags = resolveAnalysisPermissions();
+        } else if (mode == InteractionMode.APPROVAL) {
+            modeFlags = resolveApprovalPermissions();
         }
 
         InteractionContext context = buildContext(mode, content, conversationId,
-                knowledgeId, analysisFlags, emitter);
+                knowledgeId, modeFlags, emitter);
         InteractionStrategy strategy = strategyFactory.getStrategy(mode);
 
         log.info("aiModelConfig:{}", JSON.toJSONString(aiModelConfig.getConfig()));
@@ -182,6 +194,9 @@ public class InteractionApplicationService {
             case ANALYSIS -> InteractionContext.forAnalysis(
                     content, conversationId, tenantId,
                     TenantContext.getCurrentUserId(), emitter, searchConfig);
+            case APPROVAL -> InteractionContext.forApproval(
+                    content, conversationId, tenantId,
+                    TenantContext.getCurrentUserId(), emitter, searchConfig);
         };
     }
 
@@ -199,6 +214,24 @@ public class InteractionApplicationService {
         Map<String, Object> flags = new HashMap<>();
         flags.put("canObservability", canObs);
         flags.put("canEvaluation", canEval);
+        return flags;
+    }
+
+    /**
+     * 校验安全审批权限 — 需具备 approval:read 或 approval:approve 之一，否则 403.
+     * <p>
+     * 设计方案中的 {@code approval:write} 对应本系统权限码 {@code approval:approve}。
+     * 同意/拒绝由策略内再次校验 {@code canApprove}。
+     */
+    private Map<String, Object> resolveApprovalPermissions() {
+        boolean canRead = StpUtil.hasPermission("approval:read");
+        boolean canApprove = StpUtil.hasPermission("approval:approve");
+        if (!canRead && !canApprove) {
+            throw new NotPermissionException("approval:read");
+        }
+        Map<String, Object> flags = new HashMap<>();
+        flags.put("canRead", canRead);
+        flags.put("canApprove", canApprove);
         return flags;
     }
 }

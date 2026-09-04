@@ -18,6 +18,7 @@ import java.util.Map;
  *   KNOWLEDGE_SEARCH 流式模式使用: userInput, conversationId, knowledgeId, tenantId, userId, emitter
  *   TASK_EXECUTION 流式模式使用: userInput, conversationId, tenantId, userId, emitter
  *   ANALYSIS 流式模式使用: userInput, conversationId, tenantId, userId, emitter, searchConfig(权限标记)
+ *   APPROVAL 模式使用: userInput, conversationId, tenantId, userId, emitter(流式), searchConfig(权限标记)
  * </pre>
  *
  * @author Agent Platform Team
@@ -117,6 +118,27 @@ public class InteractionContext {
                                                   Map<String, Object> searchConfig) {
         return InteractionContext.builder()
                 .mode(InteractionMode.ANALYSIS)
+                .userInput(userInput)
+                .conversationId(conversationId)
+                .tenantId(tenantId)
+                .userId(userId)
+                .emitter(emitter)
+                .searchConfig(searchConfig)
+                .build();
+    }
+
+    /**
+     * 创建安全审批模式的上下文.
+     * <p>
+     * {@code searchConfig} 携带权限标记（{@code canRead} / {@code canApprove}），
+     * 供策略在异步线程中决定可读列表或可否同意/拒绝。
+     * 同步 list 可不传 emitter。
+     */
+    public static InteractionContext forApproval(String userInput, String conversationId,
+                                                  Long tenantId, String userId, Object emitter,
+                                                  Map<String, Object> searchConfig) {
+        return InteractionContext.builder()
+                .mode(InteractionMode.APPROVAL)
                 .userInput(userInput)
                 .conversationId(conversationId)
                 .tenantId(tenantId)
