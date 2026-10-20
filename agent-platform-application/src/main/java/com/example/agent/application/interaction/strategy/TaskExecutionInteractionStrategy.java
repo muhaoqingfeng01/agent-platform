@@ -2,11 +2,14 @@ package com.example.agent.application.interaction.strategy;
 
 import com.example.agent.application.approval.ApprovalWorkflowApplicationService;
 import com.example.agent.application.approval.dto.ApprovalWorkflowResponse;
+import com.example.agent.application.checkpoint.CheckpointService;
 import com.example.agent.application.conversation.MessageApplicationService;
 import com.example.agent.application.task.DagExecutionService;
 import com.example.agent.application.task.TaskPlanningService;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.domain.conversation.entity.Message;
+import com.example.agent.domain.conversation.valueobject.AgentPhase;
+import com.example.agent.domain.conversation.valueobject.SlotCollection;
 import com.example.agent.domain.interaction.service.InteractionStrategy;
 import com.example.agent.domain.interaction.valueobject.InteractionContext;
 import com.example.agent.domain.interaction.valueobject.InteractionMode;
@@ -56,6 +59,7 @@ public class TaskExecutionInteractionStrategy implements InteractionStrategy {
     private final MessageApplicationService messageService;
     private final TaskStepExecutionRepository stepExecutionRepository;
     private final SessionConfig sessionConfig;
+    private final CheckpointService checkpointService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -98,6 +102,7 @@ public class TaskExecutionInteractionStrategy implements InteractionStrategy {
 
             TaskPlanningService.PlanResult plan = planTask(userInput, conversationId);
             executionId = plan.getExecutionId();
+            recordPhase(conversationId, AgentPhase.EXECUTING, executionId, 0);
 
             List<Map<String, Object>> nodes = toPlanNodes(plan);
             sendEvent(emitter, SseEventFactory.taskPlan(executionId, plan.getTotalSteps(), nodes));
@@ -118,15 +123,18 @@ public class TaskExecutionInteractionStrategy implements InteractionStrategy {
         } catch (BusinessException e) {
             log.warn("[TaskExecutionStrategy] 规划或执行失败: convId={}, msg={}", conversationId, e.getMessage());
             abandonPendingExecution(executionId);
+            recordPhase(conversationId, AgentPhase.ERROR, executionId, null);
             sendErrorAndComplete(emitter, conversationId, e.getMessage(), e.getCode());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("[TaskExecutionStrategy] 等待执行被中断: convId={}", conversationId, e);
             abandonPendingExecution(executionId);
+            recordPhase(conversationId, AgentPhase.ERROR, executionId, null);
             sendErrorAndComplete(emitter, conversationId, "任务执行被中断", 500);
         } catch (Exception e) {
             log.error("[TaskExecutionStrategy] 流式执行异常: convId={}", conversationId, e);
             abandonPendingExecution(executionId);
+            recordPhase(conversationId, AgentPhase.ERROR, executionId, null);
             String msg = e.getMessage() != null ? e.getMessage() : "任务执行失败";
             sendErrorAndComplete(emitter, conversationId, msg, 500);
         } finally {
@@ -169,17 +177,22 @@ public class TaskExecutionInteractionStrategy implements InteractionStrategy {
     private void finishStream(SseEmitter emitter, String conversationId, String executionId,
                               TaskPlanningService.PlanResult plan, ExecutionStatus status) {
         if (status == ExecutionStatus.WAITING_APPROVAL) {
+            recordPhase(conversationId, AgentPhase.CONFIRMATION, executionId, completedStepIndex(executionId));
             handleWaitingApproval(emitter, conversationId, executionId, plan);
             return;
         }
         if (status == ExecutionStatus.FAILED) {
+            recordPhase(conversationId, AgentPhase.ERROR, executionId, null);
             sendErrorAndComplete(emitter, conversationId, "任务执行失败", 500);
             return;
         }
         if (status == ExecutionStatus.CANCELLED) {
+            recordPhase(conversationId, AgentPhase.ERROR, executionId, null);
             sendErrorAndComplete(emitter, conversationId, "任务已取消", 409);
             return;
         }
+
+        recordPhase(conversationId, AgentPhase.DONE, executionId, plan.getTotalSteps());
 
         String summary = "任务执行完成，共 " + plan.getTotalSteps() + " 步。";
         sendEvent(emitter, SseEventFactory.token(summary));
@@ -216,6 +229,27 @@ public class TaskExecutionInteractionStrategy implements InteractionStrategy {
 
         log.info("[TaskExecutionStrategy] 本轮 stream 因审批结束: executionId={}, approvalId={}",
                 executionId, approval.getApprovalId());
+    }
+
+    private void recordPhase(String conversationId, AgentPhase phase, String executionId, Integer stepIndex) {
+        if (checkpointService == null || conversationId == null || conversationId.isBlank()) {
+            return;
+        }
+        checkpointService.recordTransition(
+                conversationId, phase, "TASK_EXECUTION", SlotCollection.empty(), executionId, stepIndex);
+    }
+
+    private Integer completedStepIndex(String executionId) {
+        if (executionId == null) {
+            return null;
+        }
+        try {
+            return (int) stepExecutionRepository.findByExecutionId(executionId).stream()
+                    .filter(s -> s.getStatus() == StepStatus.SUCCESS)
+                    .count();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**

@@ -1,9 +1,13 @@
 package com.example.agent.application.conversation;
 
+import com.example.agent.application.checkpoint.CheckpointService;
+import com.example.agent.application.checkpoint.SlotAskSupport;
 import com.example.agent.application.intent.IntentRecognitionChain;
 import com.example.agent.application.intent.model.IntentResult;
 import com.example.agent.application.memory.SessionMemoryService;
 import com.example.agent.domain.conversation.entity.Message;
+import com.example.agent.domain.conversation.valueobject.SlotCollection;
+import com.example.agent.domain.interaction.valueobject.InteractionContext;
 import com.example.agent.infrastructure.annotation.Auditable;
 import com.example.agent.infrastructure.config.sse.SseEventFactory;
 import com.example.agent.infrastructure.config.nacos.SessionConfig;
@@ -43,10 +47,23 @@ public class StreamOrchestrationService {
     private final LangfuseTraceService langfuseTrace;
     /** 🆕 P6 配置治理子方案03: SSE 心跳间隔从 Nacos 动态读取 */
     private final SessionConfig sessionConfig;
+    private final CheckpointService checkpointService;
+    private final SlotAskSupport slotAskSupport;
 
     @Auditable(action = "LLM_CALL", resourceType = "CONVERSATION", recordResponse = false)
     public void executeStreamPipeline(String conversationId, Long tenantId, String userId,
                                         String userContent, SseEmitter emitter) {
+        executeStreamPipeline(conversationId, tenantId, userId, userContent, emitter, null, true);
+    }
+
+    /**
+     * @param persistUserMessage false 表示调用方已落库用户消息（避免与恢复处理器重复保存）
+     */
+    @Auditable(action = "LLM_CALL", resourceType = "CONVERSATION", recordResponse = false)
+    public void executeStreamPipeline(String conversationId, Long tenantId, String userId,
+                                        String userContent, SseEmitter emitter,
+                                        InteractionContext interactionContext,
+                                        boolean persistUserMessage) {
         // 将 HTTP 线程捕获的上下文注入当前执行线程，确保下游 ThreadLocal 链路完整
         TenantContext.setTenantId(tenantId);
         TenantContext.setUserId(userId);
@@ -59,19 +76,43 @@ public class StreamOrchestrationService {
 
         ScheduledExecutorService heartbeatExecutor = null;
         try {
-            // Step 1: 保存用户消息
-            Message userMsg = messageService.saveUserMessage(conversationId, userContent);
+            if (persistUserMessage) {
+                messageService.saveUserMessage(conversationId, userContent);
+            }
+
+            SlotCollection restoredSlots = checkpointService.slotsOf(interactionContext);
+            boolean slotsJustCompleted = interactionContext != null
+                    && checkpointService.restoredOf(interactionContext)
+                    .map(ckpt -> ckpt.isAwaitParam() && restoredSlots.isComplete())
+                    .orElse(false);
 
             // Step 2: 加载会话上下文
             List<Message> history = sessionMemoryService.getRecentMessages(conversationId, 10);
 
-            // Step 3: 意图识别（显式传入 tenantId，因当前执行在线程池线程中，ThreadLocal 不可用）
-            IntentResult intent = intentRecognitionChain.recognize(tenantId, userContent);
-            log.info("[Stream] 意图识别: convId={}, intent={}, confidence={}",
-                    conversationId, intent.getIntentCode(), intent.getConfidence());
+            IntentResult intent;
+            SlotCollection slotsForPrompt = restoredSlots;
+            if (slotsJustCompleted) {
+                intent = IntentResult.unknown("slots-restored");
+                String intentCode = checkpointService.restoredOf(interactionContext)
+                        .map(ckpt -> ckpt.getIntentCode()).orElse(null);
+                if (intentCode != null) {
+                    intent.setIntentCode(intentCode);
+                }
+            } else {
+                intent = intentRecognitionChain.recognize(tenantId, userContent);
+                log.info("[Stream] 意图识别: convId={}, intent={}, confidence={}",
+                        conversationId, intent.getIntentCode(), intent.getConfidence());
+                SlotCollection required = SlotCollection.fromRequiredParamMaps(intent.getRequiredParams());
+                if (required.hasRequired() && !required.isComplete()) {
+                    slotAskSupport.askAndComplete(emitter, conversationId, intent.getIntentCode(), required);
+                    messageSample.stop(metrics.getMessageProcessingTimer());
+                    return;
+                }
+                slotsForPrompt = required;
+            }
 
             // Step 4: 构建 Prompt
-            String fullPrompt = buildFullPrompt(history, userContent);
+            String fullPrompt = buildFullPrompt(history, userContent, slotsForPrompt);
 
             // Step 5: 启动心跳
             heartbeatExecutor = startHeartbeat(emitter);
@@ -162,10 +203,13 @@ public class StreamOrchestrationService {
         }
     }
 
-    private String buildFullPrompt(List<Message> history, String userContent) {
+    private String buildFullPrompt(List<Message> history, String userContent, SlotCollection slots) {
         StringBuilder sb = new StringBuilder();
         for (Message msg : history) {
             sb.append(msg.getRole().getDesc()).append(": ").append(msg.getContent()).append("\n");
+        }
+        if (slots != null && !slots.getFilled().isEmpty()) {
+            sb.append("已收集参数: ").append(slots.getFilled()).append("\n");
         }
         sb.append("User: ").append(userContent);
         return sb.toString();

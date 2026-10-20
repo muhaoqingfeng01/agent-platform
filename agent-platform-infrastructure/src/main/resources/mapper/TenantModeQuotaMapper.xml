@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.agent.infrastructure.persistence.mapper.TenantModeQuotaMapper">
+
+    <resultMap id="TenantModeQuotaPOMap" type="com.example.agent.infrastructure.persistence.po.TenantModeQuotaPO">
+        <id     column="id"                 property="id"/>
+        <result column="tenant_id"          property="tenantId"/>
+        <result column="mode_code"          property="modeCode"/>
+        <result column="enabled"            property="enabled"/>
+        <result column="daily_llm_limit"    property="dailyLlmLimit"/>
+        <result column="daily_upload_bytes" property="dailyUploadBytes"/>
+        <result column="created_at"         property="createdAt"/>
+        <result column="updated_at"         property="updatedAt"/>
+        <result column="deleted"            property="deleted"/>
+    </resultMap>
+
+    <select id="findByTenantIdAndModeCode" resultMap="TenantModeQuotaPOMap">
+        SELECT * FROM t_tenant_mode_quota
+        WHERE tenant_id = #{tenantId} AND mode_code = #{modeCode}
+        LIMIT 1
+    </select>
+
+    <select id="findByTenantId" resultMap="TenantModeQuotaPOMap">
+        SELECT * FROM t_tenant_mode_quota
+        WHERE tenant_id = #{tenantId} AND deleted = 0
+        ORDER BY mode_code ASC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_tenant_mode_quota
+            (tenant_id, mode_code, enabled, daily_llm_limit, daily_upload_bytes,
+             created_at, updated_at, deleted)
+        VALUES
+            (#{tenantId}, #{modeCode}, #{enabled}, #{dailyLlmLimit}, #{dailyUploadBytes},
+             #{createdAt}, #{updatedAt}, #{deleted})
+    </insert>
+
+    <update id="update">
+        UPDATE t_tenant_mode_quota
+        SET enabled            = #{enabled},
+            daily_llm_limit    = #{dailyLlmLimit},
+            daily_upload_bytes = #{dailyUploadBytes},
+            updated_at         = #{updatedAt},
+            deleted            = #{deleted}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

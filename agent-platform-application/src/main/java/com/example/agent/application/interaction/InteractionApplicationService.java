@@ -3,12 +3,15 @@ package com.example.agent.application.interaction;
 import cn.dev33.satoken.exception.NotPermissionException;
 import cn.dev33.satoken.stp.StpUtil;
 import com.alibaba.fastjson.JSON;
+import com.example.agent.application.checkpoint.CheckpointService;
 import com.example.agent.application.interaction.dto.InteractionResponse;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.domain.interaction.service.InteractionStrategy;
 import com.example.agent.domain.interaction.valueobject.InteractionContext;
 import com.example.agent.domain.interaction.valueobject.InteractionMode;
+import com.example.agent.domain.tenant.service.TenantQuotaDomainService;
 import com.example.agent.infrastructure.config.nacos.AiModelConfig;
+import com.example.agent.infrastructure.config.sse.SseEventFactory;
 import com.example.agent.infrastructure.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +46,8 @@ public class InteractionApplicationService {
     private final InteractionStrategyFactory strategyFactory;
     private final ThreadPoolExecutor streamExecutor;
     private final AiModelConfig aiModelConfig;
+    private final TenantQuotaDomainService quotaDomainService;
+    private final CheckpointService checkpointService;
     /**
      * 同步执行交互（非流式模式：知识检索等）.
      *
@@ -79,6 +84,8 @@ public class InteractionApplicationService {
             searchConfig = approvalFlags;
         }
 
+        assertQuotaOrThrow(mode);
+
         InteractionContext context = buildContext(mode, content, conversationId,
                 knowledgeId, searchConfig, null);
         InteractionStrategy strategy = strategyFactory.getStrategy(mode);
@@ -87,6 +94,10 @@ public class InteractionApplicationService {
         InteractionResponse response = (result instanceof InteractionResponse)
                 ? (InteractionResponse) result
                 : InteractionResponse.success(mode.getCode(), result);
+
+        if (response.isSuccess()) {
+            quotaDomainService.recordLlmSuccess(requireTenantId(), mode.getCode());
+        }
 
         log.info("[Interaction] 同步执行完成: mode={}, success={}", mode.getDesc(), response.isSuccess());
         return response;
@@ -119,15 +130,24 @@ public class InteractionApplicationService {
             modeFlags = resolveApprovalPermissions();
         }
 
+        if (!assertQuotaForStream(mode, emitter)) {
+            return;
+        }
+
         InteractionContext context = buildContext(mode, content, conversationId,
                 knowledgeId, modeFlags, emitter);
+        // 新 Emitter：若检查点相位 ≠ INIT 则注入槽位/执行进度，供策略断点续传
+        checkpointService.attachLatest(context);
         InteractionStrategy strategy = strategyFactory.getStrategy(mode);
 
         log.info("aiModelConfig:{}", JSON.toJSONString(aiModelConfig.getConfig()));
 
+        Long tenantId = requireTenantId();
+        String countedMode = mode.getCode();
         streamExecutor.submit(() -> {
             try {
                 strategy.executeStream(context);
+                quotaDomainService.recordLlmSuccess(tenantId, countedMode);
             } catch (Exception e) {
                 log.error("[Interaction] 流式执行异常: mode={}, convId={}", mode.getDesc(), conversationId, e);
                 emitter.completeWithError(e);
@@ -141,12 +161,53 @@ public class InteractionApplicationService {
      * @return 模式编码列表
      */
     public List<String> getRegisteredModeCodes() {
+        Long tenantId = TenantContext.getCurrentTenantId();
         return strategyFactory.getRegisteredModes().stream()
                 .map(InteractionMode::getCode)
+                .filter(code -> tenantId == null || quotaDomainService.isModeEnabled(tenantId, code))
                 .toList();
     }
 
     // ==================== 内部方法 ====================
+
+    private Long requireTenantId() {
+        Long tenantId = TenantContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new BusinessException(500, "租户上下文缺失，无法校验模式配额");
+        }
+        return tenantId;
+    }
+
+    /**
+     * 同步入口：模式关闭 403，日限额超限 429。
+     */
+    private void assertQuotaOrThrow(InteractionMode mode) {
+        Long tenantId = requireTenantId();
+        quotaDomainService.assertModeEnabled(tenantId, mode.getCode());
+        quotaDomainService.assertLlmQuota(tenantId, mode.getCode());
+    }
+
+    /**
+     * 流式入口：配额失败通过 SSE error 结束本轮（响应已按 text/event-stream 打开）.
+     *
+     * @return true 表示通过，可继续执行策略
+     */
+    private boolean assertQuotaForStream(InteractionMode mode, SseEmitter emitter) {
+        try {
+            assertQuotaOrThrow(mode);
+            return true;
+        } catch (BusinessException e) {
+            log.warn("[Interaction] 配额拦截: mode={}, code={}, msg={}",
+                    mode.getDesc(), e.getCode(), e.getMessage());
+            try {
+                emitter.send(SseEventFactory.error(e.getMessage(), e.getCode()));
+                emitter.complete();
+            } catch (Exception sendEx) {
+                emitter.completeWithError(e);
+            }
+            return false;
+        }
+    }
 
     /**
      * 解析交互模式 — null/blank/invalid 时安全回退到 CONVERSATION.

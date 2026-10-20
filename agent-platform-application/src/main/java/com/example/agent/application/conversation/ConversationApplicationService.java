@@ -1,5 +1,7 @@
 package com.example.agent.application.conversation;
 
+import com.example.agent.application.checkpoint.CheckpointService;
+import com.example.agent.application.conversation.event.ConversationStatusChangedEvent;
 import com.example.agent.common.constant.ProjectConstants;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.exception.ResourceNotFoundException;
@@ -14,6 +16,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +38,8 @@ public class ConversationApplicationService {
 
     private final ConversationRepository conversationRepository;
     private final ConversationDomainService domainService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final CheckpointService checkpointService;
 
     @Transactional
     public ConversationResponse createConversation(CreateConversationRequest request) {
@@ -86,6 +91,7 @@ public class ConversationApplicationService {
     @Transactional
     public void transitionStatus(String conversationId, ConversationStatus targetStatus) {
         Conversation conv = getConversation(conversationId);
+        ConversationStatus oldStatus = conv.getStatus();
         switch (targetStatus) {
             case CLOSED -> conv.close();
             case ACTIVE -> conv.reopen();
@@ -93,6 +99,7 @@ public class ConversationApplicationService {
             default -> throw new IllegalArgumentException("不支持的目标状态: " + targetStatus);
         }
         conversationRepository.updateStatus(conversationId, targetStatus);
+        eventPublisher.publishEvent(new ConversationStatusChangedEvent(this, conv, oldStatus));
         log.info("[Conversation] 状态变更: convId={}, status={}", conversationId, targetStatus);
     }
 
@@ -100,6 +107,7 @@ public class ConversationApplicationService {
     public void softDelete(String conversationId) {
         getConversation(conversationId);
         conversationRepository.softDelete(conversationId);
+        checkpointService.clear(conversationId);
     }
 
     // ==================== DTOs ====================

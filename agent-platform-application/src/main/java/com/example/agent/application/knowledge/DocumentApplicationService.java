@@ -22,6 +22,7 @@ import com.example.agent.domain.knowledge.service.KnowledgeBaseDomainService;
 import com.example.agent.domain.knowledge.service.MilvusStoreClient;
 import com.example.agent.domain.knowledge.valueobject.ChunkStrategy;
 import com.example.agent.domain.knowledge.valueobject.DocumentStatus;
+import com.example.agent.domain.tenant.service.TenantQuotaDomainService;
 import com.example.agent.infrastructure.config.storage.MinioConfig;
 import com.example.agent.infrastructure.context.TenantContext;
 import io.minio.GetObjectArgs;
@@ -61,6 +62,7 @@ public class DocumentApplicationService {
     private final MilvusStoreClient milvusStore;
     private final MinioClient minioClient;
     private final MinioConfig minioConfig;
+    private final TenantQuotaDomainService quotaDomainService;
 
     /** MinIO part size: 5MB for multipart uploads, -1 for single-shot below 5MB — 统一引用 ProjectConstants */
     private static final long MIN_PART_SIZE = ProjectConstants.BusinessLimit.MIN_PART_SIZE;
@@ -93,6 +95,7 @@ public class DocumentApplicationService {
         String fileType = getFileType(filename);
         long fileSize = file.getSize();
         domainService.assertFileSize(fileSize);
+        quotaDomainService.assertUploadQuota(tenantId, fileSize);
 
         String documentId = IdGenerator.generate("doc");
         String minioPath = knowledgeId + "/" + documentId + "/" + filename;
@@ -148,6 +151,7 @@ public class DocumentApplicationService {
 
             log.info("[Document] 文档上传完成（待手动触发解析）: docId={}, kbId={}, filename={}, size={}",
                     documentId, knowledgeId, filename, fileSize);
+            quotaDomainService.recordUploadSuccess(tenantId, fileSize);
             return DocumentDTO.from(doc);
 
         } catch (Exception e) {
