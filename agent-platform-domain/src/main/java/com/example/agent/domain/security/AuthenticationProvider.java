@@ -19,9 +19,10 @@ public interface AuthenticationProvider {
     /**
      * 执行认证.
      *
+     * @param tenantId 租户 ID（LOCAL/LDAP 均需定位本地用户）
      * @param username 用户名
      * @param password 密码
      * @return 认证成功返回 UserView，失败抛出异常
      */
-    UserView authenticate(String username, String password);
+    UserView authenticate(Long tenantId, String username, String password);
 }

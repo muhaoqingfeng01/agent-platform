@@ -74,10 +74,14 @@ public class SentinelConfig {
     /** 慢调用 RT 阈值 秒（fallback，200ms = 0.2s） */
     private static final double FALLBACK_SLOW_RT_THRESHOLD = 0.2;
 
-    /** 全局聊天接口资源名 */
-    private static final String RESOURCE_CHAT = "com.example.agent.interfaces.rest.ConversationController.streamChat";
-    /** 租户级聊天接口资源名（含通配符） */
-    private static final String RESOURCE_TENANT = "com.example.agent.interfaces.rest.ConversationController.sendMessage:tenant:*";
+    /** 流式聊天资源名（与 @RateLimit resource 对齐） */
+    private static final String RESOURCE_CHAT_STREAM = "chat:stream";
+    /** 非流式发送资源名 */
+    private static final String RESOURCE_CHAT_SEND = "chat:send";
+    /** 登录资源名 */
+    private static final String RESOURCE_AUTH_LOGIN = "auth:login";
+    /** 知识检索资源名 */
+    private static final String RESOURCE_KB_SEARCH = "knowledge:search";
     /** LLM 调用资源名（熔断目标） */
     private static final String RESOURCE_LLM = "com.example.agent.llm.call";
 
@@ -106,25 +110,23 @@ public class SentinelConfig {
     private void loadFlowRules() {
         List<FlowRule> rules = new ArrayList<>();
 
-        // — 全局聊天接口限流 —
-        FlowRule chatRule = new FlowRule();
-        chatRule.setResource(RESOURCE_CHAT);
-        chatRule.setGrade(RuleConstant.FLOW_GRADE_QPS);
-        chatRule.setCount(FALLBACK_GLOBAL_QPS);
-        chatRule.setLimitApp("default");
-        rules.add(chatRule);
-        log.info("[Sentinel-Fallback] 限流规则: 全局聊天接口 → {} QPS", chatRule.getCount());
-
-        // — 租户级限流 —
-        FlowRule tenantRule = new FlowRule();
-        tenantRule.setResource(RESOURCE_TENANT);
-        tenantRule.setGrade(RuleConstant.FLOW_GRADE_QPS);
-        tenantRule.setCount(FALLBACK_TENANT_QPS);
-        tenantRule.setLimitApp("default");
-        rules.add(tenantRule);
-        log.info("[Sentinel-Fallback] 限流规则: 租户级 → {} QPS", tenantRule.getCount());
+        rules.add(flowRule(RESOURCE_CHAT_STREAM, FALLBACK_GLOBAL_QPS));
+        rules.add(flowRule(RESOURCE_CHAT_SEND, FALLBACK_TENANT_QPS));
+        rules.add(flowRule(RESOURCE_AUTH_LOGIN, 20));
+        rules.add(flowRule(RESOURCE_KB_SEARCH, 40));
+        log.info("[Sentinel-Fallback] 限流规则: chat:stream={}, chat:send={}, auth:login=20, knowledge:search=40",
+                FALLBACK_GLOBAL_QPS, FALLBACK_TENANT_QPS);
 
         FlowRuleManager.loadRules(rules);
+    }
+
+    private static FlowRule flowRule(String resource, double qps) {
+        FlowRule rule = new FlowRule();
+        rule.setResource(resource);
+        rule.setGrade(RuleConstant.FLOW_GRADE_QPS);
+        rule.setCount(qps);
+        rule.setLimitApp("default");
+        return rule;
     }
 
     /**

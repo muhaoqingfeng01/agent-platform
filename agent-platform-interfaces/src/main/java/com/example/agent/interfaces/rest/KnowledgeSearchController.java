@@ -10,6 +10,7 @@ import com.example.agent.application.knowledge.dto.StrategyPresetListResponse;
 import com.example.agent.application.knowledge.dto.StrategyPresetResponse;
 import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
+import com.example.agent.infrastructure.annotation.RateLimit;
 import com.example.agent.interfaces.dto.request.knowledge.KnowledgeHitFeedbackRequest;
 import com.example.agent.interfaces.dto.request.knowledge.KnowledgeSearchRequest;
 import com.example.agent.interfaces.dto.request.knowledge.KnowledgeListHitsRequest;
@@ -39,6 +40,7 @@ public class KnowledgeSearchController {
     private final PrecisionConfigApplicationService precisionService;
 
     @PostMapping("/search")
+    @RateLimit(resource = "knowledge:search", qps = 40)
     @SaCheckPermission("kb:search")
     @Operation(summary = "混合检索（向量 + 关键词 + RRF 融合）")
     public Result<SearchResultDTO> search(@RequestBody KnowledgeSearchRequest request) {

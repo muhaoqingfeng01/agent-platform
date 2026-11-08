@@ -54,11 +54,12 @@ public class AuthProviderFactory {
      * 执行认证 — 根据 provider 参数路由.
      *
      * @param providerCode 认证提供者代码（LOCAL/LDAP/SSO）
+     * @param tenantId     租户 ID
      * @param username     用户名
      * @param password     密码
      * @return 认证成功返回 UserView
      */
-    public UserView authenticate(String providerCode, String username, String password) {
+    public UserView authenticate(String providerCode, Long tenantId, String username, String password) {
         AuthProviderType type = AuthProviderType.fromCode(providerCode);
         AuthenticationProvider provider = registry.get(type);
 
@@ -71,7 +72,8 @@ public class AuthProviderFactory {
             throw new IllegalStateException("无可用认证提供者");
         }
 
-        log.debug("[AuthFactory] 路由认证: type={}, provider={}", type, provider.getClass().getSimpleName());
-        return provider.authenticate(username, password);
+        log.debug("[AuthFactory] 路由认证: type={}, provider={}, tenantId={}",
+                type, provider.getClass().getSimpleName(), tenantId);
+        return provider.authenticate(tenantId, username, password);
     }
 }

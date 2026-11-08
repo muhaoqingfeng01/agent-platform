@@ -14,6 +14,8 @@ import com.example.agent.domain.knowledge.service.*;
 import com.example.agent.domain.knowledge.valueobject.RerankerType;
 import com.example.agent.infrastructure.config.nacos.RagConfig;
 import com.example.agent.infrastructure.context.TenantContext;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -44,6 +46,8 @@ public class HybridSearchApplicationService {
     private final RerankerRegistry rerankerRegistry;                   // ★ V1.5.0: Reranker 精排
     /** 🆕 P6 配置治理子方案02: RAG 检索参数 Nacos 动态配置（JSON 格式，Nacos 不可用时硬编码兜底） */
     private final RagConfig ragConfig;
+    private final PrecisionConfigApplicationService precisionConfigApplicationService;
+    private final ObjectMapper objectMapper;
 
     private static final int DEFAULT_VECTOR_TOP_K = 20;
     private static final int DEFAULT_FULLTEXT_TOP_K = 20;
@@ -54,7 +58,11 @@ public class HybridSearchApplicationService {
         String collectionName = "kb_" + tenantId;
 
         PrecisionConfigDomainService.MergedPrecisionConfig config =
-                precisionDomainService.mergeConfig(null, null, searchConfig, null);
+                precisionDomainService.mergeConfig(
+                        systemDefaults(),
+                        resolveStrategyPreset(knowledgeId),
+                        loadKbConfig(knowledgeId),
+                        normalizeKeys(searchConfig));
 
         int vectorTopK = config.coarseTopK() > 0 ? config.coarseTopK() : DEFAULT_VECTOR_TOP_K;
         int fulltextTopK = DEFAULT_FULLTEXT_TOP_K;
@@ -263,6 +271,83 @@ public class HybridSearchApplicationService {
     }
 
     public record FusedHit(VectorSearchProvider.SearchHit hit, double rrfScore) {}
+
+    private Map<String, Object> systemDefaults() {
+        Map<String, Object> defaults = new LinkedHashMap<>();
+        defaults.put("fusionTopN", ragConfig.getFinalTopK());
+        defaults.put("rrfK", ragConfig.getMultiStageRrfK());
+        defaults.put("enableRrfFusion", true);
+        defaults.put("vectorWeight", 0.5);
+        defaults.put("keywordWeight", 0.5);
+        return defaults;
+    }
+
+    private Map<String, Object> resolveStrategyPreset(String knowledgeId) {
+        if (knowledgeId == null || knowledgeId.isBlank()) {
+            return normalizeKeys(precisionConfigApplicationService.resolveStrategyPreset("balanced"));
+        }
+        return kbRepository.findByKnowledgeId(knowledgeId)
+                .map(kb -> normalizeKeys(precisionConfigApplicationService.resolveStrategyPreset(kb.getSearchStrategy())))
+                .orElseGet(() -> normalizeKeys(precisionConfigApplicationService.resolveStrategyPreset("balanced")));
+    }
+
+    private Map<String, Object> loadKbConfig(String knowledgeId) {
+        if (knowledgeId == null || knowledgeId.isBlank()) {
+            return null;
+        }
+        return kbRepository.findByKnowledgeId(knowledgeId)
+                .map(kb -> {
+                    Map<String, Object> merged = new LinkedHashMap<>();
+                    Map<String, Object> search = parseJsonMap(kb.getSearchParamsJson());
+                    Map<String, Object> multi = parseJsonMap(kb.getMultiStageParamsJson());
+                    if (search != null) {
+                        merged.putAll(search);
+                    }
+                    if (multi != null) {
+                        merged.putAll(multi);
+                    }
+                    return normalizeKeys(merged);
+                })
+                .orElse(null);
+    }
+
+    private Map<String, Object> parseJsonMap(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            log.warn("[HybridSearch] 解析 KB 精度 JSON 失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private Map<String, Object> normalizeKeys(Map<String, Object> raw) {
+        if (raw == null || raw.isEmpty()) {
+            return raw;
+        }
+        Map<String, Object> out = new LinkedHashMap<>(raw);
+        alias(raw, out, "nprobe_ratio", "nprobeRatio");
+        alias(raw, out, "similarity_threshold", "similarityThreshold");
+        alias(raw, out, "consistency_level", "consistencyLevel");
+        alias(raw, out, "timeout_ms", "timeoutMs");
+        alias(raw, out, "enable_reranker", "enableReranker");
+        alias(raw, out, "reranker_type", "rerankerType");
+        alias(raw, out, "enable_rrf_fusion", "enableRrfFusion");
+        alias(raw, out, "rrf_k", "rrfK");
+        alias(raw, out, "fusion_top_n", "fusionTopN");
+        alias(raw, out, "vector_weight", "vectorWeight");
+        alias(raw, out, "keyword_weight", "keywordWeight");
+        alias(raw, out, "coarse_top_k", "coarseTopK");
+        return out;
+    }
+
+    private void alias(Map<String, Object> raw, Map<String, Object> out, String from, String to) {
+        if (raw.containsKey(from) && !raw.containsKey(to)) {
+            out.put(to, raw.get(from));
+        }
+    }
 
     // ==================== V1.5.0: Reranker 精排 ====================
 

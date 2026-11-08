@@ -94,7 +94,7 @@ interfaces → application → domain ← infrastructure
 
 ## 项目定位
 
-**企业级 AI Agent 平台** — DDD 六模块 Maven 多模块项目，P0-P4 核心已全部实现（573 Java 文件），P5 A1-01 Web 聊天已落地（`agent-platform-web/`），P6 迭代增强代码已实现（9 项），配置治理子方案 01-05 已全部实现，运维设施待部署（11 项）。
+**企业级 AI Agent 平台** — DDD 六模块 Maven 多模块项目，P0-P4 核心已全部实现，P5 Web 聊天/审批卡片/反馈/IM 回调已落地（`agent-platform-web/`），主链路围栏/提示词/记忆/意图/审批/精度已接线，P6 配置治理 01-05 已实现，运维编排文件在 `deploy/`（环境待实际拉起）。
 
 - **路径**: `D:\mhqf_project\heavenly-craft-agent\agent-platform`
 - **包名**: `com.example.agent`
@@ -216,7 +216,7 @@ agent-platform-interfaces/  125 文件  ← 21 Controller + ~102 Request/Respons
 > ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、T4 提示词管理、T5 任务规划引擎、T6 RAG 知识库、T7 MCP 工具平台、T10 安全围栏、T11 人机协同审批、T9 全链路可观测性、T12 效果评估与持续优化、**P6 迭代增强（Redis缓存/Reranker/工具版本化/心跳检测/精度监控/LDAP/SSO/Presidio）、P7 多模式交互（策略工厂 + 2 种模式）、🆕 P6 配置治理子方案01（@Scheduled → Nacos）、🆕 子方案02（RagConfig 24 参数）、🆕 子方案03（AiModel/Security/Session 17 参数）、🆕 子方案04（ProjectConstants 静态常量统一管理、25常量、26文件改造）、🆕 子方案05（Sentinel 规则 Nacos 持久化、6 项规则）**
 > 📐 DDD 架构：Controller → ApplicationService → DomainService → Repository，禁止越层调用
 > 📦 DTO 分离：Application 层 DTO 独立分包 + Interfaces 层 Request DTO 独立分包
-> 🔜 待完成：P5 审批卡片/反馈/IM；主链路接线（围栏/意图/记忆/工具/审批）见 `docs/已设计未实现清单.md`
+> 🔜 待完成：SSO/OIDC、ColBERT、生产环境实际部署 Grafana/OTel/K8s（LDAP 真 bind / 租户拦截器删除 / @RateLimit 挂载已完成）
 
 ---
 
@@ -243,14 +243,14 @@ P0(收尾✅) → P1(T3-T5✅) → P2(T6-T7✅) → P3(安全✅) → P4(观测�
               任务规划✅                                        运维部署🔜
 ```
 
-**P5**: Web 聊天 A1-01 ✅（`agent-platform-web/`）；审批卡片/反馈/IM 未做
+**P5**: Web 聊天 + 审批卡片 + 反馈 + IM 回调 ✅（`agent-platform-web/`）
 **P6**: 迭代优化（9 项代码增强已实现：Reranker/工具版本化/Redis缓存/心跳检测/精度监控/LDAP/SSO/Presidio），🆕 配置治理（子方案01✅ 02✅ 03✅ 04✅ 05已设计），11 项运维设施待部署
 
 ### ⚠️ 已知差距速览
 
 | 类别 | 数量 | 说明 |
 |------|:--:|------|
-| 代码功能缺口 | 2 项 | P5 审批/反馈/IM、反馈聚合统计 API（P6 已补 9 项代码缺口；A1-01 聊天已完成） |
+| 代码功能缺口 | 少量 | SSO/ColBERT/自动租户拦截注册；反馈统计路径与设计契约仍不一致 |
 | 运维设施缺口 | 11 项 | Grafana/OTel/ELK/AlertManager/Docker/K8s/MinIO/Presidio/LDAP 等 |
 | 方案变更 | 5 项 | 均为「简化设计」方向，详见 `docs/开发进度.md` |
 | 测试覆盖 | ⚠️ 极低 | 仅 1 个 Spring Boot 上下文测试，无业务逻辑单元测试 |

@@ -10,6 +10,8 @@ import com.example.agent.domain.knowledge.service.PrecisionConfigDomainService;
 import com.example.agent.domain.knowledge.valueobject.IndexType;
 import com.example.agent.domain.knowledge.valueobject.SearchStrategy;
 import com.example.agent.infrastructure.context.TenantContext;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,7 @@ public class PrecisionConfigApplicationService {
     private final KnowledgeBaseRepository kbRepository;
     private final KnowledgeBaseDomainService domainService;
     private final PrecisionConfigDomainService precisionDomainService;
+    private final ObjectMapper objectMapper;
 
     /**
      * 设置知识库精度参数.
@@ -101,6 +104,29 @@ public class PrecisionConfigApplicationService {
         return presets;
     }
 
+    /**
+     * 按策略名解析预设参数（search + multiStage 合并）。
+     */
+    public Map<String, Object> resolveStrategyPreset(String strategy) {
+        if (strategy == null || strategy.isBlank()) {
+            return Map.of();
+        }
+        return listStrategyPresets().stream()
+                .filter(p -> p.getStrategyName().equalsIgnoreCase(strategy))
+                .findFirst()
+                .map(p -> {
+                    Map<String, Object> merged = new LinkedHashMap<>();
+                    if (p.getSearchParams() != null) {
+                        merged.putAll(p.getSearchParams());
+                    }
+                    if (p.getMultiStageParams() != null) {
+                        merged.putAll(p.getMultiStageParams());
+                    }
+                    return merged;
+                })
+                .orElse(Map.of());
+    }
+
     private StrategyPresetResponse buildPreset(String name, String desc, Map<String, Object> searchParams) {
         return StrategyPresetResponse.builder()
                 .strategyName(name)
@@ -136,9 +162,14 @@ public class PrecisionConfigApplicationService {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> parseJson(String json) {
-        if (json == null || json.isBlank()) return new HashMap<>();
-        Map<String, Object> map = new HashMap<>();
-        // 生产环境应使用 Jackson ObjectMapper
-        return map;
+        if (json == null || json.isBlank()) {
+            return new HashMap<>();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            log.warn("[Precision] 解析 JSON 失败: {}", e.getMessage());
+            return new HashMap<>();
+        }
     }
 }

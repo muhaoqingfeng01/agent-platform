@@ -1,0 +1,43 @@
+{
+  "title": "Agent Platform",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "LLM 调用耗时",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{ "expr": "rate(agent_llm_call_seconds_sum[5m])" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "对话数",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{ "expr": "rate(agent_conversations_total[5m])" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Token 消耗",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [{ "expr": "rate(agent_tokens_consumed_total[5m])" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "RAG 检索耗时",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [{ "expr": "rate(agent_rag_retrieval_seconds_sum[5m])" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "安全阻断",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [{ "expr": "rate(agent_security_blocks_total[5m])" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "工具调用失败",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [{ "expr": "rate(agent_tool_failures_total[5m])" }]
+    }
+  ]
+}

@@ -5,8 +5,8 @@ import com.example.agent.application.security.AuthProviderFactory;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
-import com.example.agent.domain.security.UserService;
 import com.example.agent.domain.security.UserView;
+import com.example.agent.infrastructure.annotation.RateLimit;
 import com.example.agent.interfaces.dto.request.auth.AuthLoginRequest;
 import com.example.agent.interfaces.dto.request.auth.AuthRefreshTokenRequest;
 import com.example.agent.interfaces.dto.LoginResponse;
@@ -36,7 +36,6 @@ import java.util.concurrent.TimeUnit;
 @Tag(name = "认证管理", description = "登录、登出、Token 刷新")
 public class AuthController {
 
-    private final UserService userService;
     private final StringRedisTemplate stringRedisTemplate;
     private final AuthProviderFactory authProviderFactory;
 
@@ -44,22 +43,18 @@ public class AuthController {
     private static final long REFRESH_TTL_DAYS = 7;
 
     @PostMapping("/login")
-    @Operation(summary = "用户登录", description = "校验用户名密码，返回 Sa-Token 访问令牌和刷新令牌")
+    @RateLimit(resource = "auth:login", qps = 20)
+    @Operation(summary = "用户登录", description = "校验用户名密码，返回 Sa-Token 访问令牌和刷新令牌；支持 provider=LOCAL/LDAP")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "登录成功，返回 Token"),
             @ApiResponse(responseCode = "401", description = "用户名或密码错误")
     })
     public Result<LoginResponse> login(@Valid @RequestBody AuthLoginRequest request) {
         return ResultRespHelper.responseInvoke("AuthController.login", request, (req) -> {
-            UserView user;
-            if (req.getProvider() != null && !req.getProvider().isBlank()
-                    && !"LOCAL".equalsIgnoreCase(req.getProvider())) {
-                user = authProviderFactory.authenticate(
-                    req.getProvider(), req.getUsername(), req.getPassword());
-            } else {
-                user = userService.authenticate(
-                    req.getTenantId(), req.getUsername(), req.getPassword());
-            }
+            String provider = (req.getProvider() == null || req.getProvider().isBlank())
+                    ? "LOCAL" : req.getProvider();
+            UserView user = authProviderFactory.authenticate(
+                    provider, req.getTenantId(), req.getUsername(), req.getPassword());
             if (user == null) {
                 throw new BusinessException(401, "用户名或密码错误");
             }

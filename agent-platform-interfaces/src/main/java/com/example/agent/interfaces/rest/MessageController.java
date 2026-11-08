@@ -10,6 +10,7 @@ import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.domain.conversation.valueobject.FeedbackType;
+import com.example.agent.infrastructure.annotation.RateLimit;
 import com.example.agent.infrastructure.config.sse.SseEmitterFactory;
 import com.example.agent.infrastructure.context.TenantContext;
 import com.example.agent.interfaces.dto.request.message.MessageSendRequest;
@@ -48,6 +49,7 @@ public class MessageController {
     private final ApplicationEventPublisher eventPublisher;
 
     @PostMapping("/api/v1/conversations/messages/send")
+    @RateLimit(resource = "chat:send", qps = 50)
     @SaCheckPermission("conversation:send")
     @Operation(summary = "发送消息（非流式）")
     public Result<MessageResponse> sendMessage(@Valid @RequestBody MessageSendRequest request) {
@@ -58,6 +60,7 @@ public class MessageController {
 
     @PostMapping(value = "/api/v1/conversations/messages/stream",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @RateLimit(resource = "chat:stream", qps = 30)
     @SaCheckPermission("conversation:send")
     @Operation(summary = "发送消息（SSE 流式）— 支持 CONVERSATION / KNOWLEDGE_SEARCH / TASK_EXECUTION / ANALYSIS / APPROVAL")
     public SseEmitter streamChat(@Valid @RequestBody MessageSendRequest request,

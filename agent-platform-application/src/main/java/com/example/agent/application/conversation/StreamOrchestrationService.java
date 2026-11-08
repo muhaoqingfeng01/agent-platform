@@ -1,13 +1,16 @@
 package com.example.agent.application.conversation;
 
+import com.example.agent.application.approval.dto.ApprovalWorkflowResponse;
 import com.example.agent.application.checkpoint.CheckpointService;
 import com.example.agent.application.checkpoint.SlotAskSupport;
 import com.example.agent.application.intent.IntentRecognitionChain;
 import com.example.agent.application.intent.model.IntentResult;
 import com.example.agent.application.memory.SessionMemoryService;
+import com.example.agent.common.exception.SecurityBlockedException;
 import com.example.agent.domain.conversation.entity.Message;
 import com.example.agent.domain.conversation.valueobject.SlotCollection;
 import com.example.agent.domain.interaction.valueobject.InteractionContext;
+import com.example.agent.domain.interaction.valueobject.InteractionMode;
 import com.example.agent.infrastructure.annotation.Auditable;
 import com.example.agent.infrastructure.config.sse.SseEventFactory;
 import com.example.agent.infrastructure.config.nacos.SessionConfig;
@@ -49,6 +52,7 @@ public class StreamOrchestrationService {
     private final SessionConfig sessionConfig;
     private final CheckpointService checkpointService;
     private final SlotAskSupport slotAskSupport;
+    private final StreamPipelineGuard pipelineGuard;
 
     @Auditable(action = "LLM_CALL", resourceType = "CONVERSATION", recordResponse = false)
     public void executeStreamPipeline(String conversationId, Long tenantId, String userId,
@@ -76,6 +80,8 @@ public class StreamOrchestrationService {
 
         ScheduledExecutorService heartbeatExecutor = null;
         try {
+            pipelineGuard.filterInput(conversationId, userId, tenantId, userContent);
+
             if (persistUserMessage) {
                 messageService.saveUserMessage(conversationId, userContent);
             }
@@ -111,8 +117,21 @@ public class StreamOrchestrationService {
                 slotsForPrompt = required;
             }
 
-            // Step 4: 构建 Prompt
-            String fullPrompt = buildFullPrompt(history, userContent, slotsForPrompt);
+            InteractionMode suggestedMode = pipelineGuard.suggestMode(intent);
+            sendEvent(emitter, SseEventFactory.intent(
+                    intent.getIntentCode(), intent.getConfidence(), intent.getRiskLevel(),
+                    suggestedMode.getCode()));
+
+            var highRiskApproval = pipelineGuard.pauseIfHighRiskIntent(intent, conversationId);
+            if (highRiskApproval.isPresent()) {
+                ApprovalWorkflowResponse approval = highRiskApproval.get();
+                completeWithApproval(emitter, conversationId, approval, messageSample);
+                return;
+            }
+
+            // Step 4: 构建 Prompt（已发布模板 + 长期记忆，缺失模板则回退拼接）
+            String fullPrompt = pipelineGuard.assembleConversationPrompt(
+                    userId, history, userContent, slotsForPrompt);
 
             // Step 5: 启动心跳
             heartbeatExecutor = startHeartbeat(emitter);
@@ -139,7 +158,6 @@ public class StreamOrchestrationService {
                         if (token != null) {
                             fullResponse.append(token);
                             tokenCount.incrementAndGet();
-                            sendEvent(emitter, SseEventFactory.token(token));
                         }
                     })
                     .doOnComplete(() -> {
@@ -149,12 +167,15 @@ public class StreamOrchestrationService {
                         // 停止消息处理计时
                         messageSample.stop(metrics.getMessageProcessingTimer());
 
+                        String safeText = pipelineGuard.desensitizeOutput(conversationId, fullResponse.toString());
+                        emitDesensitizedTokens(emitter, safeText);
+
                         // Langfuse LLM 调用追踪（异步发送）
                         langfuseTrace.logLLMCallAsync(traceId, conversationId, "deepseek",
-                                fullPrompt, fullResponse.toString(), llmDurationMs / 1_000_000, tokenCount.get());
+                                fullPrompt, safeText, llmDurationMs / 1_000_000, tokenCount.get());
 
                         Message assistantMsg = messageService.saveAssistantMessage(
-                                conversationId, fullResponse.toString(), tokenCount.get());
+                                conversationId, safeText, tokenCount.get());
                         sendEvent(emitter, SseEventFactory.done(tokenCount.get(), assistantMsg.getMessageId()));
                         emitter.complete();
                         messageService.extractLongTermMemoryAsync(conversationId, userId, tenantId);
@@ -171,6 +192,11 @@ public class StreamOrchestrationService {
                     })
                     .subscribe();
 
+        } catch (SecurityBlockedException e) {
+            messageSample.stop(metrics.getMessageProcessingTimer());
+            log.warn("[Stream] 输入被围栏阻断: convId={}, reason={}", conversationId, e.getMessage());
+            sendEvent(emitter, SseEventFactory.error(e.getMessage(), 403));
+            emitter.complete();
         } catch (Exception e) {
             messageSample.stop(metrics.getMessageProcessingTimer());
             log.error("[Stream] 流式管道异常: convId={}", conversationId, e);
@@ -203,15 +229,33 @@ public class StreamOrchestrationService {
         }
     }
 
-    private String buildFullPrompt(List<Message> history, String userContent, SlotCollection slots) {
-        StringBuilder sb = new StringBuilder();
-        for (Message msg : history) {
-            sb.append(msg.getRole().getDesc()).append(": ").append(msg.getContent()).append("\n");
+    private void completeWithApproval(SseEmitter emitter, String conversationId,
+                                      ApprovalWorkflowResponse approval, Timer.Sample messageSample) {
+        sendEvent(emitter, SseEventFactory.approvalRequired(
+                approval.getApprovalId(), approval.getExecutionId(), approval.getTitle()));
+        String summary = "该操作风险较高，已提交审批（" + approval.getApprovalId() + "），请等待审批结果。";
+        sendEvent(emitter, SseEventFactory.token(summary));
+        Message assistantMsg = messageService.saveAssistantMessage(
+                conversationId, summary, estimateTokenCount(summary));
+        sendEvent(emitter, SseEventFactory.done(estimateTokenCount(summary), assistantMsg.getMessageId()));
+        emitter.complete();
+        messageSample.stop(metrics.getMessageProcessingTimer());
+    }
+
+    private void emitDesensitizedTokens(SseEmitter emitter, String text) {
+        if (text == null || text.isEmpty()) {
+            return;
         }
-        if (slots != null && !slots.getFilled().isEmpty()) {
-            sb.append("已收集参数: ").append(slots.getFilled()).append("\n");
+        int chunk = 24;
+        for (int i = 0; i < text.length(); i += chunk) {
+            sendEvent(emitter, SseEventFactory.token(text.substring(i, Math.min(text.length(), i + chunk))));
         }
-        sb.append("User: ").append(userContent);
-        return sb.toString();
+    }
+
+    private int estimateTokenCount(String content) {
+        if (content == null) {
+            return 0;
+        }
+        return (int) Math.ceil(content.length() * 0.5);
     }
 }

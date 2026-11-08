@@ -2,29 +2,26 @@ package com.example.agent.infrastructure.security.ldap;
 
 import com.example.agent.common.exception.AuthenticationException;
 import com.example.agent.domain.security.AuthenticationProvider;
-import com.example.agent.domain.security.UserService;
 import com.example.agent.domain.security.UserView;
 import com.example.agent.domain.security.valueobject.AuthProviderType;
+import com.example.agent.domain.tenant.User;
+import com.example.agent.domain.tenant.UserRepository;
 import com.example.agent.infrastructure.config.security.LdapConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.ldap.core.support.LdapContextSource;
+import org.springframework.ldap.support.LdapUtils;
 import org.springframework.stereotype.Component;
 
+import javax.naming.directory.DirContext;
+
 /**
- * LDAP 认证提供者 — 企业目录服务认证.
+ * LDAP 认证提供者 — 企业目录 bind 校验后映射本地用户.
  *
- * <p>条件装配: spring.ldap.enabled=true 时启用.
- *
- * <p>当前为 STUB 实现 — 使用本地 UserService 验证作为降级方案，
- * 生产环境需替换为真实的 LDAP 绑定验证.
- *
- * <p>正式实现流程:
- * <ol>
- *   <li>LDAP 搜索用户 DN: filter=uid={username}, base=ou=users,dc=company,dc=com</li>
- *   <li>绑定验证: ldapTemplate.authenticate(baseDN, filter, password)</li>
- *   <li>属性映射: LDAP attributes → 本地 UserView</li>
- * </ol>
+ * <p>条件装配: {@code spring.ldap.enabled=true}.
+ * <p>流程: LDAP bind 成功 → 按 tenantId+username 查本地账号 → 返回 UserView.
+ * 本地无账号时抛错，不做本地密码降级、不自动建号.
  *
  * @author Agent Platform Team
  * @since 1.5.0
@@ -36,7 +33,8 @@ import org.springframework.stereotype.Component;
 public class LdapAuthenticationProvider implements AuthenticationProvider {
 
     private final LdapConfig ldapConfig;
-    private final UserService userService;   // 降级方案
+    private final LdapContextSource ldapContextSource;
+    private final UserRepository userRepository;
 
     @Override
     public AuthProviderType supportedType() {
@@ -44,26 +42,69 @@ public class LdapAuthenticationProvider implements AuthenticationProvider {
     }
 
     @Override
-    public UserView authenticate(String username, String password) {
-        log.info("[LDAP] 认证请求: username={}, ldapUrl={}", username, ldapConfig.getUrls());
+    public UserView authenticate(Long tenantId, String username, String password) {
+        log.info("[LDAP] 认证请求: username={}, ldapUrl={}, tenantId={}",
+                username, ldapConfig.getUrls(), tenantId);
 
-        // TODO: 替换为真实 LDAP 绑定验证
-        // 1. 通过 LdapTemplate 搜索用户 DN
-        // String userDn = searchUserDn(username);
-        // 2. 绑定验证
-        // boolean authenticated = ldapTemplate.authenticate(
-        //     LdapQueryBuilder.query().base(ldapConfig.getBase())
-        //         .filter(ldapConfig.getUserDnPattern().replace("{0}", username)),
-        //     password);
-        // 3. 属性映射到 UserView
-        // if (authenticated) { return mapLdapAttributes(username); }
-
-        // STUB: 降级到本地认证
-        log.warn("[LDAP] LDAP 服务器不可用，降级到本地认证: username={}", username);
-        UserView user = userService.authenticate(1L, username, password);
-        if (user == null || !user.isActive()) {
-            throw new AuthenticationException("LDAP/本地认证失败: " + username);
+        if (username == null || username.isBlank() || password == null) {
+            throw new AuthenticationException("LDAP 认证失败: 用户名或密码为空");
         }
-        return user;
+
+        if (!bind(username, password)) {
+            throw new AuthenticationException("LDAP 认证失败: " + username);
+        }
+
+        if (tenantId == null) {
+            throw new AuthenticationException("LDAP 认证成功但缺少 tenantId，无法定位本地账号");
+        }
+
+        User user = userRepository.findByTenantAndUsername(tenantId, username).orElse(null);
+        if (user == null) {
+            throw new AuthenticationException("LDAP 认证成功但未开通本地账号: " + username);
+        }
+        if (!user.isActive()) {
+            throw new AuthenticationException("账户已停用，请联系管理员");
+        }
+
+        log.info("[LDAP] 认证成功并映射本地用户: userId={}, tenantId={}",
+                user.getUserId(), user.getTenantId());
+        return user.toView();
+    }
+
+    /**
+     * 按 userDnPattern 构造用户 DN 并尝试 bind.
+     */
+    private boolean bind(String username, String password) {
+        String userDn = resolveUserDn(username);
+        DirContext ctx = null;
+        try {
+            ctx = ldapContextSource.getContext(userDn, password);
+            return true;
+        } catch (Exception e) {
+            log.warn("[LDAP] bind 校验失败: username={}, dn={}, error={}",
+                    username, userDn, e.getMessage());
+            return false;
+        } finally {
+            LdapUtils.closeContext(ctx);
+        }
+    }
+
+    /**
+     * 将 {@code uid={0},ou=users} 与 base DN 拼成完整用户 DN.
+     */
+    private String resolveUserDn(String username) {
+        String pattern = ldapConfig.getUserDnPattern();
+        if (pattern == null || pattern.isBlank()) {
+            pattern = "uid={0}";
+        }
+        String relative = pattern.replace("{0}", username);
+        String base = ldapConfig.getBase();
+        if (base == null || base.isBlank()) {
+            return relative;
+        }
+        if (relative.toLowerCase().contains(base.toLowerCase())) {
+            return relative;
+        }
+        return relative + "," + base;
     }
 }

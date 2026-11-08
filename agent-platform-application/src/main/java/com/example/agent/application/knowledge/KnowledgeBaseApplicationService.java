@@ -170,6 +170,16 @@ public class KnowledgeBaseApplicationService {
             throw new IllegalStateException("必须先弃用知识库再删除");
         }
 
+        // 先清向量，避免 MySQL 软删后留下孤儿 embedding
+        String collectionName = "kb_" + TenantContext.getCurrentTenantId();
+        try {
+            milvusStore.deleteByKnowledgeId(collectionName, knowledgeId);
+        } catch (Exception e) {
+            log.error("[KB] 级联删除向量失败: kbId={}, collection={}", knowledgeId, collectionName, e);
+            throw new com.example.agent.common.exception.BusinessException(
+                    500, "级联删除向量失败: " + knowledgeId, e);
+        }
+
         // 级联删除: 文档(软删) + 切片(硬删) + KB标记删除
         documentRepository.softDeleteByKnowledgeId(knowledgeId);
         chunkRepository.softDeleteByKnowledgeId(knowledgeId);

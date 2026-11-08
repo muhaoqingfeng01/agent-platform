@@ -3,6 +3,7 @@ package com.example.agent.application.conversation;
 import com.example.agent.application.knowledge.HybridSearchApplicationService;
 import com.example.agent.application.knowledge.dto.SearchResultDTO;
 import com.example.agent.application.memory.SessionMemoryService;
+import com.example.agent.common.exception.SecurityBlockedException;
 import com.example.agent.domain.conversation.entity.Message;
 import com.example.agent.infrastructure.annotation.Auditable;
 import com.example.agent.infrastructure.config.sse.SseEventFactory;
@@ -78,6 +79,7 @@ public class KnowledgeSearchStreamService {
     private final LangfuseTraceService langfuseTrace;
     /** 🆕 P6 配置治理子方案03: SSE 心跳+上下文轮数从 Nacos 动态读取（消除与 StreamOrchestrationService 的重复定义） */
     private final SessionConfig sessionConfig;
+    private final StreamPipelineGuard pipelineGuard;
 
     /** 知识库检索无结果时的提示模板 */
     private static final String NO_RESULT_TEMPLATE = "您检索的「%s」内容本知识库暂时未涵盖，请联系相关人员及时更新内容。";
@@ -135,6 +137,8 @@ public class KnowledgeSearchStreamService {
 
         ScheduledExecutorService heartbeatExecutor = null;
         try {
+            pipelineGuard.filterInput(conversationId, userId, tenantId, userContent);
+
             // ========== Step 1: 保存用户消息（自动同步 Redis 短期记忆） ==========
             Message userMsg = messageService.saveUserMessage(conversationId, userContent);
             log.info("[RAG-Stream] 用户消息已保存: convId={}, msgId={}", conversationId, userMsg.getMessageId());
@@ -194,10 +198,11 @@ public class KnowledgeSearchStreamService {
             sendEvent(emitter, SseEventFactory.thinking(
                     String.format("已检索到 %d 条相关内容，正在生成回答...", hitCount)));
 
-            // 构建三层上下文 Prompt
+            // 构建三层上下文 Prompt（已发布模板 + 长期记忆）
             String historyContext = buildHistoryContext(history);
             String retrievedContext = buildRetrievedContext(hits);
-            String fullPrompt = String.format(RAG_SYSTEM_PROMPT, historyContext, retrievedContext, userContent);
+            String fullPrompt = pipelineGuard.assembleKnowledgePrompt(
+                    userId, historyContext, retrievedContext, userContent);
 
             // LLM 流式输出
             StringBuilder fullResponse = new StringBuilder();
@@ -218,7 +223,6 @@ public class KnowledgeSearchStreamService {
                         if (token != null) {
                             fullResponse.append(token);
                             tokenCount.incrementAndGet();
-                            sendEvent(emitter, SseEventFactory.token(token));
                         }
                     })
                     .doOnComplete(() -> {
@@ -226,13 +230,16 @@ public class KnowledgeSearchStreamService {
                         metrics.recordTokenConsumption(tenantId, "deepseek", tokenCount.get());
                         messageSample.stop(metrics.getMessageProcessingTimer());
 
+                        String safeText = pipelineGuard.desensitizeOutput(conversationId, fullResponse.toString());
+                        emitDesensitizedTokens(emitter, safeText);
+
                         // Langfuse RAG 调用追踪（异步发送）
                         langfuseTrace.logLLMCallAsync(traceId, conversationId, "deepseek",
-                                fullPrompt, fullResponse.toString(), llmDurationMs / 1_000_000, tokenCount.get());
+                                fullPrompt, safeText, llmDurationMs / 1_000_000, tokenCount.get());
 
                         // 保存助手消息
                         Message assistantMsg = messageService.saveAssistantMessage(
-                                conversationId, fullResponse.toString(), tokenCount.get());
+                                conversationId, safeText, tokenCount.get());
                         sendEvent(emitter, SseEventFactory.done(tokenCount.get(), assistantMsg.getMessageId()));
                         emitter.complete();
 
@@ -253,6 +260,11 @@ public class KnowledgeSearchStreamService {
                     })
                     .subscribe();
 
+        } catch (SecurityBlockedException e) {
+            messageSample.stop(metrics.getMessageProcessingTimer());
+            log.warn("[RAG-Stream] 输入被围栏阻断: convId={}, reason={}", conversationId, e.getMessage());
+            sendEvent(emitter, SseEventFactory.error(e.getMessage(), 403));
+            emitter.complete();
         } catch (Exception e) {
             messageSample.stop(metrics.getMessageProcessingTimer());
             log.error("[RAG-Stream] 管线异常: convId={}", conversationId, e);
@@ -411,6 +423,16 @@ public class KnowledgeSearchStreamService {
             }
         }, sessionConfig.getSseHeartbeatIntervalMs(), sessionConfig.getSseHeartbeatIntervalMs(), TimeUnit.MILLISECONDS);
         return executor;
+    }
+
+    private void emitDesensitizedTokens(SseEmitter emitter, String text) {
+        if (text == null || text.isEmpty()) {
+            return;
+        }
+        int chunk = 24;
+        for (int i = 0; i < text.length(); i += chunk) {
+            sendEvent(emitter, SseEventFactory.token(text.substring(i, Math.min(text.length(), i + chunk))));
+        }
     }
 
     /**

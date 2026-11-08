@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 提示词管理应用服务 — Facade 模式.
@@ -283,7 +284,10 @@ public class PromptApplicationService {
      * @return 渲染后的最终提示词
      */
     public String runtimeRender(String promptId, Map<String, Object> context) {
-        PromptTemplate template = getTemplateWithAccess(promptId);
+        PromptTemplate byId = getTemplateWithAccess(promptId);
+        Optional<PromptTemplate> cached = cachedPromptRepository.findLatestPublished(
+                TenantContext.getCurrentTenantId(), byId.getName());
+        PromptTemplate template = cached.filter(PromptTemplate::isPublished).orElse(byId);
 
         if (!template.isPublished()) {
             throw new BusinessException(400, "仅已发布的模板可用于运行时渲染，当前状态: "
@@ -292,6 +296,32 @@ public class PromptApplicationService {
 
         return renderService.renderWithValidation(
                 template.getTemplateText(), context, template.getVariables());
+    }
+
+    /**
+     * 按名称读取最新已发布模板并渲染（走 Redis 缓存读路径）。
+     *
+     * @return 渲染结果；无已发布模板或渲染失败时返回 null，由调用方回退拼接
+     */
+    public String runtimeRenderLatestPublished(String name, Map<String, Object> context) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        Long tenantId = TenantContext.getCurrentTenantId();
+        Optional<PromptTemplate> cached = cachedPromptRepository.findLatestPublished(tenantId, name);
+        if (cached.isEmpty() || !cached.get().isPublished()) {
+            log.info("[Prompt] 未找到已发布模板，回退拼接: name={}", name);
+            return null;
+        }
+        PromptTemplate template = cached.get();
+        try {
+            domainService.assertTenantAccess(template, tenantId);
+            return renderService.renderWithValidation(
+                    template.getTemplateText(), context, template.getVariables());
+        } catch (Exception e) {
+            log.warn("[Prompt] 运行时渲染失败，回退拼接: name={}", name, e);
+            return null;
+        }
     }
 
     // ==================== 私有方法 ====================

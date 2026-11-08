@@ -244,3 +244,5 @@ app:
     max-file-size: 300MB                      # 单个日志文件最大大小
     max-history-days: 30                      # 日志归档保留天数
     total-size-cap: 10GB                      # 日志归档总大小上限
+  im:
+    callback-token: ${IM_CALLBACK_TOKEN:dev-im-token}

@@ -91,6 +91,16 @@ public class SessionConfig extends NacosConfig<SessionConfig.SessionProps> {
         return Optional.ofNullable(getConfig()).map(p -> p.toolCacheTtlMinutes).orElse(60);
     }
 
+    /** 每会话最多保留的 Redis 检查点数，默认 5 */
+    public int getCheckpointMaxCount() {
+        return Optional.ofNullable(getConfig()).map(p -> p.checkpointMaxCount).orElse(5);
+    }
+
+    /** 检查点 TTL（分钟），默认 120 */
+    public int getCheckpointTtlMinutes() {
+        return Optional.ofNullable(getConfig()).map(p -> p.checkpointTtlMinutes).orElse(120);
+    }
+
     // ============================================================
     // 内部 POJO（Jackson 反序列化）
     // ============================================================
@@ -106,5 +116,7 @@ public class SessionConfig extends NacosConfig<SessionConfig.SessionProps> {
         public Integer contextRounds;
         public Integer intentCacheTtlMinutes;
         public Integer toolCacheTtlMinutes;
+        public Integer checkpointMaxCount;
+        public Integer checkpointTtlMinutes;
     }
 }

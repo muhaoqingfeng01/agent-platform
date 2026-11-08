@@ -42,6 +42,12 @@
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
 
+        <!-- LDAP 企业目录认证（spring.ldap.enabled=true 时使用） -->
+        <dependency>
+            <groupId>org.springframework.ldap</groupId>
+            <artifactId>spring-ldap-core</artifactId>
+        </dependency>
+
         <!-- Sa-Token (Authentication & Authorization) -->
         <dependency>
             <groupId>cn.dev33</groupId>

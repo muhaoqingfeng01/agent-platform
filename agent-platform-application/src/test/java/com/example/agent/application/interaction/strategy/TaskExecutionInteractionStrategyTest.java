@@ -1,9 +1,11 @@
 package com.example.agent.application.interaction.strategy;
 
 import com.example.agent.application.approval.ApprovalWorkflowApplicationService;
+import com.example.agent.application.checkpoint.CheckpointService;
 import com.example.agent.application.conversation.MessageApplicationService;
 import com.example.agent.application.task.DagExecutionService;
 import com.example.agent.application.task.TaskPlanningService;
+import com.example.agent.infrastructure.config.nacos.SessionConfig;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.domain.conversation.entity.Message;
 import com.example.agent.domain.interaction.valueobject.InteractionContext;
@@ -41,6 +43,10 @@ class TaskExecutionInteractionStrategyTest {
     private MessageApplicationService messageService;
     @Mock
     private TaskStepExecutionRepository stepExecutionRepository;
+    @Mock
+    private SessionConfig sessionConfig;
+    @Mock
+    private CheckpointService checkpointService;
 
     private TaskExecutionInteractionStrategy strategy;
 
@@ -48,7 +54,7 @@ class TaskExecutionInteractionStrategyTest {
     void setUp() {
         strategy = new TaskExecutionInteractionStrategy(
                 planningService, dagExecutionService, approvalService,
-                messageService, stepExecutionRepository, null);
+                messageService, stepExecutionRepository, sessionConfig, checkpointService);
     }
 
     @Test

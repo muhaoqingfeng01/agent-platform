@@ -3,6 +3,7 @@ package com.example.agent.domain.interaction.valueobject;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -51,6 +52,21 @@ public class InteractionContext {
 
     /** SSE 发射器（对话型流式模式使用，由 Controller 创建并注入） */
     private Object emitter;
+
+    /** 请求级扩展属性（检查点、槽位等，不参与模式路由） */
+    @Builder.Default
+    private Map<String, Object> attributes = new HashMap<>();
+
+    public void putAttribute(String key, Object value) {
+        if (attributes == null) {
+            attributes = new HashMap<>();
+        }
+        attributes.put(key, value);
+    }
+
+    public Object getAttribute(String key) {
+        return attributes == null ? null : attributes.get(key);
+    }
 
     // ==================== 工厂方法 ====================
 

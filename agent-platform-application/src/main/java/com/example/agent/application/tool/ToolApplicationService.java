@@ -1,5 +1,8 @@
 package com.example.agent.application.tool;
 
+import com.example.agent.application.approval.ApprovalWorkflowApplicationService;
+import com.example.agent.application.approval.dto.ApprovalCreateCommand;
+import com.example.agent.application.approval.dto.ApprovalWorkflowResponse;
 import com.example.agent.application.tool.dto.*;
 import com.example.agent.infrastructure.annotation.Auditable;
 import com.example.agent.infrastructure.context.TenantContext;
@@ -69,6 +72,9 @@ public class ToolApplicationService {
 
     /** 工具版本历史仓储 */
     private final ToolRegistryVersionRepository versionRepository;
+
+    /** 高风险工具审批 */
+    private final ApprovalWorkflowApplicationService approvalService;
 
     // ==================== 工具 CRUD ====================
 
@@ -368,6 +374,24 @@ public class ToolApplicationService {
         ToolRegistry tool = toolRepository.findByToolId(toolId)
                 .orElseThrow(() -> new ResourceNotFoundException("工具", toolId));
         domainService.assertTenantAccess(tool, tenantId);
+
+        if (tool.isRequireApproval()) {
+            ApprovalWorkflowResponse approval = approvalService.createApproval(
+                    ApprovalCreateCommand.builder()
+                            .toolId(toolId)
+                            .params(params)
+                            .riskLevel("HIGH")
+                            .build());
+            log.info("[Tool] 高风险工具已提交审批: toolId={}, approvalId={}",
+                    toolId, approval.getApprovalId());
+            return ToolTestResponse.builder()
+                    .success(false)
+                    .pendingApproval(true)
+                    .approvalId(approval.getApprovalId())
+                    .errorMessage("高风险工具已提交审批，请等待审批通过后再执行")
+                    .durationMs(0)
+                    .build();
+        }
 
         long startTime = System.currentTimeMillis();
         String paramsJson = toJson(params);

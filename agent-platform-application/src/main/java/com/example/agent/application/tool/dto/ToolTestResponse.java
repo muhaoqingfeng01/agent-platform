@@ -33,4 +33,12 @@ public class ToolTestResponse {
     /** 调用记录 ID — 对应 t_tool_invocation_log.invocation_id */
     @Schema(description = "调用记录 ID")
     private String invocationId;
+
+    /** 高风险工具已建审批、尚未真正调用 */
+    @Schema(description = "是否等待审批")
+    private boolean pendingApproval;
+
+    /** 审批工单 ID */
+    @Schema(description = "审批工单 ID")
+    private String approvalId;
 }

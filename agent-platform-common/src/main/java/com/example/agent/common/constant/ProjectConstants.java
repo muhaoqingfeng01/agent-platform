@@ -112,6 +112,10 @@ public final class ProjectConstants {
 
         /** 未指定 Agent 时的默认标识（Web 聊天可直接建会话） */
         public static final String DEFAULT_AGENT_ID = "default";
+        /** 智能对话运行时已发布模板名称 */
+        public static final String PROMPT_NAME_CONVERSATION = "conversation";
+        /** 知识检索运行时已发布模板名称 */
+        public static final String PROMPT_NAME_KNOWLEDGE_SEARCH = "knowledge_search";
     }
 
     // ========== WebSocket ==========

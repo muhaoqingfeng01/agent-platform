@@ -3,6 +3,10 @@ package com.example.agent.infrastructure.aop;
 import com.alibaba.csp.sentinel.Entry;
 import com.alibaba.csp.sentinel.SphU;
 import com.alibaba.csp.sentinel.slots.block.BlockException;
+import com.alibaba.csp.sentinel.slots.block.RuleConstant;
+import com.alibaba.csp.sentinel.slots.block.flow.FlowRule;
+import com.alibaba.csp.sentinel.slots.block.flow.FlowRuleManager;
+import com.example.agent.common.exception.BusinessException;
 import com.example.agent.common.result.Result;
 import com.example.agent.infrastructure.annotation.RateLimit;
 import com.example.agent.infrastructure.context.TenantContext;
@@ -10,7 +14,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Sentinel 限流 AOP 切面
@@ -22,8 +33,9 @@ import org.springframework.stereotype.Component;
  * <ol>
  *   <li>解析资源名（注解指定 → 自动生成 "类名.方法名"）</li>
  *   <li>拼接租户维度："resource:tenant:tenantId"</li>
+ *   <li>若该完整资源尚无 FlowRule，按注解 QPS 合并注册（不覆盖已有规则）</li>
  *   <li>通过 Sentinel SphU.entry() 申请通行</li>
- *   <li>被限流时返回统一 429 响应</li>
+ *   <li>被限流时：返回类型为 Result 则返回 429 Result，否则抛 BusinessException(429)</li>
  * </ol>
  */
 @Slf4j
@@ -31,88 +43,90 @@ import org.springframework.stereotype.Component;
 @Component
 public class RateLimitAspect {
 
-    /**
-     * 环绕增强：限流校验
-     * <p>
-     * 被 {@link BlockException} 捕获时返回限流响应。
-     *
-     * @param joinPoint 切入点
-     * @param rateLimit 限流注解配置
-     * @return 方法返回值（正常执行） 或 429 限流响应（被限流）
-     */
+    /** 本切面已确保存在规则的资源名，避免每次请求扫描全量规则 */
+    private final Set<String> ensuredResources = ConcurrentHashMap.newKeySet();
+
     @Around("@annotation(rateLimit)")
     public Object around(ProceedingJoinPoint joinPoint, RateLimit rateLimit) throws Throwable {
-        // 1. 解析资源名
         String resource = resolveResource(joinPoint, rateLimit);
-
-        // 2. 拼接租户维度（尝试获取，失败则使用默认维度）
         String fullResource = appendTenantDimension(resource);
 
         log.debug("[Sentinel] 限流校验: resource={}, qps={}, warmUp={}s",
                 fullResource, rateLimit.qps(), rateLimit.warmUpPeriod());
 
+        ensureFlowRule(fullResource, rateLimit.qps());
+
         Entry entry = null;
         try {
-            // 3. 申请 Sentinel 通行许可
             entry = SphU.entry(fullResource);
-            // 4. 正常执行目标方法
             return joinPoint.proceed();
-
         } catch (BlockException e) {
-            // 5. 被限流 — 记录日志，返回统一响应
             log.warn("[Sentinel] 请求被限流: resource={}, qpsLimit={}, blockType={}",
                     fullResource, rateLimit.qps(), e.getRuleLimitApp());
-            return handleBlock(rateLimit, e);
-
+            return handleBlock(joinPoint, rateLimit);
         } finally {
-            // 6. 释放 Sentinel Entry（务必在 finally 中执行）
             if (entry != null) {
                 entry.exit();
             }
         }
     }
 
-    /**
-     * 解析资源名称
-     * <p>
-     * 注解指定则使用注解值，否则自动生成 "类全限定名.方法名"。
-     */
     private String resolveResource(ProceedingJoinPoint joinPoint, RateLimit rateLimit) {
         String resource = rateLimit.resource();
         if (resource == null || resource.isEmpty()) {
-            // 自动生成：com.example.agent.interfaces.rest.XXXController.methodName
             resource = joinPoint.getSignature().getDeclaringTypeName()
                     + "." + joinPoint.getSignature().getName();
         }
         return resource;
     }
 
-    /**
-     * 拼接租户维度
-     * <p>
-     * 格式：{resource}:tenant:{tenantId}
-     * 从 {@link TenantContext} 获取当前租户 ID（由 TenantInterceptor 在请求进入时设置），
-     * 无法获取时使用 "unknown" 兜底。
-     */
     private String appendTenantDimension(String resource) {
         Long tenantId = TenantContext.getCurrentTenantId();
-        String tenantStr;
-        if (tenantId == null) {
-            tenantStr = "unknown";
-        } else {
-            tenantStr = String.valueOf(tenantId);
-        }
+        String tenantStr = tenantId == null ? "unknown" : String.valueOf(tenantId);
         return resource + ":tenant:" + tenantStr;
     }
 
     /**
-     * 限流降级处理
-     * <p>
-     * 返回统一的 HTTP 429 响应，提示用户稍后再试。
+     * 仅为缺失资源注册注解 QPS，避免覆盖 Nacos / Fallback 已下发规则.
      */
-    private Object handleBlock(RateLimit rateLimit, BlockException e) {
+    private void ensureFlowRule(String fullResource, int qps) {
+        if (ensuredResources.contains(fullResource)) {
+            return;
+        }
+        synchronized (this) {
+            if (ensuredResources.contains(fullResource)) {
+                return;
+            }
+            List<FlowRule> existing = FlowRuleManager.getRules();
+            boolean present = existing.stream().anyMatch(r -> fullResource.equals(r.getResource()));
+            if (!present) {
+                List<FlowRule> merged = new ArrayList<>(existing);
+                FlowRule rule = new FlowRule();
+                rule.setResource(fullResource);
+                rule.setGrade(RuleConstant.FLOW_GRADE_QPS);
+                rule.setCount(qps);
+                rule.setLimitApp("default");
+                merged.add(rule);
+                FlowRuleManager.loadRules(merged);
+                log.info("[Sentinel] 按注解注册限流规则: resource={}, qps={}", fullResource, qps);
+            }
+            ensuredResources.add(fullResource);
+        }
+    }
+
+    /**
+     * Result 返回类型 → 429 Result；SSE 等非 Result → 抛 BusinessException(429).
+     */
+    private Object handleBlock(ProceedingJoinPoint joinPoint, RateLimit rateLimit) {
         String message = "请求过于频繁，请稍后再试。限制: " + rateLimit.qps() + " QPS";
-        log.info("[Sentinel] 返回限流响应: message={}", message);
-        return Result.fail(429, message);
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        Method method = signature.getMethod();
+        Class<?> returnType = method.getReturnType();
+        if (Result.class.isAssignableFrom(returnType)) {
+            log.info("[Sentinel] 返回限流 Result: message={}", message);
+            return Result.fail(429, message);
+        }
+        log.info("[Sentinel] 抛出限流异常: message={}", message);
+        throw new BusinessException(429, message);
     }
 }

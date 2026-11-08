@@ -26,6 +26,7 @@ public final class SseEventFactory {
     public static final String EVENT_APPROVAL_REQUIRED = "approval_required";
     public static final String EVENT_APPROVAL_LIST = "approval_list";
     public static final String EVENT_ANALYSIS_TABLE = "analysis_table";
+    public static final String EVENT_INTENT = "intent";
 
     private SseEventFactory() {}
 
@@ -48,6 +49,22 @@ public final class SseEventFactory {
                 .id(UUID.randomUUID().toString())
                 .name(EVENT_TOOL_RESULT)
                 .data(Map.of("tool", toolName, "status", "done", "result", result));
+    }
+
+    /**
+     * 意图识别结果事件 — 前端可展示建议模式，不强制改路由。
+     */
+    public static SseEmitter.SseEventBuilder intent(String intentCode, double confidence,
+                                                    String riskLevel, String suggestedMode) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("intentCode", intentCode != null ? intentCode : "UNKNOWN");
+        payload.put("confidence", confidence);
+        payload.put("riskLevel", riskLevel != null ? riskLevel : "LOW");
+        payload.put("suggestedMode", suggestedMode != null ? suggestedMode : "CONVERSATION");
+        return SseEmitter.event()
+                .id(UUID.randomUUID().toString())
+                .name(EVENT_INTENT)
+                .data(payload);
     }
 
     public static SseEmitter.SseEventBuilder thinking(String message) {

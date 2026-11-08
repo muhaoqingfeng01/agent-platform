@@ -68,6 +68,7 @@ public class SaTokenWebMvcConfig implements WebMvcConfigurer {
                                    "/actuator/info",
                                    "/actuator/prometheus",
                                    "/ws/**",
+                                   "/api/v1/im/callback/**",
                                    "/error")
                             .stop();                                // 停止校验，直接放行
 
