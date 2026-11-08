@@ -25,6 +25,27 @@
         )
     </insert>
 
+    <select id="selectByMessageId" resultMap="MessagePOMap">
+        SELECT id, conversation_id, message_id, role, content,
+               token_count, metadata_json, feedback, created_at
+        FROM t_message
+        WHERE message_id = #{messageId}
+        LIMIT 1
+    </select>
+
+    <select id="selectPreviousUserMessage" resultMap="MessagePOMap">
+        SELECT id, conversation_id, message_id, role, content,
+               token_count, metadata_json, feedback, created_at
+        FROM t_message
+        WHERE conversation_id = #{conversationId}
+          AND role = 'USER'
+          AND created_at &lt; (
+              SELECT created_at FROM t_message WHERE message_id = #{beforeMessageId}
+          )
+        ORDER BY created_at DESC
+        LIMIT 1
+    </select>
+
     <select id="selectByConversationId" resultMap="MessagePOMap">
         SELECT id, conversation_id, message_id, role, content,
                token_count, metadata_json, feedback, created_at

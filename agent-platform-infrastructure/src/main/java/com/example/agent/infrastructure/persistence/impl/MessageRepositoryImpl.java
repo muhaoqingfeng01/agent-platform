@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 消息仓储 MyBatis 实现 — Repository 模式.
@@ -34,6 +35,18 @@ public class MessageRepositoryImpl implements MessageRepository {
     @Override
     public void save(Message message) {
         messageMapper.insert(toPO(message));
+    }
+
+    @Override
+    public Optional<Message> findByMessageId(String messageId) {
+        MessagePO po = messageMapper.selectByMessageId(messageId);
+        return po == null ? Optional.empty() : Optional.of(toDomain(po));
+    }
+
+    @Override
+    public Optional<Message> findPreviousUserMessage(String conversationId, String beforeMessageId) {
+        MessagePO po = messageMapper.selectPreviousUserMessage(conversationId, beforeMessageId);
+        return po == null ? Optional.empty() : Optional.of(toDomain(po));
     }
 
     @Override

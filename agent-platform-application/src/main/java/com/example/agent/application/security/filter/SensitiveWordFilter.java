@@ -71,6 +71,7 @@ public class SensitiveWordFilter implements InputFilter {
 
     /**
      * 刷新敏感词缓存.
+     * <p>数据库短暂不可用时 fail-open（保留旧缓存 / 空树），避免拖垮整个应用启动.
      */
     public void refreshCache() {
         lock.writeLock().lock();
@@ -94,6 +95,8 @@ public class SensitiveWordFilter implements InputFilter {
 
             log.info("[SensitiveWordFilter] 敏感词缓存刷新完成: exact={}, regex={}",
                     newTree.size(), newRegex.size());
+        } catch (Exception e) {
+            log.warn("[SensitiveWordFilter] 敏感词缓存刷新失败，保留现有缓存: {}", e.getMessage());
         } finally {
             lock.writeLock().unlock();
         }

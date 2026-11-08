@@ -17,6 +17,11 @@ public interface MessageMapper {
 
     int insert(MessagePO po);
 
+    MessagePO selectByMessageId(@Param("messageId") String messageId);
+
+    MessagePO selectPreviousUserMessage(@Param("conversationId") String conversationId,
+                                         @Param("beforeMessageId") String beforeMessageId);
+
     List<MessagePO> selectByConversationId(@Param("conversationId") String conversationId,
                                             @Param("offset") int offset,
                                             @Param("size") int size);

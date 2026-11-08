@@ -4,6 +4,7 @@ import com.example.agent.domain.conversation.entity.Message;
 import com.example.agent.domain.conversation.valueobject.FeedbackType;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 消息仓储接口 — Repository 模式.
@@ -14,6 +15,13 @@ import java.util.List;
 public interface MessageRepository {
 
     void save(Message message);
+
+    Optional<Message> findByMessageId(String messageId);
+
+    /**
+     * 查找指定助手消息之前最近一条 USER 消息（用于重生）.
+     */
+    Optional<Message> findPreviousUserMessage(String conversationId, String beforeMessageId);
 
     List<Message> findByConversationId(String conversationId, int offset, int size);
 

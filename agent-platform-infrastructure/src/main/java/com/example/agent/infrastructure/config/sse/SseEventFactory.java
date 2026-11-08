@@ -27,8 +27,22 @@ public final class SseEventFactory {
     public static final String EVENT_APPROVAL_LIST = "approval_list";
     public static final String EVENT_ANALYSIS_TABLE = "analysis_table";
     public static final String EVENT_INTENT = "intent";
+    public static final String EVENT_STREAM_STARTED = "stream_started";
 
     private SseEventFactory() {}
+
+    /**
+     * 流开始事件 — 下发 streamId，供前端调用取消接口.
+     */
+    public static SseEmitter.SseEventBuilder streamStarted(String streamId, String conversationId) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("streamId", streamId);
+        payload.put("conversationId", conversationId != null ? conversationId : "");
+        return SseEmitter.event()
+                .id(UUID.randomUUID().toString())
+                .name(EVENT_STREAM_STARTED)
+                .data(payload);
+    }
 
     public static SseEmitter.SseEventBuilder token(String token) {
         return SseEmitter.event()
@@ -38,17 +52,46 @@ public final class SseEventFactory {
     }
 
     public static SseEmitter.SseEventBuilder toolCall(String toolName, Map<String, Object> params) {
+        return toolCall(null, toolName, params);
+    }
+
+    public static SseEmitter.SseEventBuilder toolCall(String toolId, String toolName, Map<String, Object> params) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        if (toolId != null) {
+            payload.put("toolId", toolId);
+        }
+        payload.put("tool", toolName != null ? toolName : "");
+        payload.put("status", "calling");
+        payload.put("params", params != null ? params : Map.of());
         return SseEmitter.event()
                 .id(UUID.randomUUID().toString())
                 .name(EVENT_TOOL_CALL)
-                .data(Map.of("tool", toolName, "status", "calling", "params", params));
+                .data(payload);
     }
 
     public static SseEmitter.SseEventBuilder toolResult(String toolName, Object result) {
+        return toolResult(null, toolName, true, result, null);
+    }
+
+    public static SseEmitter.SseEventBuilder toolResult(String toolId, String toolName, boolean success,
+                                                         Object result, String errorMessage) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        if (toolId != null) {
+            payload.put("toolId", toolId);
+        }
+        payload.put("tool", toolName != null ? toolName : "");
+        payload.put("status", success ? "done" : "failed");
+        payload.put("success", success);
+        if (result != null) {
+            payload.put("result", result);
+        }
+        if (errorMessage != null) {
+            payload.put("errorMessage", errorMessage);
+        }
         return SseEmitter.event()
                 .id(UUID.randomUUID().toString())
                 .name(EVENT_TOOL_RESULT)
-                .data(Map.of("tool", toolName, "status", "done", "result", result));
+                .data(payload);
     }
 
     /**

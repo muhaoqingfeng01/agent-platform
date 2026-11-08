@@ -10,10 +10,18 @@ import java.util.List;
 public interface PermissionService {
 
     /**
-     * 获取用户所有权限编码列表
+     * 获取用户所有权限编码列表（优先读缓存）
      *
      * @param userId 用户唯一标识
      * @return 权限编码列表（如 "tenant:read", "user:write"）
      */
     List<String> getPermissionCodes(String userId);
+
+    /**
+     * 强制从数据库重载权限并覆盖缓存（不踢下线）
+     *
+     * @param userId 用户唯一标识
+     * @return 最新权限编码列表
+     */
+    List<String> refreshPermissionCodes(String userId);
 }

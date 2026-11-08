@@ -1,6 +1,7 @@
 package com.example.agent.infrastructure.config.nacos;
 
 import com.alibaba.cloud.nacos.NacosConfigManager;
+import com.example.agent.common.constant.ProjectConstants;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -97,6 +98,20 @@ public class SchedulerConfig extends NacosConfig<SchedulerConfig.SchedulerProps>
         return Optional.ofNullable(getConfig()).map(p -> p.sensitiveWordRefreshMs).orElse(300_000L);
     }
 
+    /**
+     * 在线用户权限缓存刷新间隔（毫秒）.
+     * <p>优先读 Nacos {@code authzPermissionRefreshMs}；未配置或非法值时默认 1 小时.
+     */
+    public long getAuthzPermissionRefreshMs() {
+        Long configured = Optional.ofNullable(getConfig())
+                .map(p -> p.authzPermissionRefreshMs)
+                .orElse(null);
+        if (configured == null || configured <= 0) {
+            return ProjectConstants.Authz.REFRESH_INTERVAL_MS_DEFAULT;
+        }
+        return configured;
+    }
+
     // ========== 内部 POJO（Jackson 反序列化） ==========
 
     /**
@@ -121,5 +136,7 @@ public class SchedulerConfig extends NacosConfig<SchedulerConfig.SchedulerProps>
         public Long mcpClientRefreshMs;
         /** 敏感词缓存刷新间隔（毫秒） */
         public Long sensitiveWordRefreshMs;
+        /** 在线用户权限缓存刷新间隔（毫秒），默认 1 小时 */
+        public Long authzPermissionRefreshMs;
     }
 }

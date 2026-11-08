@@ -1,6 +1,7 @@
 package com.example.agent.application.interaction.strategy;
 
 import com.example.agent.application.conversation.KnowledgeSearchStreamService;
+import com.example.agent.application.conversation.StreamSessionService;
 import com.example.agent.application.interaction.dto.InteractionResponse;
 import com.example.agent.application.knowledge.HybridSearchApplicationService;
 import com.example.agent.application.knowledge.dto.SearchResultDTO;
@@ -121,7 +122,9 @@ public class KnowledgeSearchInteractionStrategy implements InteractionStrategy {
                 context.getUserId(),
                 context.getUserInput(),
                 context.getKnowledgeId(),
-                emitter
+                emitter,
+                StreamSessionService.shouldSkipPersistUser(context),
+                StreamSessionService.streamIdOf(context)
         );
     }
 

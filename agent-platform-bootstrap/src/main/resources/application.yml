@@ -5,7 +5,66 @@ spring:
   application:
     name: agent-platform
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
+    # local 对应 application-local.yml（敏感信息，已 gitignore，勿提交）
+    active: ${SPRING_PROFILES_ACTIVE:dev,local}
+
+  # 说明: 不使用 spring.config.import 拉 Nacos（会在 local 配置生效前鉴权失败）。
+  # 动态配置由 NacosConfig 子类通过 NacosConfigManager 在容器启动后拉取（失败则 YAML 兜底）。
+  cloud:
+    nacos:
+      # Nacos 3.x 默认开启鉴权；地址/账号请在 application-local.yml 或环境变量覆盖
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
+      server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+      # 空 = public 命名空间（Nacos 3.x 已合并空串与 public）
+      namespace: ${NACOS_NAMESPACE:}
+      config:
+        # 保留 enabled=true 以创建 NacosConfigManager；不通过 spring.config.import 提前拉配置
+        enabled: ${NACOS_CONFIG_ENABLED:true}
+        # 关闭 SCA 对 spring.config.import=nacos: 的强制校验
+        import-check:
+          enabled: false
+        file-extension: json
+        group: DEFAULT_GROUP
+        refresh-enabled: true
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        namespace: ${NACOS_NAMESPACE:}
+      discovery:
+        # 当前以配置中心为主；服务发现默认关，需要时设 NACOS_DISCOVERY_ENABLED=true
+        enabled: ${NACOS_DISCOVERY_ENABLED:false}
+        register-enabled: ${NACOS_DISCOVERY_ENABLED:false}
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        namespace: ${NACOS_NAMESPACE:}
+    sentinel:
+      enabled: ${SENTINEL_ENABLED:false}
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:localhost:8080}
+        port: ${SENTINEL_PORT:8719}
+      datasource:
+        ds-flow:
+          nacos:
+            server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+            username: ${NACOS_USERNAME:nacos}
+            password: ${NACOS_PASSWORD:nacos}
+            namespace: ${NACOS_NAMESPACE:}
+            group-id: SENTINEL_GROUP
+            data-id: ${spring.application.name}-flow-rules.json
+            data-type: json
+            rule-type: flow
+        ds-degrade:
+          nacos:
+            server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+            username: ${NACOS_USERNAME:nacos}
+            password: ${NACOS_PASSWORD:nacos}
+            namespace: ${NACOS_NAMESPACE:}
+            group-id: SENTINEL_GROUP
+            data-id: ${spring.application.name}-degrade-rules.json
+            data-type: json
+            rule-type: degrade
 
   # --- Datasource (MySQL) ---
   datasource:
@@ -46,7 +105,8 @@ spring:
   # --- Spring AI (DeepSeek Chat + OpenAI Embedding) ---
   ai:
     deepseek:
-      api-key: ${DEEPSEEK_API_KEY:}
+      # 启动期强制非空；真实密钥用 DEEPSEEK_API_KEY / application-local.yml 覆盖
+      api-key: ${DEEPSEEK_API_KEY:sk-local-placeholder-change-me}
       chat:
         options:
           model: ${AI_MODEL:deepseek-v4-pro}
@@ -54,7 +114,8 @@ spring:
           max-tokens: 4096
     # OpenAI 仅用于 Embedding，禁用 ChatModel 避免与 DeepSeek 冲突
     openai:
-      api-key: ${EMBEDDING_API_KEY:}
+      # 启动期强制非空；真实密钥用 EMBEDDING_API_KEY / application-local.yml 覆盖
+      api-key: ${EMBEDDING_API_KEY:sk-local-placeholder-change-me}
       base-url: ${EMBEDDING_BASE_URL:https://api.deepseek.com}
       embedding:
         options:
@@ -157,7 +218,7 @@ redisson:
 # Server
 # ============================================================
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT:8081}
   shutdown: graceful
   tomcat:
     max-connections: 1000
@@ -226,6 +287,10 @@ langfuse:
 # ============================================================
 # 以下属性仅供 logback-spring.xml 通过 <springProperty> 读取，
 # 各环境可通过 application-{profile}.yml 覆盖
+logging:
+  charset:
+    console: UTF-8
+    file: UTF-8
 
 # ============================================================
 # Security PII (Presidio 增强脱敏)

@@ -6,6 +6,7 @@ import com.example.agent.domain.conversation.entity.LongTermMemory;
 import com.example.agent.domain.conversation.entity.Message;
 import com.example.agent.domain.conversation.repository.LongTermMemoryRepository;
 import com.example.agent.domain.conversation.valueobject.MemoryType;
+import com.example.agent.infrastructure.config.ai.DeepSeekUtilityClient;
 import com.example.agent.infrastructure.config.nacos.SessionConfig;
 import com.example.agent.infrastructure.context.TenantContext;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -16,9 +17,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -39,7 +40,7 @@ public class LongTermMemoryService {
 
     private final LongTermMemoryRepository memoryRepository;
     private final SessionMemoryService sessionMemoryService;
-    private final ChatClient chatClient;
+    private final DeepSeekUtilityClient deepSeekUtilityClient;
     private final MemoryExtractorRegistry extractorRegistry;
     /** 🆕 P6 配置治理子方案03: 长期记忆参数从 Nacos 动态读取 */
     private final SessionConfig sessionConfig;
@@ -68,6 +69,9 @@ public class LongTermMemoryService {
                 }
             }
             log.info("[LTM] 提取完成: convId={}, facts={}", conversationId, facts.size());
+        } catch (RestClientException e) {
+            // fail-open：LLM 瞬时失败不影响主对话
+            log.warn("[LTM] 提取跳过（LLM 调用失败）: convId={}, error={}", conversationId, e.getMessage());
         } catch (Exception e) {
             log.error("[LTM] 提取失败: convId={}", conversationId, e);
         }
@@ -97,17 +101,15 @@ public class LongTermMemoryService {
                 .map(m -> m.getRole().getDesc() + ": " + m.getContent())
                 .collect(Collectors.joining("\n"));
 
-        return chatClient.prompt()
-                .user(String.format("""
-                    从对话中提取用户关键信息。返回 JSON:
-                    {"facts":[{"type":"FACT","key":"...","value":"...","confidence":0.9}]}
-                    type: FACT/PREFERENCE/CONTEXT/SUMMARY
+        // 走工具型客户端：强制 thinking=disabled，避免 Spring AI 非流式 JsonEOF
+        return deepSeekUtilityClient.completeText(String.format("""
+                从对话中提取用户关键信息。只返回 JSON，不要其它文字:
+                {"facts":[{"type":"FACT","key":"...","value":"...","confidence":0.9}]}
+                type: FACT/PREFERENCE/CONTEXT/SUMMARY
 
-                    对话内容:
-                    %s
-                    """, conversationText))
-                .call()
-                .content();
+                对话内容:
+                %s
+                """, conversationText), 1024);
     }
 
     private List<MemoryFact> parseFacts(String llmResponse) {
@@ -117,7 +119,7 @@ public class LongTermMemoryService {
             List<MemoryFact> facts = new ArrayList<>();
             for (JsonNode node : root.path("facts")) {
                 facts.add(MemoryFact.builder()
-                        .type(MemoryType.valueOf(node.path("type").asText("FACT")))
+                        .type(MemoryType.fromCode(node.path("type").asText("FACT")))
                         .key(node.path("key").asText())
                         .value(node.path("value").asText())
                         .confidence(node.path("confidence").asDouble(0.8))

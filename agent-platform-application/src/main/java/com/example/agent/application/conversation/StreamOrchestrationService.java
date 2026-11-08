@@ -53,6 +53,8 @@ public class StreamOrchestrationService {
     private final CheckpointService checkpointService;
     private final SlotAskSupport slotAskSupport;
     private final StreamPipelineGuard pipelineGuard;
+    private final StreamRegistry streamRegistry;
+    private final ConversationToolBridge conversationToolBridge;
 
     @Auditable(action = "LLM_CALL", resourceType = "CONVERSATION", recordResponse = false)
     public void executeStreamPipeline(String conversationId, Long tenantId, String userId,
@@ -117,10 +119,13 @@ public class StreamOrchestrationService {
                 slotsForPrompt = required;
             }
 
-            InteractionMode suggestedMode = pipelineGuard.suggestMode(intent);
-            sendEvent(emitter, SseEventFactory.intent(
-                    intent.getIntentCode(), intent.getConfidence(), intent.getRiskLevel(),
-                    suggestedMode.getCode()));
+            // 未匹配意图不推 intent 事件，避免前端刷「UNKNOWN → CONVERSATION」噪音
+            if (intent.isMatched()) {
+                InteractionMode suggestedMode = pipelineGuard.suggestMode(intent);
+                sendEvent(emitter, SseEventFactory.intent(
+                        intent.getIntentCode(), intent.getConfidence(), intent.getRiskLevel(),
+                        suggestedMode.getCode()));
+            }
 
             var highRiskApproval = pipelineGuard.pauseIfHighRiskIntent(intent, conversationId);
             if (highRiskApproval.isPresent()) {
@@ -136,6 +141,19 @@ public class StreamOrchestrationService {
             // Step 5: 启动心跳
             heartbeatExecutor = startHeartbeat(emitter);
 
+            // Step 5.5: 显式两轮工具调用（无工具/失败则 fail-open）
+            ConversationToolBridge.ToolRoundResult toolRound =
+                    conversationToolBridge.planAndExecute(tenantId, conversationId, userContent, emitter);
+            if (toolRound.hasApproval()) {
+                completeWithApproval(emitter, conversationId, toolRound.getApproval(), messageSample);
+                return;
+            }
+            String llmUserPrompt = fullPrompt;
+            if (toolRound.hasToolContext()) {
+                llmUserPrompt = fullPrompt + toolRound.getToolContext()
+                        + "\n请基于以上工具结果回答用户问题。\n";
+            }
+
             // Step 6: 推送 thinking 事件
             sendEvent(emitter, SseEventFactory.thinking("正在分析您的需求..."));
 
@@ -149,11 +167,17 @@ public class StreamOrchestrationService {
             // 启动 LLM 调用耗时采样
             Timer.Sample llmSample = Timer.start();
 
+            String streamId = StreamSessionService.streamIdOf(interactionContext);
+            final String promptForTrace = llmUserPrompt;
+
             chatClient.prompt()
-                    .user(fullPrompt)
+                    .user(llmUserPrompt)
                     .stream()
                     .chatResponse()
                     .doOnNext(resp -> {
+                        if (streamRegistry.isCancelled(streamId)) {
+                            throw new StreamCancelledException(streamId);
+                        }
                         String token = resp.getResult().getOutput().getText();
                         if (token != null) {
                             fullResponse.append(token);
@@ -161,6 +185,11 @@ public class StreamOrchestrationService {
                         }
                     })
                     .doOnComplete(() -> {
+                        if (streamRegistry.isCancelled(streamId)) {
+                            messageSample.stop(metrics.getMessageProcessingTimer());
+                            llmSample.stop(metrics.getLlmCallTimer());
+                            return;
+                        }
                         // 停止 LLM 计时并记录指标
                         long llmDurationMs = llmSample.stop(metrics.getLlmCallTimer());
                         metrics.recordTokenConsumption(tenantId, "deepseek", tokenCount.get());
@@ -172,7 +201,7 @@ public class StreamOrchestrationService {
 
                         // Langfuse LLM 调用追踪（异步发送）
                         langfuseTrace.logLLMCallAsync(traceId, conversationId, "deepseek",
-                                fullPrompt, safeText, llmDurationMs / 1_000_000, tokenCount.get());
+                                promptForTrace, safeText, llmDurationMs / 1_000_000, tokenCount.get());
 
                         Message assistantMsg = messageService.saveAssistantMessage(
                                 conversationId, safeText, tokenCount.get());
@@ -181,6 +210,12 @@ public class StreamOrchestrationService {
                         messageService.extractLongTermMemoryAsync(conversationId, userId, tenantId);
                     })
                     .doOnError(error -> {
+                        if (error instanceof StreamCancelledException) {
+                            log.info("[Stream] 用户取消生成: convId={}, streamId={}", conversationId, streamId);
+                            llmSample.stop(metrics.getLlmCallTimer());
+                            messageSample.stop(metrics.getMessageProcessingTimer());
+                            return;
+                        }
                         // 停止 LLM 计时并记录错误指标
                         llmSample.stop(metrics.getLlmCallTimer());
                         metrics.recordLlmError(tenantId, "deepseek", error.getClass().getSimpleName());

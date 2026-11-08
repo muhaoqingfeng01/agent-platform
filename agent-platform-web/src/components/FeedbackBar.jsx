@@ -5,10 +5,18 @@ export default function FeedbackBar({ messageId, conversationId, onSubmit }) {
   const [reason, setReason] = useState('')
   return (
     <Space size={4} style={{ marginTop: 4 }}>
-      <Button size="small" onClick={() => onSubmit({ messageId, conversationId, feedback: 'LIKE' })}>
+      <Button
+        size="small"
+        onClick={() => onSubmit({ msgId: messageId, messageId, conversationId, feedback: 'LIKE' })}
+      >
         赞
       </Button>
-      <Button size="small" onClick={() => onSubmit({ messageId, conversationId, feedback: 'DISLIKE', reason })}>
+      <Button
+        size="small"
+        onClick={() =>
+          onSubmit({ msgId: messageId, messageId, conversationId, feedback: 'DISLIKE', reason })
+        }
+      >
         踩
       </Button>
       <Input

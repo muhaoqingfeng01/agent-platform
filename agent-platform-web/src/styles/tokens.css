@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root,
+[data-theme='dark'] {
+  --ap-bg: #0f1115;
+  --ap-bg-elevated: #141821;
+  --ap-bg-soft: #171b24;
+  --ap-border: #2a2f3a;
+  --ap-border-strong: #3a4252;
+  --ap-text: #e8eaed;
+  --ap-text-muted: #9aa3b2;
+  --ap-accent: #3d8bfd;
+  --ap-accent-soft: rgba(61, 139, 253, 0.16);
+  --ap-user-bubble: #1e3a5f;
+  --ap-assistant-bubble: #171b24;
+  --ap-danger: #f07178;
+  --ap-success: #7fd99a;
+  --ap-radius: 12px;
+  --ap-chat-max: 780px;
+  --ap-font: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --ap-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+[data-theme='light'] {
+  --ap-bg: #f4f6f9;
+  --ap-bg-elevated: #ffffff;
+  --ap-bg-soft: #eef2f7;
+  --ap-border: #d7dee8;
+  --ap-border-strong: #b8c2d1;
+  --ap-text: #1a2332;
+  --ap-text-muted: #5b677a;
+  --ap-accent: #2563eb;
+  --ap-accent-soft: rgba(37, 99, 235, 0.1);
+  --ap-user-bubble: #dbeafe;
+  --ap-assistant-bubble: #ffffff;
+  --ap-danger: #dc2626;
+  --ap-success: #059669;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--ap-font);
+  background: var(--ap-bg);
+  color: var(--ap-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-shell {
+  min-height: 100%;
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(61, 139, 253, 0.08), transparent 60%),
+    radial-gradient(900px 400px at 90% 0%, rgba(127, 217, 154, 0.05), transparent 55%),
+    var(--ap-bg);
+}
+
+.chat-column {
+  width: min(100%, var(--ap-chat-max));
+  margin: 0 auto;
+}
+
+.msg-user {
+  background: var(--ap-user-bubble);
+  border-radius: 14px 14px 4px 14px;
+  padding: 10px 14px;
+  max-width: 85%;
+  margin-left: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.msg-assistant {
+  background: var(--ap-assistant-bubble);
+  border: 1px solid var(--ap-border);
+  border-radius: 14px 14px 14px 4px;
+  padding: 10px 14px;
+  max-width: 92%;
+  word-break: break-word;
+}
+
+.msg-assistant pre {
+  background: #0b0d12;
+  border-radius: 8px;
+  padding: 12px;
+  overflow: auto;
+  font-family: var(--ap-mono);
+  font-size: 13px;
+}
+
+[data-theme='light'] .msg-assistant pre {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.event-block {
+  border: 1px dashed var(--ap-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  background: var(--ap-bg-soft);
+  color: var(--ap-text-muted);
+  font-size: 12px;
+}
+
+.composer-box {
+  border: 1px solid var(--ap-border-strong);
+  background: var(--ap-bg-elevated);
+  border-radius: var(--ap-radius);
+  padding: 10px 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.sidebar-item {
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--ap-text-muted);
+}
+
+.sidebar-item:hover,
+.sidebar-item.active {
+  background: var(--ap-accent-soft);
+  color: var(--ap-text);
+}
+
+.login-hero {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(800px 400px at 20% 0%, rgba(61, 139, 253, 0.18), transparent 60%),
+    var(--ap-bg);
+}
+
+.login-card {
+  width: min(400px, 100%);
+  background: var(--ap-bg-elevated);
+  border: 1px solid var(--ap-border);
+  border-radius: 16px;
+  padding: 28px 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}

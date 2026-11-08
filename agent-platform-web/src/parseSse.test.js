@@ -30,4 +30,16 @@ describe('parseSse', () => {
     expect(blocks).toEqual([])
     expect(rest).toContain('token')
   })
+
+  it('parses stream_started', () => {
+    const r = parseSseBlock('event: stream_started\ndata: {"streamId":"abc","conversationId":"c1"}')
+    expect(r.event).toBe('stream_started')
+    expect(r.data.streamId).toBe('abc')
+  })
+
+  it('parses thinking event', () => {
+    const r = parseSseBlock('event: thinking\ndata: "正在分析"')
+    expect(r.event).toBe('thinking')
+    expect(r.data).toBe('正在分析')
+  })
 })

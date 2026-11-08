@@ -11,8 +11,10 @@ import java.util.List;
 /**
  * Sa-Token 权限加载器实现
  * <p>
- * 实现 {@link StpInterface}，每次鉴权时自动调用，
- * 从数据库加载当前登录用户的权限码和角色码。
+ * 实现 {@link StpInterface}，每次鉴权时自动调用。
+ * <p>
+ * 权限/角色由 {@link PermissionService}/{@link RoleService} 提供，底层优先读 Redis 缓存，
+ * 登录预热、变更动态刷新、登出清理、每 3 小时定时刷新。
  * <p>
  * 调用时机：
  * <ul>

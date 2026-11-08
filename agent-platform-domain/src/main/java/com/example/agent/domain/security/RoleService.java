@@ -10,10 +10,18 @@ import java.util.List;
 public interface RoleService {
 
     /**
-     * 获取用户角色编码列表
+     * 获取用户角色编码列表（优先读缓存）
      *
      * @param userId 用户唯一标识
      * @return 角色编码列表（如 "ADMIN", "OPERATOR"）
      */
     List<String> getRoleCodes(String userId);
+
+    /**
+     * 强制从数据库重载角色并覆盖缓存（不踢下线）
+     *
+     * @param userId 用户唯一标识
+     * @return 最新角色编码列表
+     */
+    List<String> refreshRoleCodes(String userId);
 }

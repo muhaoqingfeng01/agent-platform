@@ -1,5 +1,6 @@
 package com.example.agent.application.role;
 
+import com.example.agent.application.security.AuthzSessionService;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.domain.tenant.Role;
 import com.example.agent.domain.tenant.RoleRepository;
@@ -23,6 +24,7 @@ import java.util.List;
 public class RoleApplicationService {
 
     private final RoleRepository roleRepository;
+    private final AuthzSessionService authzSessionService;
 
     @Transactional
     public RoleResponse createRole(RoleCreateCommand request) {
@@ -61,7 +63,12 @@ public class RoleApplicationService {
         if (roleRepository.findById(id).isEmpty()) {
             throw new BusinessException(404, "角色不存在: " + id);
         }
+        // 先刷新关联用户（删除后仍可读到旧关联则先取用户列表）
+        List<String> userIds = roleRepository.findUserIdsByRoleId(id);
         roleRepository.delete(id);
+        for (String userId : userIds) {
+            authzSessionService.refreshUserAuthz(userId);
+        }
     }
 
     @Transactional
@@ -71,6 +78,8 @@ public class RoleApplicationService {
             throw new BusinessException(404, "角色不存在: " + roleId);
         }
         roleRepository.assignRoleToUser(request.getUserId(), roleId);
+        // 动态刷新该用户权限缓存，不强制退出登录
+        authzSessionService.refreshUserAuthz(request.getUserId());
     }
 
     public List<String> getUsersByRole(Long roleId) {
@@ -87,5 +96,7 @@ public class RoleApplicationService {
             throw new BusinessException(404, "角色不存在: " + roleId);
         }
         roleRepository.assignPermissionToRole(roleId, request.getPermissionId());
+        // 角色权限变更 → 刷新该角色下所有用户缓存（保持登录）
+        authzSessionService.refreshUsersOfRole(roleId);
     }
 }

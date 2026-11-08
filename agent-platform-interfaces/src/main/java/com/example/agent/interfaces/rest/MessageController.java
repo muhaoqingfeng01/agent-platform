@@ -4,7 +4,8 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.example.agent.application.conversation.MessageApplicationService;
 import com.example.agent.application.conversation.MessageListResponse;
 import com.example.agent.application.conversation.MessageApplicationService.MessageResponse;
-import com.example.agent.application.interaction.InteractionApplicationService;
+import com.example.agent.application.conversation.StreamSessionService;
+import com.example.agent.application.conversation.dto.StreamCancelResponse;
 import com.example.agent.application.optimization.event.MessageFeedbackEvent;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.helper.ResultRespHelper;
@@ -13,10 +14,12 @@ import com.example.agent.domain.conversation.valueobject.FeedbackType;
 import com.example.agent.infrastructure.annotation.RateLimit;
 import com.example.agent.infrastructure.config.sse.SseEmitterFactory;
 import com.example.agent.infrastructure.context.TenantContext;
+import com.example.agent.interfaces.dto.request.message.MessageCancelRequest;
 import com.example.agent.interfaces.dto.request.message.MessageSendRequest;
 import com.example.agent.interfaces.dto.request.message.MessageListRequest;
 import com.example.agent.interfaces.dto.request.message.MessageLoadBeforeRequest;
 import com.example.agent.interfaces.dto.request.message.MessageFeedbackRequest;
+import com.example.agent.interfaces.dto.request.message.MessageRegenerateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,9 +34,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 /**
  * 消息收发 Controller — 纯粹 HTTP 适配层.
  * <p>
- * 流式端点统一通过 {@link InteractionApplicationService} 路由到对应交互策略，
- * 支持 CONVERSATION（智能对话）、KNOWLEDGE_SEARCH（知识库检索）、TASK_EXECUTION（任务执行）、ANALYSIS（分析推理）、APPROVAL（安全审批）。
- * 新增模式只需在策略层注册，Controller 无需改动。
+ * 流式端点经 {@link StreamSessionService} 注册 streamId 后路由到交互策略，
+ * 支持 CONVERSATION / KNOWLEDGE_SEARCH / TASK_EXECUTION / ANALYSIS / APPROVAL，
+ * 并提供 cancel / regenerate。
  *
  * @author Agent Platform Team
  * @since 1.0.0
@@ -45,7 +48,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class MessageController {
 
     private final MessageApplicationService messageService;
-    private final InteractionApplicationService interactionService;
+    private final StreamSessionService streamSessionService;
     private final ApplicationEventPublisher eventPublisher;
 
     @PostMapping("/api/v1/conversations/messages/send")
@@ -66,11 +69,41 @@ public class MessageController {
     public SseEmitter streamChat(@Valid @RequestBody MessageSendRequest request,
                                  HttpServletResponse response) {
         SseEmitter emitter = SseEmitterFactory.create(300_000L, response);
-        // 统一走策略工厂路由，模式解析（含默认值/异常回退）下沉到 ApplicationService
-        interactionService.executeStream(
+        // 注册 streamId 后统一走策略工厂路由
+        streamSessionService.startStream(
                 request.getMode(),
                 request.getContent(),
                 request.getConversationId(),
+                request.getKnowledgeId(),
+                emitter,
+                false);
+        return emitter;
+    }
+
+    @PostMapping("/api/v1/conversations/messages/cancel")
+    @RateLimit(resource = "chat:send", qps = 50)
+    @SaCheckPermission("conversation:send")
+    @Operation(summary = "取消进行中的 SSE 流式生成")
+    public Result<StreamCancelResponse> cancelStream(@Valid @RequestBody MessageCancelRequest request) {
+        return ResultRespHelper.responseInvoke("MessageController.cancelStream", request, (req) ->
+                streamSessionService.cancel(req.getConversationId(), req.getStreamId()));
+    }
+
+    @PostMapping(value = "/api/v1/conversations/messages/regenerate",
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @RateLimit(resource = "chat:stream", qps = 30)
+    @SaCheckPermission("conversation:send")
+    @Operation(summary = "基于助手消息重生（SSE）— 保留旧消息并追加新助手回复")
+    public SseEmitter regenerate(@Valid @RequestBody MessageRegenerateRequest request,
+                                 HttpServletResponse response) {
+        // 先校验源消息，避免 emitter 已创建却抛出业务异常
+        streamSessionService.resolveUserContentForRegenerate(
+                request.getConversationId(), request.getSourceMessageId());
+        SseEmitter emitter = SseEmitterFactory.create(300_000L, response);
+        streamSessionService.regenerate(
+                request.getConversationId(),
+                request.getSourceMessageId(),
+                request.getMode(),
                 request.getKnowledgeId(),
                 emitter);
         return emitter;

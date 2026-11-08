@@ -2,6 +2,7 @@ package com.example.agent.interfaces.rest;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.example.agent.application.security.AuthProviderFactory;
+import com.example.agent.application.security.AuthzSessionService;
 import com.example.agent.common.exception.BusinessException;
 import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
@@ -38,6 +39,7 @@ public class AuthController {
 
     private final StringRedisTemplate stringRedisTemplate;
     private final AuthProviderFactory authProviderFactory;
+    private final AuthzSessionService authzSessionService;
 
     private static final String REFRESH_KEY_PREFIX = "refresh:";
     private static final long REFRESH_TTL_DAYS = 7;
@@ -65,6 +67,8 @@ public class AuthController {
             StpUtil.login(user.getUserId());
             StpUtil.getSession().set("tenantId", user.getTenantId());
             StpUtil.getSession().set("username", user.getUsername());
+            // 预热权限/角色缓存，后续 @SaCheckPermission 走 Redis
+            authzSessionService.onLogin(user.getUserId());
 
             String refreshToken = UUID.randomUUID().toString();
             stringRedisTemplate.opsForValue().set(
@@ -100,6 +104,7 @@ public class AuthController {
 
             stringRedisTemplate.delete(REFRESH_KEY_PREFIX + req.getUserId());
             StpUtil.login(req.getUserId());
+            authzSessionService.onLogin(req.getUserId());
 
             String newRefreshToken = UUID.randomUUID().toString();
             stringRedisTemplate.opsForValue().set(
@@ -130,6 +135,7 @@ public class AuthController {
             StpUtil.logout();
             if (userId != null) {
                 stringRedisTemplate.delete(REFRESH_KEY_PREFIX + userId);
+                authzSessionService.onLogout(userId);
             }
             return null;
         });

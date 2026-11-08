@@ -6,6 +6,7 @@ import com.alibaba.fastjson.JSON;
 import com.example.agent.application.checkpoint.CheckpointService;
 import com.example.agent.application.interaction.dto.InteractionResponse;
 import com.example.agent.common.exception.BusinessException;
+import com.example.agent.common.util.MdcContext;
 import com.example.agent.domain.interaction.service.InteractionStrategy;
 import com.example.agent.domain.interaction.valueobject.InteractionContext;
 import com.example.agent.domain.interaction.valueobject.InteractionMode;
@@ -22,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.function.Consumer;
 
 /**
  * 交互应用服务 — 编排多模式交互流程.
@@ -120,6 +122,15 @@ public class InteractionApplicationService {
      */
     public void executeStream(String modeCode, String content, String conversationId,
                                String knowledgeId, SseEmitter emitter) {
+        executeStream(modeCode, content, conversationId, knowledgeId, emitter, null);
+    }
+
+    /**
+     * @param attributeCustomizer 可选：向 InteractionContext.attributes 注入 streamId / skipPersist 等
+     */
+    public void executeStream(String modeCode, String content, String conversationId,
+                               String knowledgeId, SseEmitter emitter,
+                               Consumer<Map<String, Object>> attributeCustomizer) {
         InteractionMode mode = resolveMode(modeCode);
 
         // 分析推理 / 安全审批需在 HTTP 线程校验权限（Sa-Token ThreadLocal 不进线程池）
@@ -136,6 +147,14 @@ public class InteractionApplicationService {
 
         InteractionContext context = buildContext(mode, content, conversationId,
                 knowledgeId, modeFlags, emitter);
+        if (attributeCustomizer != null) {
+            Map<String, Object> attrs = context.getAttributes();
+            if (attrs == null) {
+                attrs = new HashMap<>();
+                context.setAttributes(attrs);
+            }
+            attributeCustomizer.accept(attrs);
+        }
         // 新 Emitter：若检查点相位 ≠ INIT 则注入槽位/执行进度，供策略断点续传
         checkpointService.attachLatest(context);
         InteractionStrategy strategy = strategyFactory.getStrategy(mode);
@@ -144,7 +163,8 @@ public class InteractionApplicationService {
 
         Long tenantId = requireTenantId();
         String countedMode = mode.getCode();
-        streamExecutor.submit(() -> {
+        // 显式传播 MDC（traceId/spanId/tenantId），否则 stream-pool 审计/日志丢链路上下文
+        streamExecutor.submit(MdcContext.wrap(() -> {
             try {
                 strategy.executeStream(context);
                 quotaDomainService.recordLlmSuccess(tenantId, countedMode);
@@ -152,7 +172,7 @@ public class InteractionApplicationService {
                 log.error("[Interaction] 流式执行异常: mode={}, convId={}", mode.getDesc(), conversationId, e);
                 emitter.completeWithError(e);
             }
-        });
+        }));
     }
 
     /**

@@ -4,6 +4,7 @@ import com.example.agent.domain.audit.entity.AuditLog;
 import com.example.agent.domain.audit.repository.AuditLogRepository;
 import com.example.agent.domain.audit.valueobject.ActorTypeEnums;
 import com.example.agent.infrastructure.annotation.Auditable;
+import com.example.agent.infrastructure.config.threadpool.AuditLogThreadPoolConfig;
 import com.example.agent.infrastructure.context.TenantContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,18 +15,22 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 审计日志 AOP 切面 — 对 {@code @Auditable} 注解的方法自动记录审计日志.
  *
  * <h3>记录内容</h3>
  * <ul>
- *   <li><b>traceId</b> — 从 MDC 获取（由 TraceFilter 注入）</li>
- *   <li><b>tenantId / userId</b> — 从 TenantContext 获取</li>
+ *   <li><b>traceId</b> — 从 MDC 获取；缺失时生成兜底值（满足 DB NOT NULL）</li>
+ *   <li><b>tenantId / userId</b> — 优先 TenantContext，回退方法参数</li>
+ *   <li><b>conversationId</b> — 方法参数 conversationId（若有）</li>
  *   <li><b>durationMs</b> — 方法执行耗时</li>
  *   <li><b>status</b> — SUCCESS / FAILED</li>
  *   <li><b>requestJson</b> — 方法参数（可选，受 recordRequest 控制）</li>
@@ -46,10 +51,15 @@ public class AuditLogAspect {
 
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
+    private final ThreadPoolTaskExecutor auditLogExecutor;
 
-    public AuditLogAspect(AuditLogRepository auditLogRepository, ObjectMapper objectMapper) {
+    public AuditLogAspect(AuditLogRepository auditLogRepository,
+                          ObjectMapper objectMapper,
+                          @Qualifier(AuditLogThreadPoolConfig.AUDIT_LOG_EXECUTOR)
+                          ThreadPoolTaskExecutor auditLogExecutor) {
         this.auditLogRepository = auditLogRepository;
         this.objectMapper = objectMapper;
+        this.auditLogExecutor = auditLogExecutor;
     }
 
     /**
@@ -58,9 +68,11 @@ public class AuditLogAspect {
     @Around("@annotation(auditable)")
     public Object around(ProceedingJoinPoint joinPoint, Auditable auditable) throws Throwable {
         long start = System.currentTimeMillis();
+        // 预捕获：HTTP 线程场景下上下文在进入方法前已就绪；
+        // 流式线程场景下方法体内才会 setTenantId，需在 finally 再解析一次。
         String traceId = MDC.get("traceId");
-        Long tenantId = TenantContext.getCurrentTenantId();
-        String userId = TenantContext.getCurrentUserId();
+        Long tenantIdBefore = TenantContext.getCurrentTenantId();
+        String userIdBefore = TenantContext.getCurrentUserId();
         String status = "SUCCESS";
         String requestJson = null;
         String responseJson = null;
@@ -86,27 +98,38 @@ public class AuditLogAspect {
         } finally {
             long duration = System.currentTimeMillis() - start;
 
-            // 构建审计日志实体
-            AuditLog auditLog = AuditLog.builder()
-                    .traceId(traceId)
-                    .tenantId(tenantId)
-                    .actorType(userId != null ? ActorTypeEnums.USER.name() : ActorTypeEnums.SYSTEM.name())
-                    .actorId(userId)
-                    .action(auditable.action())
-                    .resourceType(auditable.resourceType())
-                    .resourceId(resolveResourceId(auditable.resourceId(), joinPoint))
-                    .requestJson(requestJson)
-                    .responseJson(responseJson)
-                    .durationMs(duration)
-                    .status(status)
-                    .build();
+            // 方法执行后再次解析：覆盖 stream-pool 等延迟注入 TenantContext 的场景
+            Long tenantId = resolveTenantId(joinPoint, tenantIdBefore);
+            String userId = resolveUserId(joinPoint, userIdBefore);
+            traceId = resolveTraceId(traceId);
+            String conversationId = resolveConversationId(joinPoint);
 
-            // 异步写入（fail-open：写入失败不阻断业务）
-            try {
-                asyncSave(auditLog);
-            } catch (Exception e) {
-                log.warn("[AuditLog] 审计日志异步写入失败: traceId={}, action={}, error={}",
-                        traceId, auditable.action(), e.getMessage());
+            if (tenantId == null) {
+                log.warn("[AuditLog] 跳过写入：tenantId 为空, action={}, method={}",
+                        auditable.action(), joinPoint.getSignature().toShortString());
+            } else {
+                AuditLog auditLog = AuditLog.builder()
+                        .traceId(traceId)
+                        .tenantId(tenantId)
+                        .conversationId(conversationId)
+                        .actorType(userId != null ? ActorTypeEnums.USER.getCode() : ActorTypeEnums.SYSTEM.getCode())
+                        .actorId(userId)
+                        .action(auditable.action())
+                        .resourceType(auditable.resourceType())
+                        .resourceId(resolveResourceId(auditable.resourceId(), joinPoint))
+                        .requestJson(requestJson)
+                        .responseJson(responseJson)
+                        .durationMs(duration)
+                        .status(status)
+                        .build();
+
+                // 异步写入（fail-open：写入失败不阻断业务）
+                try {
+                    asyncSave(auditLog);
+                } catch (Exception e) {
+                    log.warn("[AuditLog] 审计日志异步提交失败: traceId={}, action={}, error={}",
+                            traceId, auditable.action(), e.getMessage());
+                }
             }
         }
     }
@@ -118,14 +141,86 @@ public class AuditLogAspect {
      * 这里提交到线程池执行。
      */
     private void asyncSave(AuditLog auditLog) {
-        // 直接写入数据库，由 RepositoryImpl 的 DAO 层保证性能
-        // 大规模部署时此处应改为 Kafka/ES
-        try {
-            auditLogRepository.save(auditLog);
-        } catch (Exception e) {
-            log.warn("[AuditLog] 审计日志写入失败（已忽略）: traceId={}, action={}, error={}",
-                    auditLog.getTraceId(), auditLog.getAction(), e.getMessage());
+        auditLogExecutor.execute(() -> {
+            try {
+                auditLogRepository.save(auditLog);
+            } catch (Exception e) {
+                log.warn("[AuditLog] 审计日志写入失败（已忽略）: traceId={}, action={}, error={}",
+                        auditLog.getTraceId(), auditLog.getAction(), e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * 解析 traceId：预捕获 → MDC → 生成兜底 UUID（DB 列为 NOT NULL）.
+     */
+    private String resolveTraceId(String traceIdBefore) {
+        if (traceIdBefore != null && !traceIdBefore.isBlank()) {
+            return traceIdBefore;
         }
+        String fromMdc = MDC.get("traceId");
+        if (fromMdc != null && !fromMdc.isBlank()) {
+            return fromMdc;
+        }
+        String generated = UUID.randomUUID().toString().replace("-", "");
+        log.debug("[AuditLog] MDC 无 traceId，已生成兜底值: {}", generated);
+        return generated;
+    }
+
+    private String resolveConversationId(ProceedingJoinPoint joinPoint) {
+        Object arg = findArgByName(joinPoint, "conversationId");
+        return arg != null ? truncate(arg.toString(), 64) : null;
+    }
+
+    /**
+     * 解析租户 ID：TenantContext（方法后）→ 预捕获值 → 方法参数 tenantId.
+     */
+    private Long resolveTenantId(ProceedingJoinPoint joinPoint, Long tenantIdBefore) {
+        Long fromContext = TenantContext.getCurrentTenantId();
+        if (fromContext != null) {
+            return fromContext;
+        }
+        if (tenantIdBefore != null) {
+            return tenantIdBefore;
+        }
+        Object arg = findArgByName(joinPoint, "tenantId");
+        if (arg instanceof Long longVal) {
+            return longVal;
+        }
+        if (arg instanceof Number number) {
+            return number.longValue();
+        }
+        return null;
+    }
+
+    /**
+     * 解析用户 ID：TenantContext（方法后）→ 预捕获值 → 方法参数 userId.
+     */
+    private String resolveUserId(ProceedingJoinPoint joinPoint, String userIdBefore) {
+        String fromContext = TenantContext.getCurrentUserId();
+        if (fromContext != null) {
+            return fromContext;
+        }
+        if (userIdBefore != null) {
+            return userIdBefore;
+        }
+        Object arg = findArgByName(joinPoint, "userId");
+        return arg != null ? arg.toString() : null;
+    }
+
+    private Object findArgByName(ProceedingJoinPoint joinPoint, String name) {
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        String[] paramNames = signature.getParameterNames();
+        Object[] args = joinPoint.getArgs();
+        if (paramNames == null || args == null) {
+            return null;
+        }
+        for (int i = 0; i < paramNames.length && i < args.length; i++) {
+            if (name.equals(paramNames[i])) {
+                return args[i];
+            }
+        }
+        return null;
     }
 
     /**

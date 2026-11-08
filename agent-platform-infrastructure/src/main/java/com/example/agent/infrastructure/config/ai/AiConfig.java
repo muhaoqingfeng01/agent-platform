@@ -3,7 +3,7 @@ package com.example.agent.infrastructure.config.ai;
 import com.example.agent.infrastructure.config.nacos.AiModelConfig;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.ai.deepseek.DeepSeekChatOptions;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -40,8 +40,9 @@ public class AiConfig {
      */
     @Bean
     public ChatClient chatClient(ChatClient.Builder builder) {
+        // 必须使用 DeepSeekChatOptions；OpenAiChatOptions 与 DeepSeekChatModel 选项合并不完整
         return builder
-                .defaultOptions(OpenAiChatOptions.builder()
+                .defaultOptions(DeepSeekChatOptions.builder()
                         .model(aiModelConfig.getChatModel())
                         .temperature(aiModelConfig.getChatTemperature())
                         .maxTokens(aiModelConfig.getChatMaxTokens())

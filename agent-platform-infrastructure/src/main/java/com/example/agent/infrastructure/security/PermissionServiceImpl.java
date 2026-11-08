@@ -13,15 +13,11 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 权限服务实现 — 基于数据库三表 JOIN 查询权限码
+ * 权限服务实现 — Redis 缓存 + 数据库三表 JOIN，支持通配符展开.
  * <p>
  * 查询路径: t_user → t_user_role → t_role_permission → t_permission
- * <p>
- * 支持通配符:
- * <ul>
- *   <li>{@code *} — 全局通配符，拥有所有权限</li>
- *   <li>{@code resource:*} — 资源级通配符，拥有该资源下所有操作权限（如 {@code knowledge:*} 匹配 knowledge:read / knowledge:write / ...）</li>
- * </ul>
+ *
+ * @author Agent Platform Team
  */
 @Slf4j
 @Service
@@ -29,10 +25,30 @@ import java.util.Set;
 public class PermissionServiceImpl implements PermissionService {
 
     private final PermissionRepository permissionRepository;
+    private final AuthzCacheStore authzCacheStore;
 
     @Override
     public List<String> getPermissionCodes(String userId) {
-        log.debug("[PermissionService] 查询权限: userId={}", userId);
+        return authzCacheStore.getPermissions(userId)
+                .orElseGet(() -> {
+                    List<String> codes = loadAndExpandFromDb(userId);
+                    authzCacheStore.putPermissions(userId, codes);
+                    log.debug("[PermissionService] 缓存未命中，已回源并写入: userId={}, count={}",
+                            userId, codes.size());
+                    return codes;
+                });
+    }
+
+    @Override
+    public List<String> refreshPermissionCodes(String userId) {
+        List<String> codes = loadAndExpandFromDb(userId);
+        authzCacheStore.putPermissions(userId, codes);
+        log.debug("[PermissionService] 已刷新权限缓存: userId={}, count={}", userId, codes.size());
+        return codes;
+    }
+
+    private List<String> loadAndExpandFromDb(String userId) {
+        log.debug("[PermissionService] 查询权限 DB: userId={}", userId);
 
         List<Permission> permissions = permissionRepository.findByUserId(userId);
         List<String> permissionCodes = new ArrayList<>(
@@ -41,35 +57,30 @@ public class PermissionServiceImpl implements PermissionService {
                         .toList()
         );
 
-        log.debug("[PermissionService] 原始权限查询结果: userId={}, permissionCount={}, codes={}",
-                userId, permissionCodes.size(), permissionCodes);
-
-        // ---- 通配符展开 ----
-
         // 全局通配符 * — 展开为系统中所有已定义的权限码
         if (permissionCodes.contains("*")) {
             List<Permission> allPermissions = permissionRepository.findAll();
             List<String> allCodes = allPermissions.stream()
                     .map(Permission::getPermissionCode)
-                    .filter(code -> !"*".equals(code)) // 排除 * 本身，Sa-Token 只做精确匹配
+                    .filter(code -> !"*".equals(code))
                     .toList();
-            log.info("[PermissionService] 用户 {} 拥有全局通配符 *，展开为 {} 个权限", userId, allCodes.size());
+            log.debug("[PermissionService] 用户 {} 拥有全局通配符 *，展开为 {} 个权限", userId, allCodes.size());
             return allCodes;
         }
 
-        // 资源级通配符 resource:* — 展开为该资源的所有 action 权限
+        // 资源级通配符 resource:*
         List<String> expandedCodes = new ArrayList<>(permissionCodes);
         boolean hasResourceWildcard = false;
 
         for (String code : permissionCodes) {
             if (code.endsWith(":*")) {
                 hasResourceWildcard = true;
-                String resourcePrefix = code.substring(0, code.length() - 2); // 去掉 ":*"
+                String resourcePrefix = code.substring(0, code.length() - 2);
                 List<Permission> allPermissions = permissionRepository.findAll();
                 List<String> matched = allPermissions.stream()
                         .map(Permission::getPermissionCode)
                         .filter(c -> c.startsWith(resourcePrefix + ":"))
-                        .filter(c -> !c.endsWith(":*")) // 避免递归展开
+                        .filter(c -> !c.endsWith(":*"))
                         .toList();
                 expandedCodes.addAll(matched);
                 log.debug("[PermissionService] 资源通配符 {} 展开为: {}", code, matched);
@@ -77,11 +88,9 @@ public class PermissionServiceImpl implements PermissionService {
         }
 
         if (hasResourceWildcard) {
-            // 去重
             Set<String> uniqueCodes = new HashSet<>(expandedCodes);
-            // 移除所有 :* 通配符本身（Sa-Token 不做通配符匹配）
             uniqueCodes.removeIf(c -> c.endsWith(":*"));
-            log.info("[PermissionService] 用户 {} 通配符展开完成: 原始={}, 展开后={}",
+            log.debug("[PermissionService] 用户 {} 通配符展开完成: 原始={}, 展开后={}",
                     userId, permissionCodes, uniqueCodes);
             return new ArrayList<>(uniqueCodes);
         }

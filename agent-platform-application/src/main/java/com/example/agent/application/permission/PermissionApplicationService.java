@@ -1,5 +1,6 @@
 package com.example.agent.application.permission;
 
+import com.example.agent.application.security.AuthzSessionService;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.domain.tenant.Permission;
 import com.example.agent.domain.tenant.PermissionRepository;
@@ -23,6 +24,7 @@ import java.util.List;
 public class PermissionApplicationService {
 
     private final PermissionRepository permissionRepository;
+    private final AuthzSessionService authzSessionService;
 
     public List<PermissionResponse> listPermissions() {
         log.debug("[Permission] 列表");
@@ -64,6 +66,8 @@ public class PermissionApplicationService {
     public void deletePermissionCascade(Long id) {
         log.info("[Permission] 级联删除: id={}", id);
         permissionRepository.deleteCascade(id);
+        // 权限定义变更可能影响通配符展开结果，刷新全部在线用户缓存
+        authzSessionService.refreshAllOnlineUsers();
     }
 
     /**

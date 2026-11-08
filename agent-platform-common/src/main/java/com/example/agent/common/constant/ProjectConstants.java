@@ -128,4 +128,24 @@ public final class ProjectConstants {
         /** 最大会话数 */
         public static final int MAX_SESSION_COUNT = 10000;
     }
+
+    // ========== 鉴权权限缓存 ==========
+
+    public static final class Authz {
+        private Authz() {}
+
+        /** 权限/角色缓存 TTL（小时）— 略长于默认定时刷新周期 */
+        public static final long CACHE_TTL_HOURS = 4;
+        /**
+         * 登录态权限定时刷新默认间隔（毫秒）— 1 小时.
+         * <p>运行时以 Nacos {@code authzPermissionRefreshMs} 为准，见 {@code SchedulerConfig}.
+         */
+        public static final long REFRESH_INTERVAL_MS_DEFAULT = 3_600_000L;
+        /** Redis 权限码列表 key 前缀 */
+        public static final String REDIS_PERM_PREFIX = "authz:perm:";
+        /** Redis 角色码列表 key 前缀 */
+        public static final String REDIS_ROLE_PREFIX = "authz:role:";
+        /** Redis 在线用户集合 key */
+        public static final String REDIS_ONLINE_SET = "authz:online";
+    }
 }

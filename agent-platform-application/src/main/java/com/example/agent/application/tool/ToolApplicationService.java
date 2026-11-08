@@ -368,17 +368,35 @@ public class ToolApplicationService {
     @Auditable(action = "TOOL_TEST", resourceType = "TOOL", resourceId = "#toolId", recordResponse = true)
     @Transactional
     public ToolTestResponse test(String toolId, Map<String, Object> params) {
+        return invokeForConversation(toolId, params, null);
+    }
+
+    /**
+     * 对话内工具执行入口 — 与 test 共用执行核，可附带 conversationId 建审批.
+     */
+    @Transactional
+    public ToolTestResponse invokeForConversation(String toolId, Map<String, Object> params,
+                                                   String conversationId) {
         Long tenantId = TenantContext.getCurrentTenantId();
-        log.info("[Tool] 测试工具调用: toolId={}", toolId);
+        log.info("[Tool] 对话内调用: toolId={}, convId={}", toolId, conversationId);
 
         ToolRegistry tool = toolRepository.findByToolId(toolId)
                 .orElseThrow(() -> new ResourceNotFoundException("工具", toolId));
         domainService.assertTenantAccess(tool, tenantId);
 
+        if (tool.getStatus() != ToolStatus.ACTIVE) {
+            return ToolTestResponse.builder()
+                    .success(false)
+                    .errorMessage("工具未启用: " + toolId)
+                    .durationMs(0)
+                    .build();
+        }
+
         if (tool.isRequireApproval()) {
             ApprovalWorkflowResponse approval = approvalService.createApproval(
                     ApprovalCreateCommand.builder()
                             .toolId(toolId)
+                            .conversationId(conversationId)
                             .params(params)
                             .riskLevel("HIGH")
                             .build());
@@ -401,35 +419,25 @@ public class ToolApplicationService {
             Object result;
             switch (tool.getToolType()) {
                 case MCP:
-                    // 通过 McpClientManager 获取缓存的 MCP 客户端并调用
                     Object mcpClient = mcpClientManager.getClient(toolId);
                     result = invokeMcpTool(mcpClient, tool, params);
                     break;
-
                 case HTTP:
-                    // 通过 HttpToolAdapter 发起 HTTP 调用
                     result = httpToolAdapter.invokeHttpTool(tool, params);
                     break;
-
                 case BUILTIN:
                 case CUSTOM:
-                    // 内置和自定义工具需通过 T5 任务引擎测试
                     throw new BusinessException(400,
-                            tool.getToolType().getDesc() + " 暂不支持在线测试，请通过任务引擎触发");
-
+                            tool.getToolType().getDesc() + " 暂不支持在线调用，请通过任务引擎触发");
                 default:
                     throw new BusinessException(400, "未知的工具类型: " + tool.getToolType());
             }
 
             long durationMs = System.currentTimeMillis() - startTime;
             String resultJson = toJson(result);
-
-            // 记录成功日志
-            saveInvocationLog(invocationId, tenantId, toolId, null, null, null,
+            saveInvocationLog(invocationId, tenantId, toolId, conversationId, null, null,
                     paramsJson, resultJson, InvocationStatus.SUCCESS, durationMs, null);
-
-            log.info("[Tool] 工具测试成功: toolId={}, durationMs={}", toolId, durationMs);
-
+            log.info("[Tool] 调用成功: toolId={}, durationMs={}", toolId, durationMs);
             return ToolTestResponse.builder()
                     .success(true)
                     .result(result)
@@ -439,13 +447,11 @@ public class ToolApplicationService {
 
         } catch (BusinessException e) {
             long durationMs = System.currentTimeMillis() - startTime;
-            saveInvocationLog(invocationId, tenantId, toolId, null, null, null,
+            saveInvocationLog(invocationId, tenantId, toolId, conversationId, null, null,
                     paramsJson, null,
                     e.getMessage().contains("审批驳回") ? InvocationStatus.REJECTED : InvocationStatus.FAILED,
                     durationMs, e.getMessage());
-
-            log.error("[Tool] 工具测试失败: toolId={}, error={}", toolId, e.getMessage());
-
+            log.error("[Tool] 调用失败: toolId={}, error={}", toolId, e.getMessage());
             return ToolTestResponse.builder()
                     .success(false)
                     .durationMs(durationMs)
@@ -455,11 +461,9 @@ public class ToolApplicationService {
 
         } catch (Exception e) {
             long durationMs = System.currentTimeMillis() - startTime;
-            saveInvocationLog(invocationId, tenantId, toolId, null, null, null,
+            saveInvocationLog(invocationId, tenantId, toolId, conversationId, null, null,
                     paramsJson, null, InvocationStatus.FAILED, durationMs, e.getMessage());
-
-            log.error("[Tool] 工具测试异常: toolId={}", toolId, e);
-
+            log.error("[Tool] 调用异常: toolId={}", toolId, e);
             return ToolTestResponse.builder()
                     .success(false)
                     .durationMs(durationMs)
@@ -467,6 +471,26 @@ public class ToolApplicationService {
                     .invocationId(invocationId)
                     .build();
         }
+    }
+
+    /**
+     * 列出对话可调用工具 — ACTIVE 且 MCP/HTTP，最多 20 条.
+     */
+    public List<CallableToolSummary> listActiveCallableTools(Long tenantId) {
+        List<ToolRegistry> tools = toolRepository.findByTenant(tenantId, 0, 100);
+        return tools.stream()
+                .filter(t -> t.getStatus() == ToolStatus.ACTIVE)
+                .filter(t -> t.getToolType() == ToolType.MCP || t.getToolType() == ToolType.HTTP)
+                .limit(20)
+                .map(t -> CallableToolSummary.builder()
+                        .toolId(t.getToolId())
+                        .name(t.getName())
+                        .description(t.getDescription())
+                        .toolType(t.getToolType() != null ? t.getToolType().getCode() : null)
+                        .inputSchema(t.getSchema() != null ? t.getSchema().getInputSchema() : null)
+                        .requireApproval(t.isRequireApproval())
+                        .build())
+                .toList();
     }
 
     // ==================== 调用日志 ====================

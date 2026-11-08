@@ -31,8 +31,10 @@
         <!-- Spring Boot -->
         <spring-boot.version>3.3.7</spring-boot.version>
 
-        <!-- Spring Cloud Alibaba -->
+        <!-- Spring Cloud Alibaba（保持 2023.x 以适配 Spring Boot 3.3.7；nacos-client 单独升到 3.3.0） -->
         <spring-cloud-alibaba.version>2023.0.3.2</spring-cloud-alibaba.version>
+        <!-- 对齐 Nacos Server 3.3.0；勿跨大版本混用客户端 -->
+        <nacos.client.version>3.3.0</nacos.client.version>
 
         <!-- Spring AI Alibaba -->
         <spring-ai-alibaba.version>1.1.2.0</spring-ai-alibaba.version>
@@ -96,6 +98,13 @@
                 <version>${spring-cloud-alibaba.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+
+            <!-- 覆盖 SCA BOM 内 nacos-client 2.4.2 → 3.3.0（适配 Nacos Server 3.3.0） -->
+            <dependency>
+                <groupId>com.alibaba.nacos</groupId>
+                <artifactId>nacos-client</artifactId>
+                <version>${nacos.client.version}</version>
             </dependency>
 
             <!-- Spring AI Alibaba BOM -->

@@ -62,13 +62,15 @@ public class HttpToolAdapter {
      * @throws BusinessException 如果 HTTP 调用失败
      */
     public Object invokeHttpTool(ToolRegistry tool, Map<String, Object> params) {
-        String url = tool.getEndpoint();
-        if (url == null || url.isBlank()) {
+        String rawUrl = tool.getEndpoint();
+        if (rawUrl == null || rawUrl.isBlank()) {
             throw new BusinessException(400, "HTTP 工具未配置 endpoint: " + tool.getToolId());
         }
 
         // 从 Schema 中解析 HTTP 方法（默认 POST）
         HttpMethod method = resolveHttpMethod(tool);
+        Map<String, Object> safeParams = params != null ? params : Map.of();
+        String url = resolveUrl(rawUrl, safeParams, method);
 
         log.info("[HTTP Tool] 调用开始: toolId={}, name={}, method={}, url={}",
                 tool.getToolId(), tool.getName(), method, url);
@@ -88,7 +90,7 @@ public class HttpToolAdapter {
 
             // POST/PUT/PATCH 请求需要设置请求体
             if (requiresBody(method)) {
-                String requestBody = objectMapper.writeValueAsString(params);
+                String requestBody = objectMapper.writeValueAsString(safeParams);
                 request.body(requestBody);
             }
 
@@ -195,6 +197,41 @@ public class HttpToolAdapter {
         return method == HttpMethod.POST
                 || method == HttpMethod.PUT
                 || method == HttpMethod.PATCH;
+    }
+
+    /**
+     * 解析 URL：替换 {param} 路径占位；GET/DELETE 时追加剩余参数为 query.
+     */
+    private String resolveUrl(String endpoint, Map<String, Object> params, HttpMethod method) {
+        String url = endpoint;
+        java.util.Set<String> consumed = new java.util.HashSet<>();
+        for (Map.Entry<String, Object> e : params.entrySet()) {
+            String placeholder = "{" + e.getKey() + "}";
+            if (url.contains(placeholder)) {
+                url = url.replace(placeholder, java.net.URLEncoder.encode(
+                        String.valueOf(e.getValue()), java.nio.charset.StandardCharsets.UTF_8));
+                consumed.add(e.getKey());
+            }
+        }
+        if (method == HttpMethod.GET || method == HttpMethod.DELETE) {
+            StringBuilder qs = new StringBuilder();
+            for (Map.Entry<String, Object> e : params.entrySet()) {
+                if (consumed.contains(e.getKey()) || e.getValue() == null) {
+                    continue;
+                }
+                if (!qs.isEmpty()) {
+                    qs.append('&');
+                }
+                qs.append(java.net.URLEncoder.encode(e.getKey(), java.nio.charset.StandardCharsets.UTF_8))
+                        .append('=')
+                        .append(java.net.URLEncoder.encode(
+                                String.valueOf(e.getValue()), java.nio.charset.StandardCharsets.UTF_8));
+            }
+            if (!qs.isEmpty()) {
+                url = url + (url.contains("?") ? "&" : "?") + qs;
+            }
+        }
+        return url;
     }
 
     /**

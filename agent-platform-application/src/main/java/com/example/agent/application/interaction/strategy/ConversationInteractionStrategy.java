@@ -5,6 +5,7 @@ import com.example.agent.application.checkpoint.restore.CheckpointRestoreDispatc
 import com.example.agent.application.checkpoint.restore.RestoreDecision;
 import com.example.agent.application.conversation.MessageApplicationService;
 import com.example.agent.application.conversation.StreamOrchestrationService;
+import com.example.agent.application.conversation.StreamSessionService;
 import com.example.agent.domain.conversation.valueobject.ConversationCheckpoint;
 import com.example.agent.domain.interaction.service.InteractionStrategy;
 import com.example.agent.domain.interaction.valueobject.InteractionContext;
@@ -56,7 +57,9 @@ public class ConversationInteractionStrategy implements InteractionStrategy {
             throw new IllegalStateException("对话模式需要 SseEmitter，但上下文中未提供");
         }
 
-        messageService.saveUserMessage(context.getConversationId(), context.getUserInput());
+        if (!StreamSessionService.shouldSkipPersistUser(context)) {
+            messageService.saveUserMessage(context.getConversationId(), context.getUserInput());
+        }
 
         ConversationCheckpoint restored = checkpointService.restoredOf(context).orElse(null);
         RestoreDecision decision = restoreDispatcher.dispatch(context, restored);

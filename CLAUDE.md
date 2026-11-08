@@ -94,7 +94,7 @@ interfaces → application → domain ← infrastructure
 
 ## 项目定位
 
-**企业级 AI Agent 平台** — DDD 六模块 Maven 多模块项目，P0-P4 核心已全部实现，P5 Web 聊天/审批卡片/反馈/IM 回调已落地（`agent-platform-web/`），主链路围栏/提示词/记忆/意图/审批/精度已接线，P6 配置治理 01-05 已实现，运维编排文件在 `deploy/`（环境待实际拉起）。
+**企业级 AI Agent 平台** — DDD 六模块 Maven 多模块项目，P0-P4 核心已全部实现，P5 Web 聊天（混合风壳 + 停生成/重生）/审批卡片/反馈/IM 回调已落地（`agent-platform-web/`），主链路围栏/提示词/记忆/意图/审批/精度已接线，P6 配置治理 01-05 已实现，运维编排文件在 `deploy/`（环境待实际拉起）。
 
 - **路径**: `D:\mhqf_project\heavenly-craft-agent\agent-platform`
 - **包名**: `com.example.agent`
@@ -108,7 +108,8 @@ interfaces → application → domain ← infrastructure
 |------|------|------|
 | JDK | **17.0.18** | `C:\tools\Java\jdk-17.0.18` |
 | Spring Boot | **3.3.7** | 不要升级到 3.5.x |
-| Spring Cloud Alibaba | 2023.0.3.2 | |
+| Spring Cloud Alibaba | 2023.0.3.2 | Boot 3.3.x 线 |
+| Nacos Client | **3.3.0** | 覆盖 SCA 默认 2.4.2，对齐 Server 3.3.0 |
 | Spring AI Alibaba | 1.1.2.0 | groupId=`com.alibaba.cloud.ai`（含 `.ai`） |
 | Spring AI | 1.1.7 | |
 | MySQL Connector | **8.0.33** | 不要用 3.0.33 或 9.x |
@@ -216,11 +217,16 @@ agent-platform-interfaces/  125 文件  ← 21 Controller + ~102 Request/Respons
 > ✅ 已实现：多租户 RBAC、意图识别 3 层链、对话管理、SSE/WebSocket 流式、状态机、长期记忆、T4 提示词管理、T5 任务规划引擎、T6 RAG 知识库、T7 MCP 工具平台、T10 安全围栏、T11 人机协同审批、T9 全链路可观测性、T12 效果评估与持续优化、**P6 迭代增强（Redis缓存/Reranker/工具版本化/心跳检测/精度监控/LDAP/SSO/Presidio）、P7 多模式交互（策略工厂 + 2 种模式）、🆕 P6 配置治理子方案01（@Scheduled → Nacos）、🆕 子方案02（RagConfig 24 参数）、🆕 子方案03（AiModel/Security/Session 17 参数）、🆕 子方案04（ProjectConstants 静态常量统一管理、25常量、26文件改造）、🆕 子方案05（Sentinel 规则 Nacos 持久化、6 项规则）**
 > 📐 DDD 架构：Controller → ApplicationService → DomainService → Repository，禁止越层调用
 > 📦 DTO 分离：Application 层 DTO 独立分包 + Interfaces 层 Request DTO 独立分包
-> 🔜 待完成：SSO/OIDC、ColBERT、生产环境实际部署 Grafana/OTel/K8s（LDAP 真 bind / 租户拦截器删除 / @RateLimit 挂载已完成）
+> 🔜 待完成：SSO/OIDC、ColBERT、管理后台二期（提示词/工具/任务/评测）、生产环境实际部署 Grafana/OTel/K8s
 
 ---
 
-## 数据库（29 张表 + V1.5.0，手动管理）
+## 数据库（全量脚本维护，手动执行）
+
+> **唯一维护入口**: [`docs/database/agent_platform_full.sql`](docs/database/agent_platform_full.sql)  
+> 后续 DDL/DML **追加到文件末尾**，并在文件头变更记录表写明时间与作用。历史 `V1.x.x__*.sql` 仅归档。
+
+## 数据库（历史分版本说明，29 张表 + V1.5.0+）
 
 - **V1.0.0** (13张): t_tenant, t_user, t_role, t_permission, t_user_role, t_role_permission, t_agent_config, t_conversation, t_message, t_knowledge_base, t_tool_registry, t_prompt_template, t_evaluation_run
 - **V1.1.0** (16张): t_intent, t_long_term_memory, t_prompt_template_version, t_task_execution, t_task_step_execution, t_document, t_document_chunk, t_knowledge_hit_record, t_tool_invocation_log, t_sensitive_word, t_security_event, t_audit_log, t_approval_workflow, t_evaluation_dataset, t_evaluation_dataset_item, t_optimization_ticket
@@ -243,7 +249,7 @@ P0(收尾✅) → P1(T3-T5✅) → P2(T6-T7✅) → P3(安全✅) → P4(观测�
               任务规划✅                                        运维部署🔜
 ```
 
-**P5**: Web 聊天 + 审批卡片 + 反馈 + IM 回调 ✅（`agent-platform-web/`）
+**P5**: Web 聊天（混合风 + cancel/regenerate）+ 审批卡片 + 反馈 + IM 回调 ✅；管理后台一期 ✅（`/admin`：KB/文档/意图/用户角色）；完整度见 `docs/前后端对齐完整度.md`
 **P6**: 迭代优化（9 项代码增强已实现：Reranker/工具版本化/Redis缓存/心跳检测/精度监控/LDAP/SSO/Presidio），🆕 配置治理（子方案01✅ 02✅ 03✅ 04✅ 05已设计），11 项运维设施待部署
 
 ### ⚠️ 已知差距速览

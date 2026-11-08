@@ -1,0 +1,109 @@
+### 演示 HTTP 工具 — 通过 API 注册（需先登录拿 Token）
+### 若已执行 SQL 种子 V1.9.0，可跳过本文件的 create，直接测 invoke
+
+@base = http://127.0.0.1:8081
+@token = {{login.response.body.data.token}}
+
+### 1. 登录
+# @name login
+POST {{base}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "Mhqf@123456"
+}
+
+### 2. 注册回声工具
+POST {{base}}/api/v1/tools/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "回声工具",
+  "description": "将用户输入的文本原样返回，用于验证对话内工具调用链路。",
+  "toolType": "HTTP",
+  "endpoint": "http://127.0.0.1:8081/api/v1/demo-tools/echo",
+  "inputSchema": "{\"method\":\"POST\",\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\",\"description\":\"要回显的文本\"}},\"required\":[\"message\"]}",
+  "outputSchema": "{\"type\":\"object\"}",
+  "requireApproval": false
+}
+
+### 3. 注册当前时间
+POST {{base}}/api/v1/tools/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "当前时间",
+  "description": "按指定时区返回当前日期时间与星期，默认 Asia/Shanghai。",
+  "toolType": "HTTP",
+  "endpoint": "http://127.0.0.1:8081/api/v1/demo-tools/current-time",
+  "inputSchema": "{\"method\":\"POST\",\"type\":\"object\",\"properties\":{\"timezone\":{\"type\":\"string\",\"description\":\"IANA 时区\"}},\"required\":[]}",
+  "outputSchema": "{\"type\":\"object\"}",
+  "requireApproval": false
+}
+
+### 4. 注册城市天气（模拟）
+POST {{base}}/api/v1/tools/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "城市天气查询",
+  "description": "查询指定城市的模拟天气。用户问某地天气时可调用。",
+  "toolType": "HTTP",
+  "endpoint": "http://127.0.0.1:8081/api/v1/demo-tools/city-weather",
+  "inputSchema": "{\"method\":\"POST\",\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"description\":\"城市名称\"}},\"required\":[\"city\"]}",
+  "outputSchema": "{\"type\":\"object\"}",
+  "requireApproval": false
+}
+
+### 5. 注册简易计算器
+POST {{base}}/api/v1/tools/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "简易计算器",
+  "description": "执行加减乘除。op=add/sub/mul/div，参数 a、b。",
+  "toolType": "HTTP",
+  "endpoint": "http://127.0.0.1:8081/api/v1/demo-tools/calculator",
+  "inputSchema": "{\"method\":\"POST\",\"type\":\"object\",\"properties\":{\"op\":{\"type\":\"string\"},\"a\":{\"type\":\"number\"},\"b\":{\"type\":\"number\"}},\"required\":[\"op\",\"a\",\"b\"]}",
+  "outputSchema": "{\"type\":\"object\"}",
+  "requireApproval": false
+}
+
+### 6. 直连探测（无需登录，白名单）
+POST {{base}}/api/v1/demo-tools/echo
+Content-Type: application/json
+
+{
+  "message": "hello tool"
+}
+
+###
+POST {{base}}/api/v1/demo-tools/current-time
+Content-Type: application/json
+
+{
+  "timezone": "Asia/Shanghai"
+}
+
+###
+POST {{base}}/api/v1/demo-tools/city-weather
+Content-Type: application/json
+
+{
+  "city": "上海"
+}
+
+###
+POST {{base}}/api/v1/demo-tools/calculator
+Content-Type: application/json
+
+{
+  "op": "mul",
+  "a": 12,
+  "b": 3.5
+}

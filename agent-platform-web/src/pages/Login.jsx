@@ -1,37 +1,43 @@
-import { Button, Card, Form, Input, Typography, message } from 'antd'
+import { Button, Form, Input, Typography, message } from 'antd'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAuthStore } from '../store.js'
 
 export default function Login() {
   const setSession = useAuthStore((s) => s.setSession)
+  const navigate = useNavigate()
 
   const onFinish = async (values) => {
     try {
       const data = await api.login(values.username, values.password)
       setSession(data)
+      navigate('/chat', { replace: true })
     } catch (e) {
       message.error(e.message)
     }
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-      <Card title="Agent Platform 登录" style={{ width: 360 }}>
-        <Typography.Paragraph type="secondary">
-          使用后台账号登录，进入对话、审批与反馈。
+    <div className="login-hero">
+      <div className="login-card">
+        <Typography.Title level={3} style={{ marginTop: 0, color: 'var(--ap-text)' }}>
+          Agent Platform
+        </Typography.Title>
+        <Typography.Paragraph style={{ color: 'var(--ap-text-muted)' }}>
+          企业级 AI Agent · 对话、知识检索与人机协同
         </Typography.Paragraph>
         <Form layout="vertical" onFinish={onFinish} initialValues={{ username: 'admin' }}>
           <Form.Item name="username" label="用户名" rules={[{ required: true }]}>
-            <Input />
+            <Input size="large" />
           </Form.Item>
           <Form.Item name="password" label="密码" rules={[{ required: true }]}>
-            <Input.Password />
+            <Input.Password size="large" />
           </Form.Item>
-          <Button type="primary" htmlType="submit" block>
+          <Button type="primary" htmlType="submit" block size="large">
             登录
           </Button>
         </Form>
-      </Card>
+      </div>
     </div>
   )
 }

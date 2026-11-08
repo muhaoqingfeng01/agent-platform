@@ -80,6 +80,7 @@ public class KnowledgeSearchStreamService {
     /** 🆕 P6 配置治理子方案03: SSE 心跳+上下文轮数从 Nacos 动态读取（消除与 StreamOrchestrationService 的重复定义） */
     private final SessionConfig sessionConfig;
     private final StreamPipelineGuard pipelineGuard;
+    private final StreamRegistry streamRegistry;
 
     /** 知识库检索无结果时的提示模板 */
     private static final String NO_RESULT_TEMPLATE = "您检索的「%s」内容本知识库暂时未涵盖，请联系相关人员及时更新内容。";
@@ -128,6 +129,13 @@ public class KnowledgeSearchStreamService {
     @Auditable(action = "RAG_LLM_CALL", resourceType = "CONVERSATION", recordResponse = false)
     public void executeStreamPipeline(String conversationId, Long tenantId, String userId,
                                        String userContent, String knowledgeId, SseEmitter emitter) {
+        executeStreamPipeline(conversationId, tenantId, userId, userContent, knowledgeId, emitter, false, null);
+    }
+
+    @Auditable(action = "RAG_LLM_CALL", resourceType = "CONVERSATION", recordResponse = false)
+    public void executeStreamPipeline(String conversationId, Long tenantId, String userId,
+                                       String userContent, String knowledgeId, SseEmitter emitter,
+                                       boolean skipPersistUser, String streamId) {
         // 将 HTTP 线程捕获的上下文注入当前执行线程
         TenantContext.setTenantId(tenantId);
         TenantContext.setUserId(userId);
@@ -139,9 +147,11 @@ public class KnowledgeSearchStreamService {
         try {
             pipelineGuard.filterInput(conversationId, userId, tenantId, userContent);
 
-            // ========== Step 1: 保存用户消息（自动同步 Redis 短期记忆） ==========
-            Message userMsg = messageService.saveUserMessage(conversationId, userContent);
-            log.info("[RAG-Stream] 用户消息已保存: convId={}, msgId={}", conversationId, userMsg.getMessageId());
+            // ========== Step 1: 保存用户消息（重生场景跳过） ==========
+            if (!skipPersistUser) {
+                Message userMsg = messageService.saveUserMessage(conversationId, userContent);
+                log.info("[RAG-Stream] 用户消息已保存: convId={}, msgId={}", conversationId, userMsg.getMessageId());
+            }
 
             // ========== Step 2: 加载会话上下文 ==========
             List<Message> history = sessionMemoryService.getRecentMessages(conversationId, sessionConfig.getContextRounds());
@@ -219,6 +229,9 @@ public class KnowledgeSearchStreamService {
                     .stream()
                     .chatResponse()
                     .doOnNext(resp -> {
+                        if (streamRegistry.isCancelled(streamId)) {
+                            throw new StreamCancelledException(streamId);
+                        }
                         String token = resp.getResult().getOutput().getText();
                         if (token != null) {
                             fullResponse.append(token);
@@ -226,6 +239,11 @@ public class KnowledgeSearchStreamService {
                         }
                     })
                     .doOnComplete(() -> {
+                        if (streamRegistry.isCancelled(streamId)) {
+                            llmSample.stop(metrics.getLlmCallTimer());
+                            messageSample.stop(metrics.getMessageProcessingTimer());
+                            return;
+                        }
                         long llmDurationMs = llmSample.stop(metrics.getLlmCallTimer());
                         metrics.recordTokenConsumption(tenantId, "deepseek", tokenCount.get());
                         messageSample.stop(metrics.getMessageProcessingTimer());
@@ -250,6 +268,12 @@ public class KnowledgeSearchStreamService {
                         messageService.extractLongTermMemoryAsync(conversationId, userId, tenantId);
                     })
                     .doOnError(error -> {
+                        if (error instanceof StreamCancelledException) {
+                            log.info("[RAG-Stream] 用户取消生成: convId={}, streamId={}", conversationId, streamId);
+                            llmSample.stop(metrics.getLlmCallTimer());
+                            messageSample.stop(metrics.getMessageProcessingTimer());
+                            return;
+                        }
                         llmSample.stop(metrics.getLlmCallTimer());
                         metrics.recordLlmError(tenantId, "deepseek", error.getClass().getSimpleName());
                         messageSample.stop(metrics.getMessageProcessingTimer());
