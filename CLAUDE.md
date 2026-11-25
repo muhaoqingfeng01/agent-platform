@@ -1,51 +1,14 @@
-# CLAUDE.md — Agent Platform 项目记忆
+﻿# CLAUDE.md — Agent Platform 项目记忆
 
 > 此文件由 Claude Code 在每次会话启动时自动加载。
-> 详细记忆文件: `docs/project-memory/`
-> 快照脚本: `.claude/hooks/session-snapshot.py`
-> Session Log: `docs/project-memory/sessions/.session-log.jsonl`
+> **文档总入口**: `docs/README.md`（00 总体设计 / 01 模块设计 / 02 任务事项 / 03 实现进度）
+> `docs/` **只保留设计与进度**；不写会话流水账。
 
 ---
 
-## 🤖 对话快照规则（每次会话必须遵守）
+## 🤖 文档同步规则（每次会话必须遵守）
 
-**核心原则: 每个重大任务完成后，立即将关键信息写入 `docs/project-memory/`。**
-
-### 触发条件（满足任一即快照）
-
-| 触发条件 | 快照内容 | 文件命名 |
-|----------|----------|----------|
-| **代码生成完成**（新增/修改 >3 个文件） | 改了什么文件、关键设计决策、踩坑 | `XX-任务名.md` |
-| **Bug 修复完成** | 根因、修复方案、预防措施 | `XX-任务名.md` |
-| **架构决策**（选型/方案变更） | 决策背景、备选方案、选择理由 | `XX-任务名.md` |
-| **会话结束前**（Stop Hook 触发） | 本次会话总结：做了什么、还有什么没做、下一步 | `XX-会话总结-YYYY-MM-DD.md` |
-| **每 30 分钟无快照** | 当前进度快照 | `XX-进度快照.md` |
-
-### 快照文件格式
-
-```markdown
-# [标题]
-
-> **日期**: YYYY-MM-DD HH:MM
-> **分支**: master
-> **触发**: [代码生成 | Bug修复 | 架构决策 | 会话总结 | 进度快照]
-
-## 做了什么
-- ...
-
-## 关键决策
-- ...
-
-## 踩坑记录
-- ...
-
-## 下一步
-- ...
-```
-
-### 快照后必须更新索引
-
-每次写入新快照后，**必须同步更新** `docs/project-memory/README.md` 的会话列表。
+**核心原则: 技术方案改 `docs/00`～`02`；进度改 `docs/03-实现进度/`。不要再建会话记忆目录。**
 
 ### 🔴 代码完成后自动同步（强制）
 
@@ -53,22 +16,10 @@
 
 | # | 同步文件 | 更新内容 |
 |:--:|------|------|
-| 1 | `docs/开发进度.md` | 模块状态、功能清单、API 端点、代码统计、下一步 |
-| 2 | `docs/project-memory/00-项目现状摘要.md` | 代码文件数、开发进度表、日期 |
-| 3 | `CLAUDE.md` | 当前阶段、文件数、优先级图 ✅ 标记、待完成列表 |
-| 4 | `docs/project-memory/XX-任务名.md` | 实现快照：做了什么、关键决策、踩坑 |
-| 5 | `docs/project-memory/XX-会话总结-YYYY-MM-DD.md` | 会话总结 |
-| 6 | `docs/project-memory/README.md` | 新增会话条目 |
-| 7 | `memory/MEMORY.md` + 独立文件 | 关键技术决策、架构模式、踩坑 |
-
-> 📋 详见记忆: [[auto-sync-progress-and-memory]]
-
-### Stop Hook 自动机制
-
-- `Stop` 事件 → 运行 `.claude/hooks/session-snapshot.py`
-- **仅当有实际文件变更时**才写入 `.session-log.jsonl` 和 `session-*.json`
-- 无变更的会话不产生任何日志文件
-- **会话结束时你必须额外写一份 `XX-会话总结-YYYY-MM-DD.md`**，不要只依赖 hook
+| 1 | `docs/03-实现进度/进度总览.md` | 模块与任务事项状态（优先） |
+| 2 | `docs/03-实现进度/开发进度.md` | 功能点级详细打卡（可选） |
+| 3 | `docs/02-任务事项/待办事项` → `已办事项` | 完成则**移动**方案文件，并更新两边 README |
+| 4 | `CLAUDE.md` | 当前阶段、优先级图 ✅ 标记、待完成列表 |
 
 ---
 
@@ -88,7 +39,7 @@ interfaces → application → domain ← infrastructure
 | **新功能流程** | Domain 建模 → Repository 接口 → DomainService → ApplicationService → Controller |
 | **反模式检测** | 见 `[[11-DDD架构强制约束]]` 完整清单 |
 
-> 📋 详细规范：`docs/project-memory/11-DDD架构强制约束.md`
+> 📋 详细规范：`docs/00-总体设计/07-开发规范.md`
 
 ---
 
@@ -196,10 +147,7 @@ interfaces → application → domain ← infrastructure
       BizAssert.hasText(name, 400, ExceptionMessages.VALIDATION_ERROR + "名称不能为空");
       ```
     - `BizAssert` 位于 `common/exception/BizAssert.java`，对标 `org.springframework.util.Assert`
-17. **🔴 project-memory 文件必须用递增序号命名（强制）** — 新建快照/总结文件时，查看 `docs/project-memory/` 中已有文件的最大序号，使用 `{max+1}-文件名.md` 格式
-    - **禁止**使用 `XX-` 或 `TODO-` 等占位前缀
-    - 文件命名示例: `35-配置治理-子方案05-Sentinel规则Nacos持久化.md`、`36-会话总结-2026-07-14-子方案05.md`
-    - 同步更新 `docs/project-memory/README.md` 时，链接路径必须与实际文件名一致
+17. **🔴 不要在 `docs/` 下新建会话记忆目录** — 设计进 `00/01/02`，进度进 `03`；禁止再写 `project-memory` / `archive` 流水账
 
 ---
 
@@ -249,17 +197,16 @@ P0(收尾✅) → P1(T3-T5✅) → P2(T6-T7✅) → P3(安全✅) → P4(观测�
               任务规划✅                                        运维部署🔜
 ```
 
-**P5**: Web 聊天（混合风 + cancel/regenerate）+ 审批卡片 + 反馈 + IM 回调 ✅；管理后台一期 ✅（`/admin`：KB/文档/意图/用户角色）；完整度见 `docs/前后端对齐完整度.md`
-**P6**: 迭代优化（9 项代码增强已实现：Reranker/工具版本化/Redis缓存/心跳检测/精度监控/LDAP/SSO/Presidio），🆕 配置治理（子方案01✅ 02✅ 03✅ 04✅ 05已设计），11 项运维设施待部署
+**P5**: Web 聊天 + 审批/反馈/IM + 管理后台一期 ✅；见 `docs/03-实现进度/前后端对齐完整度.md`  
+**P6**: 配置治理 01–05 ✅；运维 D 项待部署。见 `docs/03-实现进度/进度总览.md`
 
 ### ⚠️ 已知差距速览
 
-| 类别 | 数量 | 说明 |
-|------|:--:|------|
-| 代码功能缺口 | 少量 | SSO/ColBERT/自动租户拦截注册；反馈统计路径与设计契约仍不一致 |
-| 运维设施缺口 | 11 项 | Grafana/OTel/ELK/AlertManager/Docker/K8s/MinIO/Presidio/LDAP 等 |
-| 方案变更 | 5 项 | 均为「简化设计」方向，详见 `docs/开发进度.md` |
-| 测试覆盖 | ⚠️ 极低 | 仅 1 个 Spring Boot 上下文测试，无业务逻辑单元测试 |
+| 类别 | 说明 |
+|------|------|
+| 待做任务 | A4/A5/A6、B7、C2/C4/C6、D 运维、E1/E2 — 见 `docs/02-任务事项/` |
+| 方案变更 | 5 项简化设计，详见 `docs/03-实现进度/开发进度.md` |
+| 测试覆盖 | 极低；见任务 E1 |
 
 ---
 
@@ -267,23 +214,15 @@ P0(收尾✅) → P1(T3-T5✅) → P2(T6-T7✅) → P3(安全✅) → P4(观测�
 
 | 文档 | 路径 |
 |------|------|
-| 项目现状摘要 | `docs/project-memory/00-项目现状摘要.md` |
-| 会话索引 | `docs/project-memory/README.md` |
-| 开发进度 | `docs/开发进度.md` |
-| 已设计未实现清单 | `docs/已设计未实现清单.md` |
-| 未实现事项分项方案 | `docs/未实现事项设计方案/README.md` |
-| P0-P4 差距分析（历史） | `docs/project-memory/22-P0-P4-差距分析-2026-06-18.md` |
-| 开发规范 | `docs/开发规范.md` |
-| 后端开发计划 | `docs/后端开发计划.md` |
-| 数据库设计 | `docs/数据库设计文档.md` |
-| 架构设计文档（总入口） | `docs/Agent平台架构设计文档.md` | 🆕 源码级：为什么/技术栈/如何实现/场景 + 流程图 |
-| 技术方案汇总 | `docs/企业级Agent平台技术方案.md` |
-| 技术方案流程图 | `docs/Agent平台技术方案流程图.md` | 11 张 Mermaid 图 |
-| 架构设计图 | `docs/Agent平台架构设计图.md` | 10 张架构图 (4+1/部署/DDD/安全/MCP) |
-| 子方案(P0-P5) | `docs/P0-基础底座/` ~ `docs/P5-交互端/` |
-| P6 迭代增强 | `docs/P6-迭代优化方案/` |
+| **文档总入口** | `docs/README.md` |
+| 总体设计 | `docs/00-总体设计/` |
+| 模块子设计 P0–P7 | `docs/01-模块设计/` |
+| 待办 / 已办事项 | `docs/02-任务事项/待办事项/` · `已办事项/` |
+| 实现进度总览 | `docs/03-实现进度/进度总览.md` |
+| 前后端对齐 | `docs/03-实现进度/前后端对齐完整度.md` |
+| 开发规范 | `docs/00-总体设计/07-开发规范.md` |
+| 数据库 / SQL | `docs/database/` |
 | Swagger 配置 | `agent-platform-interfaces/.../config/OpenApiConfig.java` |
-| 数据库迁移SQL | `docs/database/` |
 
 ---
 

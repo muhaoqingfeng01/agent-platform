@@ -114,4 +114,27 @@ export const api = {
   assignPermissionToRole: (roleId, permissionId) =>
     request('/api/v1/roles/assign-permission', { roleId, permissionId }),
   listPermissions: (page = 0, size = 200) => request('/api/v1/permissions/list', { page, size }),
+  listPrompts: (page = 0, size = 100) => request('/api/v1/prompts/list', { page, size }),
+  getPrompt: (id) => request('/api/v1/prompts/get', { id }),
+  createPrompt: (payload) => request('/api/v1/prompts/create', payload),
+  updatePrompt: (payload) => request('/api/v1/prompts/update', payload),
+  generatePrompt: (payload) => request('/api/v1/prompts/generate', payload),
+  deletePrompt: (id) => request('/api/v1/prompts/delete', { id }),
+  publishPrompt: (id) => request('/api/v1/prompts/publish', { id }),
+  archivePrompt: (id) => request('/api/v1/prompts/archive', { id }),
+  listTools: (page = 0, size = 100, type) =>
+    request('/api/v1/tools/list', { page, size, type }),
+  getTool: (id) => request('/api/v1/tools/get', { id }),
+  createTool: (payload) => request('/api/v1/tools/create', payload),
+  updateTool: (payload) => request('/api/v1/tools/update', payload),
+  toggleToolStatus: (id, status) => request('/api/v1/tools/toggle-status', { id, status }),
+  testTool: (id, params) => request('/api/v1/tools/test', { id, params }),
+  generateToolDescription: (payload) => request('/api/v1/tools/generate-description', payload),
+  planTask: (payload) => request('/api/v1/tasks/plan', payload),
+  getTaskPlan: (executionId) => request('/api/v1/tasks/plan/get', { executionId }),
+  executeTask: (executionId, async = true) =>
+    request('/api/v1/tasks/execute', { executionId, async }),
+  taskStatus: (executionId) => request('/api/v1/tasks/status', { executionId }),
+  cancelTask: (executionId) => request('/api/v1/tasks/cancel', { executionId }),
+  listTaskHandlers: () => request('/api/v1/tasks/handlers', {}),
 }

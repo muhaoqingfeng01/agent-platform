@@ -18,6 +18,7 @@ import com.example.agent.domain.tool.repository.ToolRegistryRepository;
 import com.example.agent.domain.tool.repository.ToolRegistryVersionRepository;
 import com.example.agent.domain.tool.service.ToolDomainService;
 import com.example.agent.domain.tool.valueobject.*;
+import com.example.agent.infrastructure.config.ai.DeepSeekUtilityClient;
 import com.example.agent.infrastructure.mcp.HttpToolAdapter;
 import com.example.agent.infrastructure.mcp.McpClientManager;
 import com.example.agent.infrastructure.persistence.cache.ToolCacheManager;
@@ -27,6 +28,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.client.ResourceAccessException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -52,6 +55,9 @@ public class ToolApplicationService {
     /** JSON 序列化工具 */
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    private static final int GENERATE_MAX_DESCRIPTION_LENGTH = 2000;
+    private static final int GENERATE_MAX_TOKENS = 1024;
+
     /** 工具注册仓储 */
     private final ToolRegistryRepository toolRepository;
 
@@ -75,6 +81,9 @@ public class ToolApplicationService {
 
     /** 高风险工具审批 */
     private final ApprovalWorkflowApplicationService approvalService;
+
+    /** 同步 LLM 工具客户端（关闭 thinking） */
+    private final DeepSeekUtilityClient deepSeekUtilityClient;
 
     // ==================== 工具 CRUD ====================
 
@@ -241,8 +250,9 @@ public class ToolApplicationService {
                            .headers(existingAuth.getHeaders());
             }
             if (request.getAuthType() != null) authBuilder.authType(AuthType.fromCode(request.getAuthType()));
-            if (request.getApiKey() != null) authBuilder.apiKey(request.getApiKey());
-            if (request.getToken() != null) authBuilder.token(request.getToken());
+            // 掩码回显值或空串不覆盖已有密钥
+            if (isRealSecret(request.getApiKey())) authBuilder.apiKey(request.getApiKey());
+            if (isRealSecret(request.getToken())) authBuilder.token(request.getToken());
             builder.authConfig(authBuilder.build());
         }
 
@@ -344,6 +354,58 @@ public class ToolApplicationService {
 
         log.info("[Tool] 回滚成功: toolId={}, targetVersion={}", toolId, targetVersion);
         return ToolResponse.from(tool);
+    }
+
+    // ==================== AI 描述润色（不落库） ====================
+
+    /**
+     * 根据用户草稿同步润色工具描述 — 仅返回预览，不写入工具表.
+     *
+     * <p>供 LLM function calling 理解工具用途：补全能力边界、适用场景与关键约束，保持简洁。
+     */
+    public ToolGenerateDescriptionResponse generateDescription(String description, String name, String toolType) {
+        if (!StringUtils.hasText(description)) {
+            throw new BusinessException(400, "描述不能为空");
+        }
+        String trimmed = description.trim();
+        if (trimmed.length() > GENERATE_MAX_DESCRIPTION_LENGTH) {
+            throw new BusinessException(400, "描述最长" + GENERATE_MAX_DESCRIPTION_LENGTH + "个字符");
+        }
+
+        StringBuilder instruction = new StringBuilder();
+        instruction.append("你是工具平台文案助手。请把下列草稿润色为「工具描述」，供大模型在 function calling 时理解该工具。\n");
+        instruction.append("要求：\n");
+        instruction.append("1. 只输出润色后的描述正文，不要解释、不要标题、不要 Markdown 代码围栏。\n");
+        instruction.append("2. 保留原意，补全能力边界、输入输出要点与适用场景；语言简洁、客观，1～4 句为宜。\n");
+        instruction.append("3. 不要编造未提及的接口路径、鉴权细节或虚假能力。\n");
+        if (StringUtils.hasText(name)) {
+            instruction.append("4. 工具名称（仅供参考）：").append(name.trim()).append("\n");
+        }
+        if (StringUtils.hasText(toolType)) {
+            instruction.append(StringUtils.hasText(name) ? "5. " : "4. ");
+            instruction.append("工具类型（仅供参考）：").append(toolType.trim()).append("\n");
+        }
+        instruction.append("\n草稿描述：\n").append(trimmed);
+
+        String generated;
+        try {
+            generated = deepSeekUtilityClient.completeText(instruction.toString(), GENERATE_MAX_TOKENS);
+        } catch (ResourceAccessException e) {
+            log.warn("[Tool] 描述生成超时/网络失败: {}", e.getMessage());
+            throw new BusinessException(504, "生成超时，请稍后重试", e);
+        } catch (Exception e) {
+            log.warn("[Tool] 描述生成调用失败: {}", e.getMessage());
+            throw new BusinessException(502, "生成失败：" + e.getMessage(), e);
+        }
+
+        if (!StringUtils.hasText(generated)) {
+            throw new BusinessException(502, "模型返回空内容，请调整描述后重试");
+        }
+
+        String polished = generated.trim();
+        log.info("[Tool] 描述润色成功: name={}, type={}, draftLen={}, outLen={}",
+                name, toolType, trimmed.length(), polished.length());
+        return ToolGenerateDescriptionResponse.builder().description(polished).build();
     }
 
     // ==================== 工具测试 ====================
@@ -558,8 +620,13 @@ public class ToolApplicationService {
      */
     private boolean hasAuthUpdate(ToolUpdateCommand request) {
         return request.getAuthType() != null
-                || request.getApiKey() != null
-                || request.getToken() != null;
+                || isRealSecret(request.getApiKey())
+                || isRealSecret(request.getToken());
+    }
+
+    /** 空串或掩码回显（含 ****）视为未提交真实密钥. */
+    private static boolean isRealSecret(String value) {
+        return value != null && !value.isBlank() && !value.contains("****");
     }
 
     /**

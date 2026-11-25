@@ -63,3 +63,5 @@ temp/
 docs/project-memory/.session-log.jsonl
 docs/project-memory/session-*.json
 .claude/settings.local.json
+
+.cursor/code-brain/

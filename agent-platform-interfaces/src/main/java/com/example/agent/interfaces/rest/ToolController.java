@@ -1,7 +1,9 @@
 package com.example.agent.interfaces.rest;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.annotation.SaMode;
 import com.example.agent.application.tool.ToolApplicationService;
+import com.example.agent.application.tool.dto.ToolGenerateDescriptionResponse;
 import com.example.agent.application.tool.dto.ToolInvocationLogResponse;
 import com.example.agent.application.tool.dto.ToolResponse;
 import com.example.agent.application.tool.dto.ToolTestResponse;
@@ -12,6 +14,7 @@ import com.example.agent.common.helper.JsonHelper;
 import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.interfaces.dto.request.tool.ToolCreateRequest;
+import com.example.agent.interfaces.dto.request.tool.ToolGenerateDescriptionRequest;
 import com.example.agent.interfaces.dto.request.tool.ToolListRequest;
 import com.example.agent.interfaces.dto.request.tool.ToolListInvocationRequest;
 import com.example.agent.interfaces.dto.request.tool.ToolGetRequest;
@@ -50,6 +53,15 @@ public class ToolController {
     public Result<ToolResponse> create(@Valid @RequestBody ToolCreateRequest request) {
         return ResultRespHelper.responseInvoke("ToolController.create", request, (req) ->
                 toolService.create(toAppRequest(req)));
+    }
+
+    @PostMapping("/generate-description")
+    @SaCheckPermission(value = {"tool:create", "tool:update"}, mode = SaMode.OR)
+    @Operation(summary = "根据草稿润色工具描述（仅预览，不落库）")
+    public Result<ToolGenerateDescriptionResponse> generateDescription(
+            @Valid @RequestBody ToolGenerateDescriptionRequest request) {
+        return ResultRespHelper.responseInvoke("ToolController.generateDescription", request, (req) ->
+                toolService.generateDescription(req.getDescription(), req.getName(), req.getToolType()));
     }
 
     @PostMapping("/list")

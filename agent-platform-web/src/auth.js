@@ -22,5 +22,16 @@ export function canAccessAdmin() {
     'intent:create',
     'user:read',
     'user:write',
+    'prompt:read',
+    'prompt:create',
+    'prompt:update',
+    'prompt:delete',
+    'prompt:publish',
+    'tool:read',
+    'tool:create',
+    'tool:update',
+    'task:read',
+    'task:create',
+    'task:execute',
   ])
 }

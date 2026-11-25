@@ -1143,17 +1143,14 @@ Langfuse → localhost:3000   (LLM 可观测性)
 
 | 文档 | 路径 | 说明 |
 |------|------|------|
-| **项目现状摘要** | `docs/project-memory/00-项目现状摘要.md` | 快速了解项目全貌 |
-| **开发进度** | `docs/开发进度.md` | 所有功能点清单 + 完成状态 |
-| **开发规范** | `docs/开发规范.md` | 编码风格 + 强制约束 |
-| **数据库设计** | `docs/数据库设计文档.md` | 完整表结构 + 字段说明 |
-| **技术方案** | `docs/企业级Agent平台技术方案.md` | 架构决策 + 技术选型 |
-| **技术流程图** | `docs/Agent平台技术方案流程图.md` | 11 张 Mermaid 流程图 |
-| **架构设计图** | `docs/Agent平台架构设计图.md` | 10 张架构图（4+1/部署/DDD/安全/MCP） |
-| **会话记忆索引** | `docs/project-memory/README.md` | 所有历史会话记录 |
-| **P6 配置治理** | `docs/P6-迭代优化方案/配置信息迭代优化方案/` | 配置治理 5 个子方案 |
-| **SQL 迁移参考** | `docs/database/` | V1.0.0 ~ V1.5.0 全部迁移脚本 |
-| **Swagger** | `http://localhost:8080/swagger-ui.html` | 在线 API 文档 |
+| **文档总入口** | `docs/README.md` | 四层文档导航 |
+| **总体设计** | `docs/00-总体设计/` | 架构 / 功能全景 / 数据 / 交互 / 规范 |
+| **模块子设计** | `docs/01-模块设计/` | P0–P7 技术方案 |
+| **任务事项** | `docs/02-任务事项/` | 缺口清单 + 分项方案 |
+| **实现进度** | `docs/03-实现进度/进度总览.md` | 唯一活进度 |
+| **数据库 / SQL** | `docs/database/` | 表结构 + 全量 SQL |
+| **接口说明** | `docs/api/Agent-Platform-API-接口文档.md` | 人工接口说明（完整以 Knife4j 为准） |
+| **Swagger** | `http://localhost:8081/doc.html` | 在线 API 文档（Knife4j） |
 
 ---
 

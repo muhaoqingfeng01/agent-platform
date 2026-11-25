@@ -101,7 +101,7 @@ public class ToolResponse {
         r.setToolTypeLabel(Optional.ofNullable(entity.getToolType()).map(ToolType::getDesc).orElse(null));
         r.setSchema(entity.getSchema());
         r.setEndpoint(entity.getEndpoint());
-        r.setAuthConfig(entity.getAuthConfig());
+        r.setAuthConfig(maskAuthConfig(entity.getAuthConfig()));
         r.setRequireApproval(entity.isRequireApproval());
         r.setStatus(entity.getStatus() != null ? entity.getStatus().name() : null);
         r.setStatusLabel(Optional.ofNullable(entity.getStatus()).map(ToolStatus::getDesc).orElse(null));
@@ -109,5 +109,33 @@ public class ToolResponse {
         r.setCreatedAt(TimeConverters.toEpochMilli(entity.getCreatedAt()));
         r.setUpdatedAt(TimeConverters.toEpochMilli(entity.getUpdatedAt()));
         return r;
+    }
+
+    /**
+     * 响应中掩码密钥字段，避免完整 secret 回显到前端.
+     */
+    private static AuthConfig maskAuthConfig(AuthConfig auth) {
+        if (auth == null) {
+            return null;
+        }
+        return AuthConfig.builder()
+                .authType(auth.getAuthType())
+                .apiKey(maskSecret(auth.getApiKey()))
+                .token(maskSecret(auth.getToken()))
+                .username(auth.getUsername())
+                .password(maskSecret(auth.getPassword()))
+                .headers(auth.getHeaders())
+                .build();
+    }
+
+    private static String maskSecret(String secret) {
+        if (secret == null || secret.isBlank()) {
+            return secret;
+        }
+        int len = secret.length();
+        if (len <= 4) {
+            return "****";
+        }
+        return secret.substring(0, 2) + "****" + secret.substring(len - 2);
     }
 }

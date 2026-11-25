@@ -13,6 +13,15 @@ function buildMenuItems() {
   if (hasAnyPermission(['intent:read', 'intent:create'])) {
     items.push({ key: '/admin/intents', label: <Link to="/admin/intents">意图</Link> })
   }
+  if (hasAnyPermission(['prompt:read', 'prompt:create', 'prompt:update', 'prompt:delete', 'prompt:publish'])) {
+    items.push({ key: '/admin/prompts', label: <Link to="/admin/prompts">提示词</Link> })
+  }
+  if (hasAnyPermission(['tool:read', 'tool:create', 'tool:update'])) {
+    items.push({ key: '/admin/tools', label: <Link to="/admin/tools">工具</Link> })
+  }
+  if (hasAnyPermission(['task:read', 'task:create', 'task:execute'])) {
+    items.push({ key: '/admin/tasks', label: <Link to="/admin/tasks">任务</Link> })
+  }
   if (hasAnyPermission(['user:read', 'user:write'])) {
     items.push({ key: '/admin/users', label: <Link to="/admin/users">用户</Link> })
     items.push({ key: '/admin/roles', label: <Link to="/admin/roles">角色</Link> })

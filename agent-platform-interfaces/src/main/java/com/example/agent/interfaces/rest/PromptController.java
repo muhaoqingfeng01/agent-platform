@@ -1,12 +1,14 @@
 package com.example.agent.interfaces.rest;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.annotation.SaMode;
 import com.example.agent.application.prompt.PromptApplicationService;
 import com.example.agent.application.prompt.PromptVersionListResponse;
 import com.example.agent.common.dto.PageResponse;
 import com.example.agent.common.helper.ResultRespHelper;
 import com.example.agent.common.result.Result;
 import com.example.agent.interfaces.dto.request.prompt.PromptCreateRequest;
+import com.example.agent.interfaces.dto.request.prompt.PromptGenerateRequest;
 import com.example.agent.interfaces.dto.request.prompt.PromptListRequest;
 import com.example.agent.interfaces.dto.request.prompt.PromptGetRequest;
 import com.example.agent.interfaces.dto.request.prompt.PromptUpdateRequest;
@@ -70,6 +72,15 @@ public class PromptController {
     public Result<PromptApplicationService.PromptResponse> getById(@Valid @RequestBody PromptGetRequest request) {
         return ResultRespHelper.responseInvoke("PromptController.getById", request, (req) ->
                 applicationService.getPrompt(req.getId()));
+    }
+
+    @PostMapping("/generate")
+    @SaCheckPermission(value = {"prompt:create", "prompt:update"}, mode = SaMode.OR)
+    @Operation(summary = "根据描述生成提示词正文（仅预览，不落库）")
+    public Result<PromptApplicationService.GeneratePromptResponse> generate(
+            @Valid @RequestBody PromptGenerateRequest request) {
+        return ResultRespHelper.responseInvoke("PromptController.generate", request, (req) ->
+                applicationService.generateFromDescription(req.getDescription(), req.getName()));
     }
 
     @PostMapping("/update")

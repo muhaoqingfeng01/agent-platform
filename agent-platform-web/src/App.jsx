@@ -5,6 +5,9 @@ import AdminLayout from './components/admin/AdminLayout.jsx'
 import KnowledgeList from './pages/admin/KnowledgeList.jsx'
 import DocumentList from './pages/admin/DocumentList.jsx'
 import IntentList from './pages/admin/IntentList.jsx'
+import PromptList from './pages/admin/PromptList.jsx'
+import ToolList from './pages/admin/ToolList.jsx'
+import TaskPlanPage from './pages/admin/TaskPlanPage.jsx'
 import UserList from './pages/admin/UserList.jsx'
 import RoleList from './pages/admin/RoleList.jsx'
 import { useAuthStore } from './store.js'
@@ -48,6 +51,9 @@ export default function App() {
         <Route path="knowledge" element={<KnowledgeList />} />
         <Route path="knowledge/:knowledgeId/docs" element={<DocumentList />} />
         <Route path="intents" element={<IntentList />} />
+        <Route path="prompts" element={<PromptList />} />
+        <Route path="tools" element={<ToolList />} />
+        <Route path="tasks" element={<TaskPlanPage />} />
         <Route path="users" element={<UserList />} />
         <Route path="roles" element={<RoleList />} />
       </Route>

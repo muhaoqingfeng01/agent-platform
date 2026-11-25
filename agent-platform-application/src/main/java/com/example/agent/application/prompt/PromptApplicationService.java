@@ -12,6 +12,7 @@ import com.example.agent.domain.prompt.repository.PromptTemplateVersionRepositor
 import com.example.agent.domain.prompt.service.PromptDomainService;
 import com.example.agent.domain.prompt.valueobject.PromptStatus;
 import com.example.agent.domain.prompt.valueobject.VariableDef;
+import com.example.agent.infrastructure.config.ai.DeepSeekUtilityClient;
 import com.example.agent.infrastructure.context.TenantContext;
 import com.example.agent.infrastructure.persistence.cache.CachedPromptRepository;
 import lombok.Builder;
@@ -20,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.client.ResourceAccessException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -46,11 +49,15 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class PromptApplicationService {
 
+    private static final int GENERATE_MAX_DESCRIPTION_LENGTH = 2000;
+    private static final int GENERATE_MAX_TOKENS = 2048;
+
     private final PromptTemplateRepository templateRepository;
     private final PromptTemplateVersionRepository versionRepository;
     private final PromptDomainService domainService;
     private final PromptRenderService renderService;
     private final CachedPromptRepository cachedPromptRepository;
+    private final DeepSeekUtilityClient deepSeekUtilityClient;
 
     // ==================== CRUD ====================
 
@@ -266,6 +273,52 @@ public class PromptApplicationService {
                 .build();
     }
 
+    // ==================== AI 生成（不落库） ====================
+
+    /**
+     * 根据描述同步生成系统提示词正文 — 仅返回预览，不写入模板表.
+     */
+    public GeneratePromptResponse generateFromDescription(String description, String name) {
+        if (!StringUtils.hasText(description)) {
+            throw new BusinessException(400, "描述不能为空");
+        }
+        String trimmed = description.trim();
+        if (trimmed.length() > GENERATE_MAX_DESCRIPTION_LENGTH) {
+            throw new BusinessException(400, "描述最长" + GENERATE_MAX_DESCRIPTION_LENGTH + "个字符");
+        }
+
+        StringBuilder instruction = new StringBuilder();
+        instruction.append("你是提示词工程师。根据下列模板用途描述，写一条可直接作为系统提示词的正文。\n");
+        instruction.append("要求：\n");
+        instruction.append("1. 只输出提示词正文本身，不要解释、不要标题、不要 Markdown 代码围栏。\n");
+        instruction.append("2. 如需可配置项，使用 {{variable}} 形式的占位符。\n");
+        instruction.append("3. 语气与约束应贴合用途描述，适合作为 Agent 的 system prompt。\n");
+        if (StringUtils.hasText(name)) {
+            instruction.append("4. 模板名称（仅供参考）：").append(name.trim()).append("\n");
+        }
+        instruction.append("\n模板用途描述：\n").append(trimmed);
+
+        String generated;
+        try {
+            generated = deepSeekUtilityClient.completeText(instruction.toString(), GENERATE_MAX_TOKENS);
+        } catch (ResourceAccessException e) {
+            log.warn("[Prompt] 生成超时/网络失败: {}", e.getMessage());
+            throw new BusinessException(504, "生成超时，请稍后重试", e);
+        } catch (Exception e) {
+            log.warn("[Prompt] 生成调用失败: {}", e.getMessage());
+            throw new BusinessException(502, "生成失败：" + e.getMessage(), e);
+        }
+
+        if (!StringUtils.hasText(generated)) {
+            throw new BusinessException(502, "模型返回空内容，请调整描述后重试");
+        }
+
+        String templateText = generated.trim();
+        log.info("[Prompt] 描述生成正文成功: name={}, descLen={}, textLen={}",
+                name, trimmed.length(), templateText.length());
+        return GeneratePromptResponse.builder().templateText(templateText).build();
+    }
+
     // ==================== 预览渲染 ====================
 
     /**
@@ -363,6 +416,12 @@ public class PromptApplicationService {
         private String description;
         private String templateText;
         private List<VariableDef> variables;
+    }
+
+    @Data
+    @Builder
+    public static class GeneratePromptResponse {
+        private String templateText;
     }
 
     @Data
